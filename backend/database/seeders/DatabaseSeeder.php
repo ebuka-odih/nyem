@@ -8,6 +8,8 @@ use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Database\Seeders\DemoDataSeeder;
+use Database\Seeders\CategorySeeder;
+use Database\Seeders\LocationSeeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -18,6 +20,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        // Seed categories and locations first
+        $this->call(CategorySeeder::class);
+        $this->call(LocationSeeder::class);
+
         $primary = User::factory()->create([
             'username' => 'demo',
             'phone' => '08000000000',

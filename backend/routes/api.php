@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryLocationController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MatchController;
@@ -15,6 +16,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return response()->json(['message' => 'Nyem API']);
 });
+
+// Public endpoints for categories and locations
+Route::get('/categories', [CategoryLocationController::class, 'categories']);
+Route::get('/locations', [CategoryLocationController::class, 'locations']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);

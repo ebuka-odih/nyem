@@ -6,11 +6,14 @@ use App\Models\Item;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Faker\Factory as Faker;
 
 class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
+        $faker = Faker::create();
+        
         $user = User::firstOrCreate(
             ['phone' => '08000000000'],
             [
@@ -20,7 +23,7 @@ class DemoDataSeeder extends Seeder
                 'otp_verified_at' => now(),
                 'role' => 'standard_user',
                 'bio' => 'I love swapping cool gadgets.',
-                'profile_photo' => 'https://via.placeholder.com/150',
+                'profile_photo' => 'https://ui-avatars.com/api/?name=' . urlencode('Demo User') . '&background=random',
             ],
         );
 
@@ -98,7 +101,7 @@ class DemoDataSeeder extends Seeder
                 'otp_verified_at' => now(),
                 'role' => 'standard_user',
                 'bio' => 'Looking to swap quality items.',
-                'profile_photo' => 'https://via.placeholder.com/150',
+                'profile_photo' => 'https://ui-avatars.com/api/?name=' . urlencode('Tester User') . '&background=random',
             ],
         );
 

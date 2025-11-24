@@ -2,31 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
 {
-    private array $categories = [
-        'Electronics',
-        'Fashion',
-        'Household',
-        'Food Items',
-        'Accessories',
-        'Beauty',
-        'Baby/Kids',
-        'Books',
-        'Sports',
-        'Other',
-    ];
+    private function getCategoryNames(): array
+    {
+        return Category::pluck('name')->toArray();
+    }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => ['required', 'string', Rule::in($this->categories)],
+            'category' => ['required', 'string', Rule::in($this->getCategoryNames())],
             'condition' => ['required', Rule::in(['new', 'like_new', 'used'])],
             'photos' => 'nullable|array|min:1',
             'photos.*' => 'string|max:2048',
@@ -107,7 +100,7 @@ class ItemController extends Controller
         $data = $request->validate([
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|nullable|string',
-            'category' => ['sometimes', 'string', Rule::in($this->categories)],
+            'category' => ['sometimes', 'string', Rule::in($this->getCategoryNames())],
             'condition' => ['sometimes', Rule::in(['new', 'like_new', 'used'])],
             'photos' => 'sometimes|array|min:1',
             'photos.*' => 'string|max:2048',
