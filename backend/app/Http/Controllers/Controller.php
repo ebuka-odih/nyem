@@ -22,7 +22,7 @@ abstract class Controller extends BaseController
             ->all();
     }
 
-    protected function isBlockedBetween(User $user, int $otherUserId): bool
+    protected function isBlockedBetween(User $user, string $otherUserId): bool
     {
         return Block::where(function ($query) use ($user, $otherUserId) {
             $query->where('blocker_id', $user->id)

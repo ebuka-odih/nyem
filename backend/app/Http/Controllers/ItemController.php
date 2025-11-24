@@ -104,7 +104,7 @@ class ItemController extends Controller
         return response()->json(['message' => 'Item deleted']);
     }
 
-    private function authorizeItemOwnership(int $userId, Item $item): void
+    private function authorizeItemOwnership(string $userId, Item $item): void
     {
         if ($item->user_id !== $userId) {
             abort(403, 'You can only manage your own items');
