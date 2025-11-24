@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MatchController;
 use App\Http\Controllers\MessageController;
@@ -44,7 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/matches', [MatchController::class, 'index']);
     Route::get('/matches/{match}', [MatchController::class, 'show']);
 
-    Route::get('/messages/{match}', [MessageController::class, 'index']);
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
+    Route::get('/conversations/{conversation}/matches', [ConversationController::class, 'matches']);
+
     Route::post('/messages', [MessageController::class, 'store']);
 
     Route::post('/report', [ModerationController::class, 'report']);

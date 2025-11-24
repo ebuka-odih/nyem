@@ -31,7 +31,7 @@ class MatchController extends Controller
         }
 
         return response()->json([
-            'match' => $match->load(['messages', 'item1', 'item2', 'user1', 'user2']),
+            'match' => $match->load(['item1', 'item2', 'user1', 'user2', 'conversation']),
         ]);
     }
 }

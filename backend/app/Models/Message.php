@@ -12,15 +12,15 @@ class Message extends Model
     use HasFactory, HasUuids;
 
     protected $fillable = [
-        'match_id',
+        'conversation_id',
         'sender_id',
         'receiver_id',
         'message_text',
     ];
 
-    public function match()
+    public function conversation()
     {
-        return $this->belongsTo(UserMatch::class, 'match_id');
+        return $this->belongsTo(UserConversation::class, 'conversation_id');
     }
 
     public function sender()

@@ -179,6 +179,7 @@ class SwipeController extends Controller
             'match' => $match,
             'match_created' => $matchCreated,
             'match_id' => $match?->id,
+            'conversation_id' => $match?->conversation_id,
         ]);
     }
 

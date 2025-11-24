@@ -44,11 +44,6 @@ class UserMatch extends Model
         return $this->belongsTo(UserConversation::class, 'conversation_id');
     }
 
-    public function messages()
-    {
-        return $this->hasMany(Message::class, 'match_id');
-    }
-
     public function scopeForUser($query, string $userId)
     {
         return $query->where(function ($q) use ($userId) {
