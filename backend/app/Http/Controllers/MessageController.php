@@ -40,8 +40,9 @@ class MessageController extends Controller
         $conversation->touch();
 
         // Broadcast message sent event
-        // Using toOthers() to exclude the sender from receiving their own message
-        broadcast(new MessageSent($message))->toOthers();
+        // Note: We broadcast to both users so both can see the message in real-time
+        // The frontend will handle displaying it appropriately
+        broadcast(new MessageSent($message));
 
         return response()->json(['message' => $message->load(['sender', 'receiver'])], 201);
     }
