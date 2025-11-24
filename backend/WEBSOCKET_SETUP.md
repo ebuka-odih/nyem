@@ -23,17 +23,20 @@ The system uses Laravel's broadcasting feature to send real-time events via WebS
    php artisan reverb:install
    ```
 
-2. **Configure `.env`:**
+2. **Configure `.env` (Production credentials are already set):**
    ```env
    BROADCAST_DRIVER=reverb
    
-   REVERB_APP_ID=8ecacaed-12a8-4139-b868-0fda32126048
-   REVERB_APP_KEY=DvMw3hbpYsejEcjRCYpP
-   REVERB_APP_SECRET=1sbIdCjf1h4hCiCn8S7OicYUYnjMR7iHWW2eBdV1
-   REVERB_HOST=127.0.0.1
-   REVERB_PORT=8080
-   REVERB_SCHEME=http
+   # Production Credentials
+   REVERB_APP_ID=7fe83b2c-d977-4b62-92e3-4bb523fd6fc6
+   REVERB_APP_KEY=XXtWgUw0t6Lf0kBvOmu0
+   REVERB_APP_SECRET=N3QnZyLECjNNKvFSSCcqZji2nU1hBxHUcgkVYkXK
+   REVERB_HOST=yourdomain.com  # ⚠️ Update with your production domain
+   REVERB_PORT=443
+   REVERB_SCHEME=https
    ```
+   
+   **📋 See `REVERB_PRODUCTION_CREDENTIALS.md` for detailed production setup instructions.**
 
 3. **Start Reverb server:**
    ```bash
