@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ConversationCreated;
+use App\Events\MatchCreated;
 use App\Models\Item;
 use App\Models\Swipe;
 use App\Models\TradeOffer;
@@ -131,6 +133,8 @@ class SwipeController extends Controller
                         ]
                     );
 
+                    $conversationCreated = $conversation->wasRecentlyCreated;
+
                     // Create match
                     $match = UserMatch::firstOrCreate(
                         [
@@ -160,6 +164,18 @@ class SwipeController extends Controller
                         if ($reciprocalTradeOffer) {
                             $reciprocalTradeOffer->update(['status' => 'accepted']);
                         }
+
+                        // Broadcast events after transaction commits
+                        // We'll do this outside the transaction to ensure data is persisted
+                        DB::afterCommit(function () use ($match, $conversation, $conversationCreated) {
+                            // Broadcast match created event to both users
+                            broadcast(new MatchCreated($match));
+
+                            // Broadcast conversation created event if it's a new conversation
+                            if ($conversationCreated) {
+                                broadcast(new ConversationCreated($conversation));
+                            }
+                        });
                     }
                 }
             }

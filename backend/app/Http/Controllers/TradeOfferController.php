@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ConversationCreated;
+use App\Events\MatchCreated;
 use App\Models\TradeOffer;
 use App\Models\Swipe;
 use App\Models\UserMatch;
@@ -125,6 +127,8 @@ class TradeOfferController extends Controller
                         ]
                     );
 
+                    $conversationCreated = $conversation->wasRecentlyCreated;
+
                     // Create match
                     $match = UserMatch::firstOrCreate(
                         [
@@ -142,6 +146,19 @@ class TradeOfferController extends Controller
 
                     // Update trade offer status
                     $offer->update(['status' => 'accepted']);
+
+                    // Broadcast events after transaction commits
+                    if ($matchCreated) {
+                        DB::afterCommit(function () use ($match, $conversation, $conversationCreated) {
+                            // Broadcast match created event to both users
+                            broadcast(new MatchCreated($match));
+
+                            // Broadcast conversation created event if it's a new conversation
+                            if ($conversationCreated) {
+                                broadcast(new ConversationCreated($conversation));
+                            }
+                        });
+                    }
                 } else {
                     // This shouldn't happen if the flow is correct, but handle it gracefully
                     $offer->update(['status' => 'accepted']);

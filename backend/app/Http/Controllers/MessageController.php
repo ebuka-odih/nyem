@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageSent;
 use App\Models\Message;
 use App\Models\UserConversation;
 use Illuminate\Http\Request;
@@ -37,6 +38,10 @@ class MessageController extends Controller
 
         // Update conversation's updated_at timestamp
         $conversation->touch();
+
+        // Broadcast message sent event
+        // Using toOthers() to exclude the sender from receiving their own message
+        broadcast(new MessageSent($message))->toOthers();
 
         return response()->json(['message' => $message->load(['sender', 'receiver'])], 201);
     }
