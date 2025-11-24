@@ -191,4 +191,3 @@ VITE_REVERB_SCHEME=https
 ⚠️ **Host**: Update `yourdomain.com` with your actual domain  
 ✅ **Port**: `443` (HTTPS)  
 ✅ **Scheme**: `https`
-
