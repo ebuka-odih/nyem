@@ -166,16 +166,31 @@ class SwipeController extends Controller
             ];
         })->values();
         
+        // Always return debug info to help diagnose issues
+        $debugInfo = [
+            'user_id' => $user->id,
+            'username' => $user->username,
+            'user_items_count' => $userItemIds->count(),
+            'user_item_ids' => $userItemIds->toArray(),
+            'total_swipes_on_user_items' => $allSwipesCount,
+            'matched_user_ids' => $matchedUserIds->toArray(),
+            'blocked_user_ids' => $blockedUserIds,
+            'pending_requests_count' => $pendingRequests->count(),
+            'all_swipes_details' => $swipes->map(function ($swipe) {
+                return [
+                    'swipe_id' => $swipe->id,
+                    'from_user_id' => $swipe->from_user_id,
+                    'target_item_id' => $swipe->target_item_id,
+                    'direction' => $swipe->direction,
+                    'has_from_user' => $swipe->fromUser ? true : false,
+                    'has_target_item' => $swipe->targetItem ? true : false,
+                ];
+            })->toArray(),
+        ];
+        
         return response()->json([
             'requests' => $pendingRequests,
-            'debug' => $request->has('debug') ? [
-                'user_id' => $user->id,
-                'user_items_count' => $userItemIds->count(),
-                'total_swipes_on_user_items' => $allSwipesCount,
-                'matched_user_ids' => $matchedUserIds->toArray(),
-                'blocked_user_ids' => $blockedUserIds,
-                'pending_requests_count' => $pendingRequests->count(),
-            ] : null,
+            'debug' => $debugInfo,
         ]);
     }
 }
