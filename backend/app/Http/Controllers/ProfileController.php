@@ -33,7 +33,7 @@ class ProfileController extends Controller
         $data = $request->validate([
             'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
             'bio' => 'sometimes|nullable|string',
-            'profile_photo' => 'sometimes|nullable|string|max:2048',
+            'profile_photo' => 'sometimes|nullable|string|max:65535', // TEXT field can hold up to 65,535 characters
             'city' => 'sometimes|string|max:255',
             'password' => 'sometimes|nullable|string|min:6',
         ]);
@@ -52,11 +52,21 @@ class ProfileController extends Controller
             $data['username_updated_at'] = now();
         }
 
-        $user->fill($data);
-        if (isset($data['password']) && $data['password']) {
-            $user->password = Hash::make($data['password']);
+        try {
+            $user->fill($data);
+            if (isset($data['password']) && $data['password']) {
+                $user->password = Hash::make($data['password']);
+            }
+            $user->save();
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database errors (like column size issues)
+            if (str_contains($e->getMessage(), 'profile_photo') || str_contains($e->getMessage(), 'too long') || str_contains($e->getMessage(), 'Data too long')) {
+                throw ValidationException::withMessages([
+                    'profile_photo' => ['The profile photo path is too long. Please try selecting a different image or contact support.'],
+                ]);
+            }
+            throw $e;
         }
-        $user->save();
 
         return response()->json([
             'user' => $user,

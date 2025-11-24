@@ -39,7 +39,7 @@ class AuthController extends Controller
             'code' => 'required|string|max:6',
             'username' => 'sometimes|string|max:255',
             'bio' => 'sometimes|nullable|string',
-            'profile_photo' => 'sometimes|nullable|string|max:2048',
+            'profile_photo' => 'sometimes|nullable|string|max:65535',
             'city' => 'sometimes|string|max:255',
             'password' => 'sometimes|nullable|string|min:6',
         ]);
