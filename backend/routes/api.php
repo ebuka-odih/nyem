@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/posts', [ItemController::class, 'store']);
 
     Route::post('/swipes', [SwipeController::class, 'store']);
+    Route::get('/swipes/pending-requests', [SwipeController::class, 'pendingRequests']);
 
     Route::get('/matches', [MatchController::class, 'index']);
     Route::get('/matches/{match}', [MatchController::class, 'show']);
