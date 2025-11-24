@@ -78,31 +78,34 @@ return new class extends Migration
         DB::table('messages')->whereNull('conversation_id')->delete();
 
         // Drop old match_id foreign key and column
+        // First, find the actual foreign key constraint name in MySQL
+        $constraintName = DB::selectOne("
+            SELECT CONSTRAINT_NAME
+            FROM information_schema.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'messages'
+            AND COLUMN_NAME = 'match_id'
+            AND REFERENCED_TABLE_NAME IS NOT NULL
+        ");
+
+        if ($constraintName) {
+            DB::statement("ALTER TABLE `messages` DROP FOREIGN KEY `{$constraintName->CONSTRAINT_NAME}`");
+        }
+
+        // Drop the match_id column
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropForeign(['match_id']);
             $table->dropColumn('match_id');
         });
 
         // Add foreign key constraint to conversation_id
-        // Note: For SQLite, we'll keep it nullable in the schema but enforce it in application logic
-        // SQLite has limited ALTER TABLE support, so we'll add the foreign key if possible
-        try {
-            Schema::table('messages', function (Blueprint $table) {
-                $table->foreign('conversation_id')->references('id')->on('user_conversations')->cascadeOnDelete();
-            });
-        } catch (\Exception $e) {
-            // If foreign key addition fails (SQLite limitation), we'll rely on application-level constraints
-            // The column is already created, so we can continue
-        }
+        Schema::table('messages', function (Blueprint $table) {
+            $table->foreign('conversation_id')->references('id')->on('user_conversations')->cascadeOnDelete();
+        });
 
-        // For databases that support it, make conversation_id not nullable
-        // For SQLite, we'll enforce this at the application level
-        $driver = DB::getDriverName();
-        if ($driver !== 'sqlite') {
-            Schema::table('messages', function (Blueprint $table) {
-                $table->uuid('conversation_id')->nullable(false)->change();
-            });
-        }
+        // Make conversation_id not nullable
+        Schema::table('messages', function (Blueprint $table) {
+            $table->uuid('conversation_id')->nullable(false)->change();
+        });
     }
 
     /**
