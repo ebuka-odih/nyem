@@ -6,16 +6,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class Swipe extends Model
+class TradeOffer extends Model
 {
-    /** @use HasFactory<\Database\Factories\SwipeFactory> */
     use HasFactory, HasUuids;
 
     protected $fillable = [
         'from_user_id',
-        'target_item_id',
+        'to_user_id',
         'offered_item_id',
-        'direction',
+        'target_item_id',
+        'status',
     ];
 
     public function fromUser()
@@ -23,13 +23,18 @@ class Swipe extends Model
         return $this->belongsTo(User::class, 'from_user_id');
     }
 
-    public function targetItem()
+    public function toUser()
     {
-        return $this->belongsTo(Item::class, 'target_item_id');
+        return $this->belongsTo(User::class, 'to_user_id');
     }
 
     public function offeredItem()
     {
         return $this->belongsTo(Item::class, 'offered_item_id');
+    }
+
+    public function targetItem()
+    {
+        return $this->belongsTo(Item::class, 'target_item_id');
     }
 }

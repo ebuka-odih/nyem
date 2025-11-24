@@ -7,6 +7,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SwipeController;
+use App\Http\Controllers\TradeOfferController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -36,6 +37,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/swipes', [SwipeController::class, 'store']);
     Route::get('/swipes/pending-requests', [SwipeController::class, 'pendingRequests']);
+
+    Route::get('/trade-offers/pending', [TradeOfferController::class, 'pending']);
+    Route::post('/trade-offers/{id}/respond', [TradeOfferController::class, 'respond']);
 
     Route::get('/matches', [MatchController::class, 'index']);
     Route::get('/matches/{match}', [MatchController::class, 'show']);

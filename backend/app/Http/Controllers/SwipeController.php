@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Item;
 use App\Models\Swipe;
+use App\Models\TradeOffer;
 use App\Models\UserMatch;
+use App\Models\UserConversation;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class SwipeController extends Controller
 {
@@ -14,230 +17,180 @@ class SwipeController extends Controller
         $data = $request->validate([
             'target_item_id' => 'required|exists:items,id',
             'direction' => 'required|in:left,right',
+            'offered_item_id' => 'required_if:direction,right|nullable|exists:items,id',
         ]);
 
         $user = $request->user();
-        $item = Item::with('user')->findOrFail($data['target_item_id']);
+        $targetItem = Item::with('user')->findOrFail($data['target_item_id']);
 
-        if (!$item->user_id || !$item->user) {
+        if (!$targetItem->user_id || !$targetItem->user) {
             return response()->json(['message' => 'Item owner not found'], 404);
         }
 
-        if ($item->user_id === $user->id) {
+        if ($targetItem->user_id === $user->id) {
             return response()->json(['message' => 'Cannot swipe on your own item'], 422);
         }
 
-        if ($this->isBlockedBetween($user, $item->user_id)) {
+        if ($this->isBlockedBetween($user, $targetItem->user_id)) {
             return response()->json(['message' => 'User blocked'], 403);
+        }
+
+        // For right swipes, validate that offered_item_id belongs to the user
+        if ($data['direction'] === 'right') {
+            if (empty($data['offered_item_id'])) {
+                return response()->json(['message' => 'offered_item_id is required for right swipes'], 422);
+            }
+
+            $offeredItem = Item::findOrFail($data['offered_item_id']);
+            if ($offeredItem->user_id !== $user->id) {
+                return response()->json(['message' => 'offered_item_id must belong to you'], 422);
+            }
+
+            if ($offeredItem->id === $targetItem->id) {
+                return response()->json(['message' => 'Cannot offer the same item you are swiping on'], 422);
+            }
         }
 
         \Log::info('Creating swipe', [
             'from_user_id' => $user->id,
-            'target_item_id' => $item->id,
-            'item_owner_id' => $item->user_id,
+            'target_item_id' => $targetItem->id,
+            'offered_item_id' => $data['offered_item_id'] ?? null,
+            'item_owner_id' => $targetItem->user_id,
             'direction' => $data['direction'],
         ]);
 
-        $swipe = Swipe::updateOrCreate(
-            [
-                'from_user_id' => $user->id,
-                'target_item_id' => $item->id,
-            ],
-            [
-                'direction' => $data['direction'],
-            ]
-        );
+        $match = null;
+        $matchCreated = false;
+        $tradeOffer = null;
+
+        DB::transaction(function () use ($user, $targetItem, $data, &$swipe, &$match, &$matchCreated, &$tradeOffer) {
+            // Check if there's an existing swipe (to handle direction changes)
+            $existingSwipe = Swipe::where('from_user_id', $user->id)
+                ->where('target_item_id', $targetItem->id)
+                ->first();
+
+            // If changing from right to left, decline any pending trade offers
+            if ($existingSwipe && $existingSwipe->direction === 'right' && $data['direction'] === 'left') {
+                TradeOffer::where('from_user_id', $user->id)
+                    ->where('target_item_id', $targetItem->id)
+                    ->where('status', 'pending')
+                    ->update(['status' => 'declined']);
+            }
+
+            // Create or update swipe
+            $swipe = Swipe::updateOrCreate(
+                [
+                    'from_user_id' => $user->id,
+                    'target_item_id' => $targetItem->id,
+                ],
+                [
+                    'direction' => $data['direction'],
+                    'offered_item_id' => $data['direction'] === 'right' ? $data['offered_item_id'] : null,
+                ]
+            );
+
+            if ($data['direction'] === 'right') {
+                // Create or update trade offer
+                $tradeOffer = TradeOffer::firstOrCreate(
+                    [
+                        'from_user_id' => $user->id,
+                        'to_user_id' => $targetItem->user_id,
+                        'offered_item_id' => $data['offered_item_id'],
+                        'target_item_id' => $targetItem->id,
+                    ],
+                    [
+                        'status' => 'pending',
+                    ]
+                );
+
+                // Check for reciprocal swipe
+                // User B must have swiped right on User A's offered_item
+                // AND User B's offered_item must be User A's target_item
+                $reciprocal = Swipe::where('from_user_id', $targetItem->user_id)
+                    ->where('target_item_id', $data['offered_item_id']) // User B swiped on User A's offered item
+                    ->where('offered_item_id', $targetItem->id) // User B offered User A's target item
+                    ->where('direction', 'right')
+                    ->first();
+
+                if ($reciprocal) {
+                    // Create match
+                    $userIds = [$user->id, $targetItem->user_id];
+                    sort($userIds);
+                    $firstUserId = $userIds[0];
+                    $secondUserId = $userIds[1];
+
+                    // Determine item IDs based on user order
+                    $firstItemId = $firstUserId === $user->id ? $data['offered_item_id'] : $targetItem->id;
+                    $secondItemId = $firstUserId === $user->id ? $targetItem->id : $data['offered_item_id'];
+
+                    // Get or create conversation
+                    $conversation = UserConversation::firstOrCreate(
+                        [
+                            'user1_id' => $firstUserId,
+                            'user2_id' => $secondUserId,
+                        ]
+                    );
+
+                    // Create match
+                    $match = UserMatch::firstOrCreate(
+                        [
+                            'user1_id' => $firstUserId,
+                            'user2_id' => $secondUserId,
+                            'item1_id' => $firstItemId,
+                            'item2_id' => $secondItemId,
+                        ],
+                        [
+                            'conversation_id' => $conversation->id,
+                        ]
+                    );
+
+                    $matchCreated = $match->wasRecentlyCreated;
+
+                    // Update trade offer status if match was created
+                    if ($matchCreated) {
+                        $tradeOffer->update(['status' => 'accepted']);
+                        
+                        // Also update the reciprocal trade offer if it exists
+                        $reciprocalTradeOffer = TradeOffer::where('from_user_id', $targetItem->user_id)
+                            ->where('to_user_id', $user->id)
+                            ->where('offered_item_id', $targetItem->id)
+                            ->where('target_item_id', $data['offered_item_id'])
+                            ->first();
+                        
+                        if ($reciprocalTradeOffer) {
+                            $reciprocalTradeOffer->update(['status' => 'accepted']);
+                        }
+                    }
+                }
+            }
+        });
 
         \Log::info('Swipe created/updated', [
             'swipe_id' => $swipe->id,
             'from_user_id' => $swipe->from_user_id,
             'target_item_id' => $swipe->target_item_id,
+            'offered_item_id' => $swipe->offered_item_id,
             'direction' => $swipe->direction,
+            'match_created' => $matchCreated,
         ]);
-
-        $match = null;
-        $matchCreated = false;
-
-        if ($data['direction'] === 'right') {
-            $userItemIds = $user->items()->pluck('id');
-            $reciprocal = Swipe::where('from_user_id', $item->user_id)
-                ->whereIn('target_item_id', $userItemIds)
-                ->where('direction', 'right')
-                ->latest()
-                ->first();
-
-            if ($reciprocal) {
-                // For UUIDs, use string comparison for consistent ordering
-                $userIds = [$user->id, $item->user_id];
-                sort($userIds);
-                $firstUserId = $userIds[0];
-                $secondUserId = $userIds[1];
-
-                $firstItemId = $firstUserId === $user->id ? $reciprocal->target_item_id : $item->id;
-                $secondItemId = $firstUserId === $user->id ? $item->id : $reciprocal->target_item_id;
-
-                $match = UserMatch::firstOrCreate([
-                    'user1_id' => $firstUserId,
-                    'user2_id' => $secondUserId,
-                    'item1_id' => $firstItemId,
-                    'item2_id' => $secondItemId,
-                ]);
-
-                $matchCreated = $match->wasRecentlyCreated;
-            }
-        }
 
         return response()->json([
             'swipe' => $swipe,
             'match' => $match,
             'match_created' => $matchCreated,
+            'match_id' => $match?->id,
         ]);
     }
 
     public function pendingRequests(Request $request)
     {
+        // This method is deprecated in favor of TradeOfferController@pending
+        // Keeping for backward compatibility but should redirect to new endpoint
         $user = $request->user();
         
-        // Get all items owned by the current user
-        $userItemIds = $user->items()->pluck('id');
-        
-        if ($userItemIds->isEmpty()) {
-            return response()->json([
-                'requests' => [],
-                'debug' => [
-                    'user_id' => $user->id,
-                    'user_items_count' => 0,
-                    'message' => 'User has no items, so no match requests can exist',
-                ],
-            ]);
-        }
-        
-        // Get all right swipes on user's items
-        $swipes = Swipe::whereIn('target_item_id', $userItemIds)
-            ->where('direction', 'right')
-            ->where('from_user_id', '!=', $user->id)
-            ->with(['fromUser', 'targetItem'])
-            ->latest()
-            ->get();
-        
-        // Get existing matches to mark matched users (but don't filter them out)
-        $existingMatches = UserMatch::forUser($user->id)->get();
-        $matchedUserIds = $existingMatches->map(function ($match) use ($user) {
-            return $match->otherUserId($user->id);
-        })->filter()->unique()->values();
-        
-        // Get items that the current user has already swiped on
-        $swipedItemIds = Swipe::where('from_user_id', $user->id)
-            ->pluck('target_item_id')
-            ->toArray();
-        
-        // Filter out swipes from blocked users and items already swiped on
-        $blockedUserIds = $this->blockedUserIds($user);
-        
-        $allSwipesCount = $swipes->count();
-        
-        $pendingRequests = $swipes->filter(function ($swipe) use ($blockedUserIds, $swipedItemIds) {
-            // Check if user exists (in case of deleted users)
-            if (!$swipe->fromUser || !$swipe->targetItem) {
-                return false;
-            }
-            
-            // Filter out blocked users
-            if (in_array($swipe->from_user_id, $blockedUserIds)) {
-                return false;
-            }
-            
-            // Filter out items that the current user has already swiped on
-            // (This prevents showing requests for items you've already responded to)
-            if (in_array($swipe->target_item_id, $swipedItemIds)) {
-                return false;
-            }
-            
-            return true;
-        })->map(function ($swipe) use ($user, $matchedUserIds) {
-            // Get the other user's items that the current user can swipe on
-            // Get items that haven't been swiped on yet by the current user
-            $userSwipedItemIds = Swipe::where('from_user_id', $user->id)
-                ->pluck('target_item_id')
-                ->toArray();
-            
-            $otherUserItems = Item::where('user_id', $swipe->from_user_id)
-                ->where('status', 'active')
-                ->whereNotIn('id', $userSwipedItemIds)
-                ->get()
-                ->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'title' => $item->title,
-                        'photos' => $item->photos,
-                        'condition' => $item->condition,
-                        'category' => $item->category,
-                        'looking_for' => $item->looking_for,
-                    ];
-                });
-            
-            // Check if this user is already matched
-            $isMatched = $matchedUserIds->contains($swipe->from_user_id);
-            
-            return [
-                'id' => $swipe->id,
-                'from_user' => [
-                    'id' => $swipe->fromUser->id,
-                    'username' => $swipe->fromUser->username,
-                    'profile_photo' => $swipe->fromUser->profile_photo,
-                    'city' => $swipe->fromUser->city,
-                ],
-                'target_item' => [
-                    'id' => $swipe->targetItem->id,
-                    'title' => $swipe->targetItem->title,
-                    'photos' => $swipe->targetItem->photos,
-                    'condition' => $swipe->targetItem->condition,
-                ],
-                'other_user_items' => $otherUserItems,
-                'is_matched' => $isMatched,
-                'created_at' => $swipe->created_at,
-            ];
-        })->values();
-        
-        // Always return debug info to help diagnose issues
-        $debugInfo = [
-            'user_id' => $user->id,
-            'username' => $user->username,
-            'user_items_count' => $userItemIds->count(),
-            'user_item_ids' => $userItemIds->toArray(),
-            'total_swipes_on_user_items' => $allSwipesCount,
-            'matched_user_ids' => $matchedUserIds->toArray(),
-            'blocked_user_ids' => $blockedUserIds,
-            'pending_requests_count' => $pendingRequests->count(),
-            'all_swipes_details' => $swipes->map(function ($swipe) {
-                return [
-                    'swipe_id' => $swipe->id,
-                    'from_user_id' => $swipe->from_user_id,
-                    'target_item_id' => $swipe->target_item_id,
-                    'direction' => $swipe->direction,
-                    'has_from_user' => $swipe->fromUser ? true : false,
-                    'has_target_item' => $swipe->targetItem ? true : false,
-                ];
-            })->toArray(),
-        ];
-        
-        // Also check all swipes in the database for debugging
-        $allSwipes = Swipe::with(['fromUser', 'targetItem'])->get()->map(function ($swipe) {
-            return [
-                'id' => $swipe->id,
-                'from_user_id' => $swipe->from_user_id,
-                'target_item_id' => $swipe->target_item_id,
-                'direction' => $swipe->direction,
-                'created_at' => $swipe->created_at,
-            ];
-        });
-
-        $debugInfo['all_swipes_in_database'] = $allSwipes->toArray();
-        $debugInfo['all_swipes_count'] = $allSwipes->count();
-
         return response()->json([
-            'requests' => $pendingRequests,
-            'debug' => $debugInfo,
+            'requests' => [],
+            'message' => 'This endpoint is deprecated. Use GET /trade-offers/pending instead.',
         ]);
     }
 }

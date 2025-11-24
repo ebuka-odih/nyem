@@ -6,17 +6,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
-class UserMatch extends Model
+class UserConversation extends Model
 {
-    /** @use HasFactory<\Database\Factories\UserMatchFactory> */
     use HasFactory, HasUuids;
 
     protected $fillable = [
         'user1_id',
         'user2_id',
-        'item1_id',
-        'item2_id',
-        'conversation_id',
     ];
 
     public function user1()
@@ -29,24 +25,9 @@ class UserMatch extends Model
         return $this->belongsTo(User::class, 'user2_id');
     }
 
-    public function item1()
+    public function matches()
     {
-        return $this->belongsTo(Item::class, 'item1_id');
-    }
-
-    public function item2()
-    {
-        return $this->belongsTo(Item::class, 'item2_id');
-    }
-
-    public function conversation()
-    {
-        return $this->belongsTo(UserConversation::class, 'conversation_id');
-    }
-
-    public function messages()
-    {
-        return $this->hasMany(Message::class, 'match_id');
+        return $this->hasMany(UserMatch::class, 'conversation_id');
     }
 
     public function scopeForUser($query, string $userId)
