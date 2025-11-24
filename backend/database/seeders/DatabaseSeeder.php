@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
         $secondary = User::factory()->create([
             'username' => 'tester',
             'phone' => '08000000001',
-            'city' => 'Abuja',
+            'city' => 'Lagos', // Same city as demo user for easier testing
             'password' => Hash::make('password'),
             'otp_verified_at' => now(),
         ]);

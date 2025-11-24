@@ -54,8 +54,23 @@ class ItemController extends Controller
             ->where('status', 'active')
             ->where('user_id', '!=', $user->id)
             ->whereNotIn('user_id', $blockedIds)
-            ->where('city', $user->city)
             ->latest();
+
+        // City filtering: case-insensitive comparison
+        // In development mode (local), allow bypassing city filter for testing via ?ignore_city=1
+        if (config('app.env') !== 'local' || !$request->boolean('ignore_city', false)) {
+            if ($user->city) {
+                // Use case-insensitive comparison using LOWER() for both sides
+                $userCity = trim($user->city);
+                $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
+            } else {
+                // If user has no city, only show items with no city or empty city
+                $query->where(function ($q) {
+                    $q->whereNull('city')
+                      ->orWhere('city', '');
+                });
+            }
+        }
 
         if ($request->filled('category')) {
             $query->where('category', $request->string('category'));
