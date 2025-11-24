@@ -120,35 +120,50 @@ class SwipeController extends Controller
             ->latest()
             ->get();
         
-        // Get existing matches to filter out already matched users
+        // Get existing matches to mark matched users (but don't filter them out)
         $existingMatches = UserMatch::forUser($user->id)->get();
         $matchedUserIds = $existingMatches->map(function ($match) use ($user) {
             return $match->otherUserId($user->id);
         })->filter()->unique()->values();
         
-        // Filter out swipes from users who are already matched or blocked
+        // Get items that the current user has already swiped on
+        $swipedItemIds = Swipe::where('from_user_id', $user->id)
+            ->pluck('target_item_id')
+            ->toArray();
+        
+        // Filter out swipes from blocked users and items already swiped on
         $blockedUserIds = $this->blockedUserIds($user);
         
         $allSwipesCount = $swipes->count();
         
-        $pendingRequests = $swipes->filter(function ($swipe) use ($matchedUserIds, $blockedUserIds) {
+        $pendingRequests = $swipes->filter(function ($swipe) use ($blockedUserIds, $swipedItemIds) {
             // Check if user exists (in case of deleted users)
             if (!$swipe->fromUser || !$swipe->targetItem) {
                 return false;
             }
             
-            return !$matchedUserIds->contains($swipe->from_user_id) 
-                && !in_array($swipe->from_user_id, $blockedUserIds);
-        })->map(function ($swipe) use ($user) {
+            // Filter out blocked users
+            if (in_array($swipe->from_user_id, $blockedUserIds)) {
+                return false;
+            }
+            
+            // Filter out items that the current user has already swiped on
+            // (This prevents showing requests for items you've already responded to)
+            if (in_array($swipe->target_item_id, $swipedItemIds)) {
+                return false;
+            }
+            
+            return true;
+        })->map(function ($swipe) use ($user, $matchedUserIds) {
             // Get the other user's items that the current user can swipe on
             // Get items that haven't been swiped on yet by the current user
-            $swipedItemIds = Swipe::where('from_user_id', $user->id)
+            $userSwipedItemIds = Swipe::where('from_user_id', $user->id)
                 ->pluck('target_item_id')
                 ->toArray();
             
             $otherUserItems = Item::where('user_id', $swipe->from_user_id)
                 ->where('status', 'active')
-                ->whereNotIn('id', $swipedItemIds)
+                ->whereNotIn('id', $userSwipedItemIds)
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -160,6 +175,9 @@ class SwipeController extends Controller
                         'looking_for' => $item->looking_for,
                     ];
                 });
+            
+            // Check if this user is already matched
+            $isMatched = $matchedUserIds->contains($swipe->from_user_id);
             
             return [
                 'id' => $swipe->id,
@@ -176,6 +194,7 @@ class SwipeController extends Controller
                     'condition' => $swipe->targetItem->condition,
                 ],
                 'other_user_items' => $otherUserItems,
+                'is_matched' => $isMatched,
                 'created_at' => $swipe->created_at,
             ];
         })->values();
