@@ -43,7 +43,7 @@ class UserMatch extends Model
         return $this->hasMany(Message::class, 'match_id');
     }
 
-    public function scopeForUser($query, int $userId)
+    public function scopeForUser($query, string $userId)
     {
         return $query->where(function ($q) use ($userId) {
             $q->where('user1_id', $userId)
@@ -51,7 +51,7 @@ class UserMatch extends Model
         });
     }
 
-    public function otherUserId(int $userId): ?int
+    public function otherUserId(string $userId): string|null
     {
         if ($this->user1_id === $userId) {
             return $this->user2_id;

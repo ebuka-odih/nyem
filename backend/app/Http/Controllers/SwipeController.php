@@ -19,6 +19,10 @@ class SwipeController extends Controller
         $user = $request->user();
         $item = Item::with('user')->findOrFail($data['target_item_id']);
 
+        if (!$item->user_id || !$item->user) {
+            return response()->json(['message' => 'Item owner not found'], 404);
+        }
+
         if ($item->user_id === $user->id) {
             return response()->json(['message' => 'Cannot swipe on your own item'], 422);
         }
@@ -49,8 +53,11 @@ class SwipeController extends Controller
                 ->first();
 
             if ($reciprocal) {
-                $firstUserId = min($user->id, $item->user_id);
-                $secondUserId = max($user->id, $item->user_id);
+                // For UUIDs, use string comparison for consistent ordering
+                $userIds = [$user->id, $item->user_id];
+                sort($userIds);
+                $firstUserId = $userIds[0];
+                $secondUserId = $userIds[1];
 
                 $firstItemId = $firstUserId === $user->id ? $reciprocal->target_item_id : $item->id;
                 $secondItemId = $firstUserId === $user->id ? $item->id : $reciprocal->target_item_id;
