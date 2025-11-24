@@ -57,19 +57,29 @@ class ItemController extends Controller
             ->latest();
 
         // City filtering: case-insensitive comparison
+        // Allow city filter via query parameter, or use user's city as default
         // In development mode (local), allow bypassing city filter for testing via ?ignore_city=1
         if (config('app.env') !== 'local' || !$request->boolean('ignore_city', false)) {
-            if ($user->city) {
-                // Use case-insensitive comparison using LOWER() for both sides
-                $userCity = trim($user->city);
-                $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
-            } else {
-                // If user has no city, only show items with no city or empty city
-                $query->where(function ($q) {
-                    $q->whereNull('city')
-                      ->orWhere('city', '');
-                });
+            $filterCity = $request->string('city');
+            
+            if ($filterCity && strtolower(trim($filterCity)) !== 'all') {
+                // Use provided city for filtering
+                $cityFilter = trim($filterCity);
+                $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$cityFilter]);
+            } elseif (!$filterCity) {
+                // No city parameter provided, use user's city as default
+                if ($user->city) {
+                    $userCity = trim($user->city);
+                    $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
+                } else {
+                    // If user has no city, only show items with no city or empty city
+                    $query->where(function ($q) {
+                        $q->whereNull('city')
+                          ->orWhere('city', '');
+                    });
+                }
             }
+            // If city='all', don't apply city filter (show all cities)
         }
 
         if ($request->filled('category')) {
