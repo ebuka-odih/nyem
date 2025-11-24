@@ -31,6 +31,13 @@ class SwipeController extends Controller
             return response()->json(['message' => 'User blocked'], 403);
         }
 
+        \Log::info('Creating swipe', [
+            'from_user_id' => $user->id,
+            'target_item_id' => $item->id,
+            'item_owner_id' => $item->user_id,
+            'direction' => $data['direction'],
+        ]);
+
         $swipe = Swipe::updateOrCreate(
             [
                 'from_user_id' => $user->id,
@@ -40,6 +47,13 @@ class SwipeController extends Controller
                 'direction' => $data['direction'],
             ]
         );
+
+        \Log::info('Swipe created/updated', [
+            'swipe_id' => $swipe->id,
+            'from_user_id' => $swipe->from_user_id,
+            'target_item_id' => $swipe->target_item_id,
+            'direction' => $swipe->direction,
+        ]);
 
         $match = null;
         $matchCreated = false;
@@ -188,6 +202,20 @@ class SwipeController extends Controller
             })->toArray(),
         ];
         
+        // Also check all swipes in the database for debugging
+        $allSwipes = Swipe::with(['fromUser', 'targetItem'])->get()->map(function ($swipe) {
+            return [
+                'id' => $swipe->id,
+                'from_user_id' => $swipe->from_user_id,
+                'target_item_id' => $swipe->target_item_id,
+                'direction' => $swipe->direction,
+                'created_at' => $swipe->created_at,
+            ];
+        });
+
+        $debugInfo['all_swipes_in_database'] = $allSwipes->toArray();
+        $debugInfo['all_swipes_count'] = $allSwipes->count();
+
         return response()->json([
             'requests' => $pendingRequests,
             'debug' => $debugInfo,
