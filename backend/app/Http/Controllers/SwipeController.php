@@ -88,7 +88,14 @@ class SwipeController extends Controller
         $userItemIds = $user->items()->pluck('id');
         
         if ($userItemIds->isEmpty()) {
-            return response()->json(['requests' => []]);
+            return response()->json([
+                'requests' => [],
+                'debug' => [
+                    'user_id' => $user->id,
+                    'user_items_count' => 0,
+                    'message' => 'User has no items, so no match requests can exist',
+                ],
+            ]);
         }
         
         // Get all right swipes on user's items
@@ -108,18 +115,26 @@ class SwipeController extends Controller
         // Filter out swipes from users who are already matched or blocked
         $blockedUserIds = $this->blockedUserIds($user);
         
+        $allSwipesCount = $swipes->count();
+        
         $pendingRequests = $swipes->filter(function ($swipe) use ($matchedUserIds, $blockedUserIds) {
+            // Check if user exists (in case of deleted users)
+            if (!$swipe->fromUser || !$swipe->targetItem) {
+                return false;
+            }
+            
             return !$matchedUserIds->contains($swipe->from_user_id) 
                 && !in_array($swipe->from_user_id, $blockedUserIds);
         })->map(function ($swipe) use ($user) {
             // Get the other user's items that the current user can swipe on
+            // Get items that haven't been swiped on yet by the current user
+            $swipedItemIds = Swipe::where('from_user_id', $user->id)
+                ->pluck('target_item_id')
+                ->toArray();
+            
             $otherUserItems = Item::where('user_id', $swipe->from_user_id)
                 ->where('status', 'active')
-                ->whereNotIn('id', function ($query) use ($user) {
-                    $query->select('target_item_id')
-                        ->from('swipes')
-                        ->where('from_user_id', $user->id);
-                })
+                ->whereNotIn('id', $swipedItemIds)
                 ->get()
                 ->map(function ($item) {
                     return [
@@ -149,11 +164,18 @@ class SwipeController extends Controller
                 'other_user_items' => $otherUserItems,
                 'created_at' => $swipe->created_at,
             ];
-        })->filter(function ($request) {
-            // Only include requests where there are items to swipe on
-            return count($request['other_user_items']) > 0;
         })->values();
         
-        return response()->json(['requests' => $pendingRequests]);
+        return response()->json([
+            'requests' => $pendingRequests,
+            'debug' => $request->has('debug') ? [
+                'user_id' => $user->id,
+                'user_items_count' => $userItemIds->count(),
+                'total_swipes_on_user_items' => $allSwipesCount,
+                'matched_user_ids' => $matchedUserIds->toArray(),
+                'blocked_user_ids' => $blockedUserIds,
+                'pending_requests_count' => $pendingRequests->count(),
+            ] : null,
+        ]);
     }
 }
