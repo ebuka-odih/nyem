@@ -13,14 +13,14 @@ use Illuminate\Support\Facades\Broadcast;
 |
 */
 
-// Private user channel: private-user.{user_id}
-Broadcast::channel('private-user.{userId}', function ($user, $userId) {
+// Private user channel: user.{userId}
+Broadcast::channel('user.{userId}', function ($user, $userId) {
     // Users can only subscribe to their own channel
     return (string) $user->id === (string) $userId;
 });
 
-// Private conversation channel: private-conversation.{conversation_id}
-Broadcast::channel('private-conversation.{conversationId}', function ($user, $conversationId) {
+// Private conversation channel: conversation.{conversationId}
+Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
     // Check if user is part of the conversation
     $conversation = \App\Models\UserConversation::find($conversationId);
     

@@ -150,3 +150,5 @@ The WebSocket connection uses the path `/app/{app_key}`. Make sure:
 4. ⚠️ **Configure Nginx reverse proxy** (if using Option B)
 5. ⚠️ **Test real-time messaging** between two users
 
+
+

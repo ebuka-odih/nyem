@@ -28,14 +28,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
 });
 
-// Broadcasting authentication endpoint for WebSocket connections
-// This endpoint is used by WebSocket clients to authenticate private channel subscriptions
-Route::middleware('auth:sanctum')->post('/broadcasting/auth', function (Request $request) {
-    // Laravel's broadcasting system will automatically use routes/channels.php
-    // for channel authorization. This endpoint just needs to authenticate the user.
-    // The actual channel authorization happens via Broadcast::channel() definitions.
-    return \Illuminate\Support\Facades\Broadcast::auth($request);
-});
+
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile/me', [ProfileController::class, 'me']);

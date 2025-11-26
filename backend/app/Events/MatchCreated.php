@@ -37,8 +37,8 @@ class MatchCreated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('private-user.'.$this->user1Id),
-            new PrivateChannel('private-user.'.$this->user2Id),
+            new PrivateChannel('user.'.$this->user1Id),
+            new PrivateChannel('user.'.$this->user2Id),
         ];
     }
 
