@@ -93,6 +93,22 @@ class ItemController extends Controller
             
             // Calculate distance if both users have location
             if ($user->hasLocation() && $item->user && $item->user->hasLocation()) {
+                // Debug: Log coordinates being used
+                \Log::info('Distance calculation', [
+                    'current_user' => [
+                        'id' => $user->id,
+                        'username' => $user->username,
+                        'lat' => $user->latitude,
+                        'lon' => $user->longitude,
+                    ],
+                    'item_owner' => [
+                        'id' => $item->user->id,
+                        'username' => $item->user->username,
+                        'lat' => $item->user->latitude,
+                        'lon' => $item->user->longitude,
+                    ],
+                ]);
+                
                 $distanceKm = $this->locationService->calculateDistance(
                     $user->latitude,
                     $user->longitude,
@@ -103,8 +119,22 @@ class ItemController extends Controller
                 $distanceMiles = $this->locationService->kmToMiles($distanceKm);
                 
                 // Add distance to item data
-                $itemData['distance_km'] = round($distanceKm, 1);
-                $itemData['distance_miles'] = round($distanceMiles, 1);
+                // For very small distances (< 10m), keep precision for display
+                if ($distanceKm < 0.01) {
+                    // Distance less than 10 meters - keep more precision
+                    $itemData['distance_km'] = round($distanceKm, 3);
+                    $itemData['distance_miles'] = round($distanceMiles, 4);
+                } else {
+                    // Normal distances - 1 decimal place is fine
+                    $itemData['distance_km'] = round($distanceKm, 1);
+                    $itemData['distance_miles'] = round($distanceMiles, 1);
+                }
+                
+                // Log calculated distance
+                \Log::info('Calculated distance', [
+                    'distance_km' => $itemData['distance_km'],
+                    'item_owner' => $item->user->username,
+                ]);
             } else {
                 // No distance available
                 $itemData['distance_km'] = null;
