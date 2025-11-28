@@ -181,12 +181,32 @@ See `LOCATION_IMPLEMENTATION.md` for detailed examples including:
 - Check backend API logs
 - Test API endpoint directly with curl
 
+## Automatic Location Request
+
+✅ **Location is automatically requested when:**
+- User logs in or signs up
+- App launches with authenticated user
+- User's location is older than 1 hour
+
+The `LocationProvider` in `App.tsx` handles this automatically - no additional code needed!
+
+## Handling Permission Denial
+
+If a user denies location permission:
+
+1. ✅ App continues to work (no blocking)
+2. ✅ Shows fallback UI (all users instead of nearby)
+3. ✅ User can retry enabling location later
+4. ✅ City-based location can be used as fallback
+
+See `LOCATION_PERMISSION_HANDLING.md` for detailed guide on permission handling.
+
 ## Next Steps
 
-1. Integrate location updates on app launch
-2. Add live location tracking for active users
-3. Update feed to show distance to items/users
-4. Add location-based filtering to search
+1. ✅ Location automatically requested on login (already implemented)
+2. ✅ Live location tracking active (already implemented)
+3. Update feed to show distance to items/users (use `useLocation` hook)
+4. Add location-based filtering to search (use `hasBackendLocation`)
 
 See `LOCATION_IMPLEMENTATION.md` for complete documentation.
 
