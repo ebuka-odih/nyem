@@ -53,13 +53,15 @@ class ItemController extends Controller
         // Allow city filter via query parameter, or use user's city as default
         // In development mode (local), allow bypassing city filter for testing via ?ignore_city=1
         if (config('app.env') !== 'local' || !$request->boolean('ignore_city', false)) {
-            $filterCity = $request->string('city');
-            
-            if ($filterCity && strtolower(trim($filterCity)) !== 'all') {
-                // Use provided city for filtering
-                $cityFilter = trim($filterCity);
-                $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$cityFilter]);
-            } elseif (!$filterCity) {
+            if ($request->filled('city')) {
+                $filterCity = trim((string) $request->string('city'));
+                
+                if (strtolower($filterCity) !== 'all') {
+                    // Use provided city for filtering (case-insensitive)
+                    $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity]);
+                }
+                // If city='all', don't apply city filter (show all cities)
+            } else {
                 // No city parameter provided, use user's city as default
                 if ($user->city) {
                     $userCity = trim($user->city);
@@ -72,7 +74,6 @@ class ItemController extends Controller
                     });
                 }
             }
-            // If city='all', don't apply city filter (show all cities)
         }
 
         if ($request->filled('category')) {

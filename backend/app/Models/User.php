@@ -24,6 +24,9 @@ class User extends Authenticatable
         'role',
         'otp_verified_at',
         'password',
+        'latitude',
+        'longitude',
+        'location_updated_at',
     ];
 
     protected $hidden = [
@@ -36,7 +39,10 @@ class User extends Authenticatable
         return [
             'otp_verified_at' => 'datetime',
             'username_updated_at' => 'datetime',
+            'location_updated_at' => 'datetime',
             'password' => 'hashed',
+            'latitude' => 'decimal:7',
+            'longitude' => 'decimal:7',
         ];
     }
 
@@ -48,5 +54,73 @@ class User extends Authenticatable
     public function swipes()
     {
         return $this->hasMany(Swipe::class, 'from_user_id');
+    }
+
+    /**
+     * Check if user has location data
+     * 
+     * @return bool
+     */
+    public function hasLocation(): bool
+    {
+        return !is_null($this->latitude) && !is_null($this->longitude);
+    }
+
+    /**
+     * Scope to filter users with location data
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWithLocation($query)
+    {
+        return $query->whereNotNull('latitude')
+                    ->whereNotNull('longitude');
+    }
+
+    /**
+     * Scope to find users within a radius (in kilometers) from given coordinates
+     * Uses MySQL Haversine formula for accurate distance calculation
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param float $latitude Latitude of the center point
+     * @param float $longitude Longitude of the center point
+     * @param float $radiusKm Radius in kilometers
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWithinRadius($query, float $latitude, float $longitude, float $radiusKm)
+    {
+        // Haversine formula in MySQL
+        // 6371 is the Earth's radius in kilometers
+        // Returns distance in kilometers
+        $haversine = "(
+            6371 * acos(
+                cos(radians(?))
+                * cos(radians(latitude))
+                * cos(radians(longitude) - radians(?))
+                + sin(radians(?))
+                * sin(radians(latitude))
+            )
+        )";
+
+        return $query->selectRaw(
+            "*, {$haversine} AS distance",
+            [$latitude, $longitude, $latitude]
+        )
+        ->having('distance', '<=', $radiusKm)
+        ->orderBy('distance', 'asc');
+    }
+
+    /**
+     * Scope to exclude specific user IDs (e.g., current user)
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param array|string $userIds
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeExcludeUsers($query, $userIds)
+    {
+        $userIds = is_array($userIds) ? $userIds : [$userIds];
+        return $query->whereNotIn('id', $userIds);
     }
 }

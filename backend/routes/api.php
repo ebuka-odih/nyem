@@ -4,6 +4,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryLocationController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MatchController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ModerationController;
@@ -35,6 +36,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile/update', [ProfileController::class, 'update']);
     Route::put('/profile/update-password', [ProfileController::class, 'updatePassword']);
 
+    // Location endpoints
+    // Rate limiting is handled within the controller
+    Route::prefix('location')->group(function () {
+        Route::post('/update', [LocationController::class, 'update']);
+        Route::get('/nearby', [LocationController::class, 'nearby']);
+        Route::get('/status', [LocationController::class, 'status']);
+    });
 
     Route::post('/items', [ItemController::class, 'store']);
     Route::get('/items/feed', [ItemController::class, 'feed']);
