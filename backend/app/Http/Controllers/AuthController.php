@@ -4,32 +4,81 @@ namespace App\Http\Controllers;
 
 use App\Models\OtpCode;
 use App\Models\User;
+use App\Services\TwilioService;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    protected $twilioService;
+
+    public function __construct()
+    {
+        // Initialize TwilioService only if credentials are configured
+        try {
+            $this->twilioService = app(TwilioService::class);
+        } catch (\Exception $e) {
+            // Twilio not configured, will handle in sendOtp method
+            $this->twilioService = null;
+        }
+    }
+
+    /**
+     * Send OTP code to user's phone number via SMS
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function sendOtp(Request $request)
     {
         $data = $request->validate([
             'phone' => 'required|string|max:20',
         ]);
 
+        // Generate 6-digit OTP code
         $code = (string) random_int(100000, 999999);
         $expiry = now()->addMinutes(5);
 
+        // Store OTP in database
         OtpCode::create([
             'phone' => $data['phone'],
             'code' => $code,
             'expires_at' => $expiry,
         ]);
 
+        // Send OTP via Twilio SMS if configured
+        if ($this->twilioService) {
+            $smsResult = $this->twilioService->sendOtpCode($data['phone'], $code);
+
+            if (!$smsResult['success']) {
+                Log::warning('Failed to send OTP via SMS', [
+                    'phone' => $data['phone'],
+                    'error' => $smsResult['message'],
+                ]);
+
+                // Still return success to prevent phone number enumeration
+                // In production, you might want to handle this differently
+                return response()->json([
+                    'message' => 'OTP code generated. Please check your phone.',
+                    'expires_at' => $expiry,
+                    // Include debug code only in non-production for testing
+                    'debug_code' => app()->environment('local', 'testing') ? $code : null,
+                ], 200);
+            }
+        } else {
+            Log::warning('Twilio not configured, OTP not sent via SMS', [
+                'phone' => $data['phone'],
+            ]);
+        }
+
         return response()->json([
-            'message' => 'OTP sent',
-            'debug_code' => $code, // return code so mobile dev/testing can proceed
+            'message' => 'OTP sent successfully',
             'expires_at' => $expiry,
-        ]);
+            // Include debug code only in non-production for testing
+            'debug_code' => app()->environment('local', 'testing') ? $code : null,
+        ], 200);
     }
 
     public function verifyOtp(Request $request)
