@@ -4,11 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Item;
+use App\Services\LocationService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
 {
+    public function __construct(
+        protected LocationService $locationService
+    ) {}
+
     private function getCategoryNames(): array
     {
         return Category::pluck('name')->toArray();
@@ -82,6 +87,40 @@ class ItemController extends Controller
 
         $items = $query->get();
 
+        // Calculate distance for each item if current user has location
+        if ($user->hasLocation()) {
+            $items = $items->map(function ($item) use ($user) {
+                // Check if item owner has location
+                if ($item->user && $item->user->hasLocation()) {
+                    $distanceKm = $this->locationService->calculateDistance(
+                        $user->latitude,
+                        $user->longitude,
+                        $item->user->latitude,
+                        $item->user->longitude,
+                        'km'
+                    );
+                    $distanceMiles = $this->locationService->kmToMiles($distanceKm);
+                    
+                    // Add distance to item
+                    $item->distance_km = round($distanceKm, 1);
+                    $item->distance_miles = round($distanceMiles, 1);
+                } else {
+                    // Owner doesn't have location
+                    $item->distance_km = null;
+                    $item->distance_miles = null;
+                }
+                
+                return $item;
+            });
+        } else {
+            // Current user doesn't have location, set distance to null
+            $items = $items->map(function ($item) {
+                $item->distance_km = null;
+                $item->distance_miles = null;
+                return $item;
+            });
+        }
+
         return response()->json(['items' => $items]);
     }
 
@@ -91,7 +130,28 @@ class ItemController extends Controller
             return response()->json(['message' => 'User blocked'], 403);
         }
 
-        return response()->json(['item' => $item->load('user')]);
+        $item->load('user');
+        
+        // Calculate distance if both users have location
+        $user = $request->user();
+        if ($user->hasLocation() && $item->user && $item->user->hasLocation()) {
+            $distanceKm = $this->locationService->calculateDistance(
+                $user->latitude,
+                $user->longitude,
+                $item->user->latitude,
+                $item->user->longitude,
+                'km'
+            );
+            $distanceMiles = $this->locationService->kmToMiles($distanceKm);
+            
+            $item->distance_km = round($distanceKm, 1);
+            $item->distance_miles = round($distanceMiles, 1);
+        } else {
+            $item->distance_km = null;
+            $item->distance_miles = null;
+        }
+
+        return response()->json(['item' => $item]);
     }
 
     public function update(Request $request, Item $item)
