@@ -88,40 +88,33 @@ class ItemController extends Controller
         $items = $query->get();
 
         // Calculate distance for each item if current user has location
-        if ($user->hasLocation()) {
-            $items = $items->map(function ($item) use ($user) {
-                // Check if item owner has location
-                if ($item->user && $item->user->hasLocation()) {
-                    $distanceKm = $this->locationService->calculateDistance(
-                        $user->latitude,
-                        $user->longitude,
-                        $item->user->latitude,
-                        $item->user->longitude,
-                        'km'
-                    );
-                    $distanceMiles = $this->locationService->kmToMiles($distanceKm);
-                    
-                    // Add distance to item
-                    $item->distance_km = round($distanceKm, 1);
-                    $item->distance_miles = round($distanceMiles, 1);
-                } else {
-                    // Owner doesn't have location
-                    $item->distance_km = null;
-                    $item->distance_miles = null;
-                }
+        $itemsArray = $items->map(function ($item) use ($user) {
+            $itemData = $item->toArray();
+            
+            // Calculate distance if both users have location
+            if ($user->hasLocation() && $item->user && $item->user->hasLocation()) {
+                $distanceKm = $this->locationService->calculateDistance(
+                    $user->latitude,
+                    $user->longitude,
+                    $item->user->latitude,
+                    $item->user->longitude,
+                    'km'
+                );
+                $distanceMiles = $this->locationService->kmToMiles($distanceKm);
                 
-                return $item;
-            });
-        } else {
-            // Current user doesn't have location, set distance to null
-            $items = $items->map(function ($item) {
-                $item->distance_km = null;
-                $item->distance_miles = null;
-                return $item;
-            });
-        }
+                // Add distance to item data
+                $itemData['distance_km'] = round($distanceKm, 1);
+                $itemData['distance_miles'] = round($distanceMiles, 1);
+            } else {
+                // No distance available
+                $itemData['distance_km'] = null;
+                $itemData['distance_miles'] = null;
+            }
+            
+            return $itemData;
+        });
 
-        return response()->json(['items' => $items]);
+        return response()->json(['items' => $itemsArray]);
     }
 
     public function show(Request $request, Item $item)
