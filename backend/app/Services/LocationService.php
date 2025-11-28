@@ -74,7 +74,13 @@ class LocationService
         $radius = $unit === 'miles' ? self::EARTH_RADIUS_MILES : self::EARTH_RADIUS_KM;
         $distance = $radius * $c;
 
-        return round($distance, 2); // Round to 2 decimal places
+        // For very small distances (< 0.01km = 10m), keep more precision
+        // Otherwise round to 2 decimal places
+        if ($distance < 0.01) {
+            return round($distance, 4); // Keep 4 decimals for distances < 10m (0.0001km = 0.1m precision)
+        }
+        
+        return round($distance, 2); // Round to 2 decimal places for larger distances
     }
 
     /**

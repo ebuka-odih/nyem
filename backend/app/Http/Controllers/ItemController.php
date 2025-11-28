@@ -119,11 +119,19 @@ class ItemController extends Controller
                 $distanceMiles = $this->locationService->kmToMiles($distanceKm);
                 
                 // Add distance to item data
-                // For very small distances (< 10m), keep precision for display
-                if ($distanceKm < 0.01) {
-                    // Distance less than 10 meters - keep more precision
-                    $itemData['distance_km'] = round($distanceKm, 3);
-                    $itemData['distance_miles'] = round($distanceMiles, 4);
+                // Preserve precision based on distance size
+                if ($distanceKm < 0.001) {
+                    // Distance less than 1 meter - keep full precision
+                    $itemData['distance_km'] = $distanceKm; // Don't round, keep as is
+                    $itemData['distance_miles'] = $distanceMiles;
+                } elseif ($distanceKm < 0.1) {
+                    // Distance less than 100 meters - keep 4 decimal places (0.1m precision)
+                    $itemData['distance_km'] = round($distanceKm, 4);
+                    $itemData['distance_miles'] = round($distanceMiles, 5);
+                } elseif ($distanceKm < 1) {
+                    // Distance less than 1 km - keep 2 decimal places (10m precision)
+                    $itemData['distance_km'] = round($distanceKm, 2);
+                    $itemData['distance_miles'] = round($distanceMiles, 3);
                 } else {
                     // Normal distances - 1 decimal place is fine
                     $itemData['distance_km'] = round($distanceKm, 1);
