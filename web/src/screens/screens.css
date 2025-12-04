@@ -1,0 +1,433 @@
+/* Base screen layout - extracted from mobile app */
+.screen-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Gradient backgrounds - from GradientLayout.tsx */
+.gradient-header {
+    background: linear-gradient(135deg, #990033 0%, #330033 100%);
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 0;
+}
+
+/* Welcome Screen - 35% */
+.welcome-gradient {
+    height: 35vh;
+}
+
+/* Login/OTP - 25% */
+.auth-gradient {
+    height: 25vh;
+}
+
+/* Content section */
+.content-section {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Header container */
+.header-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 30px 20px;
+    min-height: 280px;
+}
+
+.welcome-header {
+    min-height: 280px;
+}
+
+.auth-header {
+    min-height: 200px;
+    align-items: flex-start;
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+/* Logo circle - from WelcomeScreen */
+.logo-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
+    backdrop-filter: blur(4px);
+}
+
+.logo-text {
+    font-size: 48px;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.app-name {
+    font-size: 42px;
+    font-weight: 800;
+    color: #FFFFFF;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    line-height: 1.1;
+}
+
+.app-tagline {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+/* White card container - from mobile screens */
+.card-container {
+    flex: 1;
+    background-color: #FFFFFF;
+    border-top-left-radius: 40px;
+    border-top-right-radius: 40px;
+    padding: 40px 30px 30px;
+    display: flex;
+    flex-direction: column;
+    margin-top: -20px;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Tagline section */
+.tagline-container {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.tagline {
+    font-size: 28px;
+    font-weight: 700;
+    color: #222222;
+    margin-bottom: 12px;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: #555555;
+    line-height: 24px;
+    padding: 0 20px;
+}
+
+/* Features container - from WelcomeScreen */
+.features-container {
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 10px;
+}
+
+.feature-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 22px;
+    background-color: #F0F0F0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 16px;
+    flex-shrink: 0;
+}
+
+.feature-emoji {
+    font-size: 20px;
+}
+
+.feature-text {
+    font-size: 16px;
+    color: #222222;
+    font-weight: 500;
+}
+
+/* Button container */
+.button-container {
+    margin-top: auto;
+}
+
+/* Continue button - from WelcomeScreen */
+.continue-button {
+    background-color: #990033;
+    padding: 18px;
+    border-radius: 30px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(153, 0, 51, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    width: 100%;
+}
+
+.continue-button:hover {
+    box-shadow: 0 6px 12px rgba(153, 0, 51, 0.4);
+    transform: translateY(-1px);
+}
+
+.continue-button:active {
+    transform: translateY(0);
+}
+
+.continue-button-text {
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+/* Terms container */
+.terms-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    margin-top: 16px;
+    padding: 0 10px;
+}
+
+.terms-text {
+    font-size: 12px;
+    color: #555555;
+    line-height: 18px;
+}
+
+.terms-link {
+    font-size: 12px;
+    color: #990033;
+    font-weight: 600;
+    text-decoration: underline;
+    line-height: 18px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* Back button - from GradientLayout */
+.back-button {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.back-button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Header titles - from LoginScreen */
+.header-title {
+    font-size: 32px;
+    font-weight: 700;
+    color: #FFFFFF;
+    line-height: 40px;
+}
+
+/* Input styling - from LoginScreen and PhoneLoginScreen */
+.input-group {
+    margin-bottom: 24px;
+}
+
+.input-label {
+    font-size: 14px;
+    color: #990033;
+    font-weight: 600;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.input-wrapper {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #E0E0E0;
+    padding-bottom: 8px;
+}
+
+.text-input {
+    flex: 1;
+    font-size: 16px;
+    color: #222222;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+    outline: none;
+}
+
+.text-input::placeholder {
+    color: #999999;
+}
+
+/* Phone input specific */
+.phone-input-wrapper {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #E0E0E0;
+    padding-bottom: 8px;
+}
+
+.country-code {
+    padding-right: 10px;
+    border-right: 1px solid #E0E0E0;
+    margin-right: 10px;
+}
+
+.country-code-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: #222222;
+}
+
+.phone-input {
+    flex: 1;
+    font-size: 18px;
+    color: #222222;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
+    outline: none;
+}
+
+/* Links and buttons */
+.forgot-password {
+    align-self: flex-end;
+    margin-bottom: 40px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+}
+
+.forgot-password-text {
+    color: #555555;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.primary-button {
+    background-color: #990033;
+    padding: 18px;
+    border-radius: 30px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(153, 0, 51, 0.3);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.primary-button:hover {
+    box-shadow: 0 6px 12px rgba(153, 0, 51, 0.4);
+}
+
+.primary-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.primary-button-text {
+    color: #FFFFFF;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+/* Footer text */
+.footer-container {
+    display: flex;
+    justify-content: center;
+    margin-top: auto;
+    margin-bottom: 40px;
+}
+
+.footer-text {
+    color: #555555;
+    font-size: 14px;
+}
+
+.footer-link {
+    color: #990033;
+    font-size: 14px;
+    font-weight: 700;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+}
+
+/* OTP specific */
+.otp-container {
+    display: flex;
+    justify-content: center;
+    padding-top: 32px;
+    flex: 1;
+}
+
+.instruction-text {
+    font-size: 16px;
+    color: #555555;
+    margin-bottom: 30px;
+}
+
+.info-text {
+    font-size: 13px;
+    color: #555555;
+    text-align: center;
+    margin-top: 20px;
+    opacity: 0.7;
+}
+
+/* Utility */
+.flex-1 {
+    flex: 1;
+}
+
+.mt-auto {
+    margin-top: auto;
+}
+
+/* Remove default input styling */
+input {
+    font-family: inherit;
+}
+
+button {
+    font-family: inherit;
+}
+
+/* Smooth font rendering */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}

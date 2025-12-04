@@ -68,6 +68,20 @@ class MessageController extends Controller
         // The frontend will handle displaying it appropriately
         broadcast(new MessageSent($message));
 
+        // CUSTOM WEBSOCKET BROADCAST
+        try {
+            \Illuminate\Support\Facades\Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
+                'type' => 'message.sent',
+                'receivers' => [$receiverId, $user->id],
+                'data' => [
+                    'message' => $message->load(['sender', 'receiver']),
+                    'conversation_id' => $conversation->id
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Custom WebSocket broadcast failed: ' . $e->getMessage());
+        }
+
         return response()->json(['message' => $message->load(['sender', 'receiver'])], 201);
     }
 }

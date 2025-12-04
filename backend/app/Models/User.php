@@ -56,6 +56,16 @@ class User extends Authenticatable
         return $this->hasMany(Swipe::class, 'from_user_id');
     }
 
+    public function matchesAsUser1()
+    {
+        return $this->hasMany(UserMatch::class, 'user1_id');
+    }
+
+    public function matchesAsUser2()
+    {
+        return $this->hasMany(UserMatch::class, 'user2_id');
+    }
+
     /**
      * Check if user has location data
      * 

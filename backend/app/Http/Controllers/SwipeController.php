@@ -171,9 +171,33 @@ class SwipeController extends Controller
                             // Broadcast match created event to both users
                             broadcast(new MatchCreated($match));
 
+                            // CUSTOM WEBSOCKET BROADCAST - Match Created
+                            try {
+                                $matchEvent = new MatchCreated($match);
+                                \Illuminate\Support\Facades\Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
+                                    'type' => 'match.created',
+                                    'receivers' => [$match->user1_id, $match->user2_id],
+                                    'data' => $matchEvent->broadcastWith()
+                                ]);
+                            } catch (\Exception $e) {
+                                \Illuminate\Support\Facades\Log::error('Custom WebSocket broadcast (match) failed: ' . $e->getMessage());
+                            }
+
                             // Broadcast conversation created event if it's a new conversation
                             if ($conversationCreated) {
                                 broadcast(new ConversationCreated($conversation));
+
+                                // CUSTOM WEBSOCKET BROADCAST - Conversation Created
+                                try {
+                                    $convEvent = new ConversationCreated($conversation);
+                                    \Illuminate\Support\Facades\Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
+                                        'type' => 'conversation.created',
+                                        'receivers' => [$conversation->user1_id, $conversation->user2_id],
+                                        'data' => $convEvent->broadcastWith()
+                                    ]);
+                                } catch (\Exception $e) {
+                                    \Illuminate\Support\Facades\Log::error('Custom WebSocket broadcast (conversation) failed: ' . $e->getMessage());
+                                }
                             }
                         });
                     }

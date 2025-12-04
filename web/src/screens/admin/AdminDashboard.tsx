@@ -1,0 +1,164 @@
+import { useEffect, useState } from 'react';
+import { AdminLayout } from '@/components/admin/AdminLayout';
+import { Card } from '@/components/ui/card';
+import { Users, Heart, Package, MessageSquare, TrendingUp, AlertCircle } from 'lucide-react';
+import { getDashboardStats } from '@/services/adminApi';
+
+interface DashboardStats {
+  users: {
+    total: number;
+    active: number;
+    new_today: number;
+    new_this_week: number;
+  };
+  matches: {
+    total: number;
+    today: number;
+    this_week: number;
+  };
+  items: {
+    total: number;
+    active: number;
+    today: number;
+  };
+  swipes: {
+    total: number;
+    today: number;
+  };
+  messages: {
+    total: number;
+    today: number;
+  };
+  reports: {
+    total: number;
+    pending: number;
+  };
+}
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const response = await getDashboardStats();
+      setStats(response.data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Failed to load dashboard stats');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">Loading...</div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-red-500">{error}</div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (!stats) return null;
+
+  const statCards = [
+    {
+      title: 'Total Users',
+      value: stats.users.total,
+      change: `+${stats.users.new_this_week} this week`,
+      icon: Users,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+    },
+    {
+      title: 'Active Users',
+      value: stats.users.active,
+      change: `${stats.users.new_today} new today`,
+      icon: TrendingUp,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+    },
+    {
+      title: 'Total Matches',
+      value: stats.matches.total,
+      change: `+${stats.matches.this_week} this week`,
+      icon: Heart,
+      color: 'text-pink-600',
+      bgColor: 'bg-pink-50',
+    },
+    {
+      title: 'Total Items',
+      value: stats.items.total,
+      change: `${stats.items.active} active`,
+      icon: Package,
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50',
+    },
+    {
+      title: 'Total Swipes',
+      value: stats.swipes.total,
+      change: `${stats.swipes.today} today`,
+      icon: MessageSquare,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+    },
+    {
+      title: 'Reports',
+      value: stats.reports.total,
+      change: `${stats.reports.pending} pending`,
+      icon: AlertCircle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+    },
+  ];
+
+  return (
+    <AdminLayout>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-gray-600 mt-1">Overview of your platform</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {statCards.map((card) => {
+            const Icon = card.icon;
+            return (
+              <Card key={card.title} className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-600">{card.title}</p>
+                    <p className="text-3xl font-bold text-gray-900 mt-2">{card.value.toLocaleString()}</p>
+                    <p className="text-sm text-gray-500 mt-2">{card.change}</p>
+                  </div>
+                  <div className={`${card.bgColor} p-3 rounded-lg`}>
+                    <Icon className={`w-6 h-6 ${card.color}`} />
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    </AdminLayout>
+  );
+}
+
