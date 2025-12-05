@@ -26,10 +26,10 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
       </div>
 
       {/* Bottom Card Section */}
-      <div className="bg-white rounded-t-[36px] w-full px-6 md:px-8 pt-8 md:pt-10 pb-8 flex flex-col items-center shadow-[0_-10px_40px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom duration-500 shrink-0">
+      <div className="bg-white rounded-t-[36px] w-full px-6 md:px-8 pt-8 md:pt-10 pb-8 md:pb-10 flex flex-col items-center shadow-[0_-10px_40px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom duration-500 shrink-0">
         
         {/* Card Header */}
-        <div className="text-center mb-8 md:mb-10">
+        <div className="text-center mb-6 md:mb-8">
           <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-2 md:mb-3">Swap. Match. Trade.</h2>
           <p className="text-gray-500 text-sm md:text-base leading-relaxed max-w-[280px] mx-auto">
             Turn your unused items into something you actually want
@@ -37,7 +37,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
         </div>
 
         {/* Features List */}
-        <div className="w-full space-y-6 md:space-y-8 mb-10 md:mb-12">
+        <div className="w-full space-y-5 md:space-y-6 mb-8 md:mb-10">
           
           {/* Item 1 */}
           <div className="flex items-center space-x-5">
@@ -66,14 +66,14 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
         </div>
 
         {/* Action Button */}
-        <div className="w-full mt-auto">
+        <div className="w-full">
           <Button fullWidth onClick={onGetStarted}>
             Get Started
           </Button>
         </div>
 
         {/* Footer Legal */}
-        <div className="mt-6 text-center">
+        <div className="mt-6 md:mt-7 text-center">
           <p className="text-xs text-gray-400 leading-normal">
             By continuing, you agree to our <a href="#" className="font-bold underline decoration-1">Terms of Use</a> and <a href="#" className="font-bold underline decoration-1 text-brand">Privacy Policy</a>
           </p>

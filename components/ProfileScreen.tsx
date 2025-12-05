@@ -1,21 +1,60 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapPin, Pencil, Settings, HelpCircle, LogOut, ChevronRight, Grid, List } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { apiFetch } from '../utils/api';
+import { ENDPOINTS } from '../constants/endpoints';
 
 interface ProfileScreenProps {
   onEditProfile: () => void;
 }
 
-// Mock Data for User Items
-const MY_ITEMS = [
-  { id: 101, title: "AirPod Pro", image: "https://images.unsplash.com/photo-1603351154351-5cf233081e35?auto=format&fit=crop&w=300&q=80" },
-  { id: 102, title: "Camera", image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=300&q=80" },
-  { id: 103, title: "Shoes", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80" },
-  { id: 104, title: "Headphones", image: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=300&q=80" },
-];
+interface UserItem {
+  id: number;
+  title: string;
+  image: string;
+}
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) => {
+  const { user, logout, token, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'items' | 'settings'>('items');
+  const [userItems, setUserItems] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user items
+  useEffect(() => {
+    const fetchUserItems = async () => {
+      if (!token) return;
+
+      try {
+        // Fetch items feed and filter for user's items
+        const res = await apiFetch(ENDPOINTS.items.feed, { token });
+        const items = res.data || res.items || [];
+        
+        // Filter items by current user (if backend doesn't provide user-specific endpoint)
+        // For now, we'll show all items - you may want to add a user-specific endpoint
+        const formattedItems = items.slice(0, 4).map((item: any) => ({
+          id: item.id,
+          title: item.title || item.name || 'Untitled Item',
+          image: item.images?.[0] || item.image || 'https://via.placeholder.com/300',
+        }));
+        setUserItems(formattedItems);
+      } catch (error) {
+        console.error('Failed to fetch user items:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserItems();
+  }, [token]);
+
+  const handleLogout = async () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      await logout();
+      window.location.reload(); // Reload to reset app state
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -31,7 +70,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) =
                 {/* Avatar */}
                 <div className="w-28 h-28 rounded-full bg-gray-100 p-1 mb-4 relative shadow-sm">
                     <img 
-                        src="https://i.pravatar.cc/150?img=11" 
+                        src={user?.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=random`}
                         alt="Profile" 
                         className="w-full h-full rounded-full object-cover border-4 border-white"
                     />
@@ -39,15 +78,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) =
                 </div>
 
                 {/* Info */}
-                <h2 className="text-2xl font-extrabold text-gray-900 mb-1">tester</h2>
-                <div className="flex items-center text-gray-500 text-sm font-medium mb-3">
-                    <MapPin size={14} className="mr-1 text-brand" />
-                    <span>Abuja, Nigeria</span>
-                </div>
+                <h2 className="text-2xl font-extrabold text-gray-900 mb-1">{user?.username || 'User'}</h2>
+                {user?.city && (
+                    <div className="flex items-center text-gray-500 text-sm font-medium mb-3">
+                        <MapPin size={14} className="mr-1 text-brand" />
+                        <span>{user.city}</span>
+                    </div>
+                )}
                 
-                <p className="text-gray-500 text-sm max-w-[250px] leading-relaxed mb-6">
-                    Odio sit quo rerum similique. Love trading gadgets and cool stuff!
-                </p>
+                {user?.bio && (
+                    <p className="text-gray-500 text-sm max-w-[250px] leading-relaxed mb-6">
+                        {user.bio}
+                    </p>
+                )}
 
                 {/* Edit Button */}
                 <button 
@@ -85,14 +128,20 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) =
             {activeTab === 'items' ? (
                 // My Items Grid
                 <div className="grid grid-cols-2 gap-4">
-                    {MY_ITEMS.map((item) => (
+                    {loading ? (
+                        <div className="col-span-2 text-center py-8 text-gray-500">Loading items...</div>
+                    ) : userItems.length > 0 ? (
+                        userItems.map((item) => (
                         <div key={item.id} className="bg-white rounded-2xl p-2.5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                             <div className="aspect-square bg-gray-100 rounded-xl mb-3 overflow-hidden">
                                 <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
                             </div>
                             <h3 className="font-bold text-gray-900 text-sm px-1 truncate">{item.title}</h3>
                         </div>
-                    ))}
+                        ))
+                    ) : (
+                        <div className="col-span-2 text-center py-8 text-gray-500">No items yet</div>
+                    )}
                     {/* Add New Placeholder */}
                     <div className="aspect-[4/5] rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-gray-400 hover:border-brand hover:text-brand hover:bg-brand/5 transition-colors cursor-pointer">
                         <span className="text-4xl mb-2 font-light">+</span>
@@ -116,7 +165,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) =
                         </div>
                         <ChevronRight size={18} className="text-gray-300" />
                     </button>
-                    <button className="w-full flex items-center justify-between p-4 hover:bg-red-50 transition-colors group">
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center justify-between p-4 hover:bg-red-50 transition-colors group"
+                    >
                         <div className="flex items-center space-x-3 text-red-500">
                             <LogOut size={20} />
                             <span className="font-bold text-sm">Logout</span>

@@ -2,9 +2,95 @@
 import React, { useState } from 'react';
 import { Camera, ChevronDown } from 'lucide-react';
 import { Button } from './Button';
+import { useAuth } from '../contexts/AuthContext';
+import { apiFetch } from '../utils/api';
+import { ENDPOINTS } from '../constants/endpoints';
 
 export const UploadScreen: React.FC = () => {
+  const { token } = useAuth();
   const [listingType, setListingType] = useState<'barter' | 'sell'>('barter');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('');
+  const [condition, setCondition] = useState('');
+  const [lookingFor, setLookingFor] = useState('');
+  const [price, setPrice] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+
+    if (!title.trim()) {
+      setError('Title is required');
+      return;
+    }
+    if (!category) {
+      setError('Category is required');
+      return;
+    }
+    if (!condition) {
+      setError('Condition is required');
+      return;
+    }
+    if (listingType === 'barter' && !lookingFor.trim()) {
+      setError('Please specify what you are looking for');
+      return;
+    }
+    if (listingType === 'sell' && !price.trim()) {
+      setError('Price is required');
+      return;
+    }
+
+    if (!token) {
+      setError('You must be logged in to post items');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload: any = {
+        title: title.trim(),
+        description: description.trim() || undefined,
+        category_id: parseInt(category) || undefined,
+        condition: condition,
+        type: listingType === 'barter' ? 'barter' : 'marketplace',
+      };
+
+      if (listingType === 'barter') {
+        payload.looking_for = lookingFor.trim();
+      } else {
+        payload.price = parseFloat(price.replace(/,/g, ''));
+      }
+
+      await apiFetch(ENDPOINTS.items.create, {
+        method: 'POST',
+        token,
+        body: payload,
+      });
+
+      setSuccess(true);
+      // Reset form
+      setTitle('');
+      setDescription('');
+      setCategory('');
+      setCondition('');
+      setLookingFor('');
+      setPrice('');
+
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message || 'Failed to post item. Please try again.');
+      console.error('Upload error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-white relative">
@@ -16,6 +102,18 @@ export const UploadScreen: React.FC = () => {
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
         
+        {/* Success/Error Messages */}
+        {success && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                Item posted successfully!
+            </div>
+        )}
+        {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+            </div>
+        )}
+
         {/* Title Section */}
         <div>
            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Upload Item</h2>
@@ -42,6 +140,8 @@ export const UploadScreen: React.FC = () => {
                 <label className="block text-brand font-bold text-sm mb-2">Title *</label>
                 <input 
                     type="text" 
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
                     placeholder="e.g., iPhone 13 Pro" 
                     className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
                 />
@@ -51,6 +151,8 @@ export const UploadScreen: React.FC = () => {
             <div>
                 <label className="block text-brand font-bold text-sm mb-2">Description</label>
                 <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     placeholder="Describe your item..." 
                     className="w-full h-24 px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all resize-none"
                 ></textarea>
@@ -60,13 +162,17 @@ export const UploadScreen: React.FC = () => {
             <div>
                 <label className="block text-brand font-bold text-sm mb-2">Category *</label>
                 <div className="relative">
-                    <select className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer">
-                        <option value="" disabled selected>Select category</option>
-                        <option value="electronics">Electronics</option>
-                        <option value="fashion">Fashion</option>
-                        <option value="home">Home & Garden</option>
-                        <option value="vehicles">Vehicles</option>
-                        <option value="other">Other</option>
+                    <select 
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer"
+                    >
+                        <option value="" disabled>Select category</option>
+                        <option value="1">Electronics</option>
+                        <option value="2">Fashion</option>
+                        <option value="3">Home & Garden</option>
+                        <option value="4">Vehicles</option>
+                        <option value="5">Other</option>
                     </select>
                     <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
                 </div>
@@ -76,8 +182,12 @@ export const UploadScreen: React.FC = () => {
             <div>
                 <label className="block text-brand font-bold text-sm mb-2">Condition *</label>
                 <div className="relative">
-                    <select className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer">
-                        <option value="" disabled selected>Select condition</option>
+                    <select 
+                        value={condition}
+                        onChange={(e) => setCondition(e.target.value)}
+                        className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer"
+                    >
+                        <option value="" disabled>Select condition</option>
                         <option value="new">New</option>
                         <option value="like_new">Like New</option>
                         <option value="used_good">Used - Good</option>
@@ -116,12 +226,16 @@ export const UploadScreen: React.FC = () => {
                 {listingType === 'barter' ? (
                     <input 
                         type="text" 
+                        value={lookingFor}
+                        onChange={(e) => setLookingFor(e.target.value)}
                         placeholder="What do you want in exchange?" 
                         className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
                     />
                 ) : (
                     <input 
-                        type="number" 
+                        type="text" 
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value.replace(/[^0-9,.]/g, ''))}
                         placeholder="0.00" 
                         className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
                     />
@@ -129,11 +243,18 @@ export const UploadScreen: React.FC = () => {
             </div>
 
             {/* Submit */}
-            <div className="pt-4 pb-8">
-                <Button fullWidth className="bg-brand hover:bg-brand-light text-white rounded-xl py-4 shadow-lg text-lg">
-                    Post Item
-                </Button>
-            </div>
+            <form onSubmit={handleSubmit}>
+                <div className="pt-4 pb-8">
+                    <Button 
+                        fullWidth 
+                        type="submit"
+                        className="bg-brand hover:bg-brand-light text-white rounded-xl py-4 shadow-lg text-lg"
+                        disabled={loading}
+                    >
+                        {loading ? 'Posting...' : 'Post Item'}
+                    </Button>
+                </div>
+            </form>
         </div>
       </div>
     </div>

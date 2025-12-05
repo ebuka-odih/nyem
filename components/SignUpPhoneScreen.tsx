@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
 import { ArrowLeft } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SignUpPhoneScreenProps {
   onSendOtp: (phone: string) => void;
@@ -9,11 +10,29 @@ interface SignUpPhoneScreenProps {
 
 export const SignUpPhoneScreen: React.FC<SignUpPhoneScreenProps> = ({ onSendOtp, onBack }) => {
   const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { sendOtp } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length > 3) {
-        onSendOtp(phone);
+    setError(null);
+
+    if (phone.length < 8) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const fullPhone = `+234${phone}`;
+      await sendOtp(fullPhone);
+      onSendOtp(phone);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP. Please try again.');
+      console.error('Send OTP error:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,6 +60,13 @@ export const SignUpPhoneScreen: React.FC<SignUpPhoneScreenProps> = ({ onSendOtp,
             <form onSubmit={handleSubmit} className="flex flex-col flex-1">
                 <p className="text-gray-500 font-medium mb-6">We'll send a one-time code</p>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+                        {error}
+                    </div>
+                )}
+
                 {/* Phone Input Group */}
                 <div className="flex items-end space-x-3 mb-10 border-b border-gray-200 pb-2">
                     <span className="text-lg font-bold text-gray-900 pb-1">+234</span>
@@ -57,8 +83,13 @@ export const SignUpPhoneScreen: React.FC<SignUpPhoneScreenProps> = ({ onSendOtp,
                 
                 {/* Submit Button */}
                 <div>
-                     <Button fullWidth type="submit" className="shadow-xl py-4 font-extrabold text-lg tracking-wide rounded-full">
-                        Send OTP
+                     <Button 
+                        fullWidth 
+                        type="submit" 
+                        className="shadow-xl py-4 font-extrabold text-lg tracking-wide rounded-full"
+                        disabled={loading}
+                     >
+                        {loading ? 'Sending...' : 'Send OTP'}
                     </Button>
                 </div>
 
