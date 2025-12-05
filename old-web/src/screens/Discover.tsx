@@ -7,8 +7,8 @@ import { Filter, MapPin, X, Check, Info } from 'lucide-react';
  * Main feed with swipeable item cards
  */
 const Discover = () => {
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [selectedLocation, setSelectedLocation] = useState('Abuja');
+  const [selectedCategory] = useState('All Categories');
+  const [selectedLocation] = useState('Abuja');
   const [activeTab, setActiveTab] = useState<'barter' | 'marketplace'>('barter');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [swiping, setSwiping] = useState(false);
