@@ -18,6 +18,8 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      }
+      },
+      // Public directory for PWA assets (manifest.json, icons, service worker)
+      publicDir: 'public'
     };
 });
