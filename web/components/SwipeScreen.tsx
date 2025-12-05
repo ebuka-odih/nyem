@@ -54,8 +54,17 @@ const MOCK_USER_ITEMS = [
     { id: 103, title: "Shoes", subtitle: "Used • Fashion", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80" },
 ];
 
-const CATEGORY_OPTIONS = ["All Categories", "Electronics", "Fashion", "Home", "Books"];
-const LOCATION_OPTIONS = ["Abuja", "Lagos", "Port Harcourt", "London"];
+interface Category {
+  id: number;
+  name: string;
+  order: number;
+}
+
+interface Location {
+  id: number;
+  name: string;
+  order: number;
+}
 
 interface SwipeScreenProps {
   onBack: () => void;
@@ -77,7 +86,38 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [selectedLocation, setSelectedLocation] = useState('Abuja');
+  const [selectedLocation, setSelectedLocation] = useState('all');
+  
+  // Categories and Locations from API
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loadingFilters, setLoadingFilters] = useState(true);
+
+  // Fetch categories and locations from API
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        setLoadingFilters(true);
+        const [categoriesRes, locationsRes] = await Promise.all([
+          apiFetch(ENDPOINTS.categories),
+          apiFetch(ENDPOINTS.locations),
+        ]);
+        
+        const cats = (categoriesRes.categories || []) as Category[];
+        const locs = (locationsRes.locations || []) as Location[];
+        
+        setCategories(cats);
+        setLocations(locs);
+      } catch (error) {
+        console.error('Failed to fetch categories/locations:', error);
+        // Fallback to empty arrays - will show "All Categories" and "all" as defaults
+      } finally {
+        setLoadingFilters(false);
+      }
+    };
+
+    fetchFilters();
+  }, []);
 
   // Fetch items from API
   useEffect(() => {
@@ -89,8 +129,40 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
 
       setLoading(true);
       try {
-        const res = await apiFetch(ENDPOINTS.items.feed, { token });
-        const apiItems = res.data || res.items || [];
+        // Build query parameters
+        const params: string[] = [];
+        
+        // Add type parameter based on active tab
+        const itemType = activeTab === 'exchange' ? 'barter' : 'marketplace';
+        params.push(`type=${encodeURIComponent(itemType)}`);
+        
+        // Add category filter if not "All Categories"
+        if (selectedCategory && selectedCategory !== 'All Categories') {
+          params.push(`category=${encodeURIComponent(selectedCategory)}`);
+        }
+        
+        // Add city filter
+        if (selectedLocation && selectedLocation !== 'all') {
+          params.push(`city=${encodeURIComponent(selectedLocation)}`);
+        } else if (selectedLocation === 'all') {
+          params.push('city=all');
+        }
+        
+        // Build feed URL with query parameters
+        let feedUrl = ENDPOINTS.items.feed;
+        if (params.length > 0) {
+          feedUrl += `?${params.join('&')}`;
+        }
+        
+        const res = await apiFetch(feedUrl, { token });
+        const apiItems = res.items || res.data || [];
+        
+        console.log(`[SwipeScreen] Fetched ${apiItems.length} items for ${activeTab} tab`, {
+          type: itemType,
+          category: selectedCategory,
+          location: selectedLocation,
+          items: apiItems.length,
+        });
         
         // Transform API items to SwipeItem format
         const transformedItems: SwipeItem[] = apiItems.map((item: any) => ({
@@ -101,33 +173,42 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
           image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800"%3E%3Crect fill="%23f3f4f6" width="800" height="800"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
           description: item.description || '',
           lookingFor: item.looking_for || item.lookingFor || '',
-          price: item.price ? `₦${item.price}` : undefined,
+          price: item.price ? (typeof item.price === 'string' ? `₦${item.price}` : `₦${item.price}`) : undefined,
           owner: {
             name: item.user?.username || item.owner?.name || 'Unknown',
             image: item.user?.profile_photo || item.owner?.image || 'https://i.pravatar.cc/150',
-            location: item.user?.city || item.owner?.location || 'Unknown',
-            distance: item.distance ? `${item.distance}km` : 'Unknown',
+            // Use item.city (where the item is located) instead of user.city (user's current location)
+            location: item.city || item.user?.city || item.owner?.location || 'Unknown',
+            distance: (() => {
+              // Check distance_km first, then distance, then owner.distance
+              const distanceKm = item.distance_km ?? item.distance;
+              if (distanceKm !== null && distanceKm !== undefined) {
+                return distanceKm < 1 
+                  ? `${Math.round(distanceKm * 1000)}m` 
+                  : `${distanceKm}km`;
+              }
+              // Fallback to formatted distance from owner object
+              if (item.owner?.distance) {
+                return item.owner.distance;
+              }
+              return 'Unknown';
+            })(),
           },
-          gallery: item.images || [item.image].filter(Boolean),
+          gallery: item.images || item.gallery || [item.image].filter(Boolean),
         }));
 
-        // Filter by type based on active tab
-        const filteredItems = activeTab === 'exchange' 
-          ? transformedItems.filter(item => item.type === 'barter')
-          : transformedItems.filter(item => item.type === 'marketplace');
-
-        setItems(filteredItems.length > 0 ? filteredItems : (activeTab === 'exchange' ? MOCK_BARTER_ITEMS : MOCK_MARKETPLACE_ITEMS));
+        setItems(transformedItems.length > 0 ? transformedItems : []);
+        setCurrentIndex(0); // Reset to first item when items change
       } catch (error) {
         console.error('Failed to fetch items:', error);
-        // Fallback to mock data on error
-        setItems(activeTab === 'exchange' ? MOCK_BARTER_ITEMS : MOCK_MARKETPLACE_ITEMS);
+        setItems([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchItems();
-  }, [activeTab, token]);
+  }, [activeTab, token, selectedCategory, selectedLocation]);
   
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -179,13 +260,20 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
   const resetStack = () => setCurrentIndex(0);
   
   const handleCategorySelect = (category: string) => {
-      setSelectedCategory(category);
-      setShowCategoryDropdown(false);
-  }
+    setSelectedCategory(category);
+    setShowCategoryDropdown(false);
+  };
+  
   const handleLocationSelect = (location: string) => {
-      setSelectedLocation(location);
-      setShowLocationDropdown(false);
-  }
+    setSelectedLocation(location);
+    setShowLocationDropdown(false);
+  };
+  
+  // Build category options list (with "All Categories" first)
+  const categoryOptions = ['All Categories', ...categories.map(cat => cat.name)];
+  
+  // Build location options list (with "All Locations" first)
+  const locationOptions = ['all', ...locations.map(loc => loc.name)];
 
   return (
     <div className="flex flex-col h-full bg-white relative">
@@ -212,30 +300,64 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
         
         <div className="flex justify-between items-center w-full pb-1 relative">
             <div className="relative">
-                <button onClick={() => setShowCategoryDropdown(!showCategoryDropdown)} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-xs font-bold text-gray-700 shadow-sm active:bg-gray-50">
+                <button 
+                    onClick={() => setShowCategoryDropdown(!showCategoryDropdown)} 
+                    disabled={loadingFilters}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-xs font-bold text-gray-700 shadow-sm active:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     <Filter size={12} />
                     <span>{selectedCategory}</span>
                 </button>
                 <AnimatePresence>
-                    {showCategoryDropdown && (
-                        <motion.div initial={{opacity: 0, y: -10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -10}} className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30">
-                            {CATEGORY_OPTIONS.map(cat => (
-                                <button key={cat} onClick={() => handleCategorySelect(cat)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg">{cat}</button>
+                    {showCategoryDropdown && !loadingFilters && (
+                        <motion.div 
+                            initial={{opacity: 0, y: -10}} 
+                            animate={{opacity: 1, y: 0}} 
+                            exit={{opacity: 0, y: -10}} 
+                            className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30 max-h-60 overflow-y-auto"
+                        >
+                            {categoryOptions.map(cat => (
+                                <button 
+                                    key={cat} 
+                                    onClick={() => handleCategorySelect(cat)} 
+                                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                                        selectedCategory === cat ? 'bg-brand/10 text-brand font-bold' : 'text-gray-700'
+                                    }`}
+                                >
+                                    {cat}
+                                </button>
                             ))}
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
-             <div className="relative">
-                 <button onClick={() => setShowLocationDropdown(!showLocationDropdown)} className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-xs font-bold text-gray-700 shadow-sm active:bg-gray-50">
+            <div className="relative">
+                <button 
+                    onClick={() => setShowLocationDropdown(!showLocationDropdown)} 
+                    disabled={loadingFilters}
+                    className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-xs font-bold text-gray-700 shadow-sm active:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     <MapPin size={12} className="text-brand" />
-                    <span>{selectedLocation}</span>
+                    <span>{selectedLocation === 'all' ? 'All Locations' : selectedLocation}</span>
                 </button>
-                 <AnimatePresence>
-                    {showLocationDropdown && (
-                        <motion.div initial={{opacity: 0, y: -10}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -10}} className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30">
-                            {LOCATION_OPTIONS.map(loc => (
-                                <button key={loc} onClick={() => handleLocationSelect(loc)} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg">{loc}</button>
+                <AnimatePresence>
+                    {showLocationDropdown && !loadingFilters && (
+                        <motion.div 
+                            initial={{opacity: 0, y: -10}} 
+                            animate={{opacity: 1, y: 0}} 
+                            exit={{opacity: 0, y: -10}} 
+                            className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-100 z-30 max-h-60 overflow-y-auto"
+                        >
+                            {locationOptions.map(loc => (
+                                <button 
+                                    key={loc} 
+                                    onClick={() => handleLocationSelect(loc)} 
+                                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg ${
+                                        selectedLocation === loc ? 'bg-brand/10 text-brand font-bold' : 'text-gray-700'
+                                    }`}
+                                >
+                                    {loc === 'all' ? 'All Locations' : loc}
+                                </button>
                             ))}
                         </motion.div>
                     )}

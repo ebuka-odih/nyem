@@ -142,3 +142,4 @@ export async function hasLocationPermission(): Promise<boolean> {
     return navigator.geolocation !== undefined;
 }
 
+

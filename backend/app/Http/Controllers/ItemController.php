@@ -174,7 +174,7 @@ class ItemController extends Controller
                 'owner' => [
                     'name' => $item->user->username,
                     'image' => $item->user->profile_photo ?? 'https://i.pravatar.cc/150',
-                    'location' => $item->user->city ?? 'Unknown',
+                    'location' => $item->city ?? $item->user->city ?? 'Unknown', // Use item's city, fallback to user's city
                     'distance' => $distanceKm !== null ? ($distanceKm < 1 ? round($distanceKm * 1000) . 'm' : $distanceKm . 'km') : 'Unknown',
                 ],
             ];
