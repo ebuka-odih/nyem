@@ -37,17 +37,49 @@ The app will automatically connect to `http://localhost:8000/api` in development
 
 ## Configuration
 
-### API Base URL
+### Environment Variables
 
-The API base URL is automatically configured:
-- **Development**: `http://localhost:8000/api` (automatic)
-- **Production**: `https://nyem.gnosisbrand.com/backend/public/api`
+The application uses environment variables to configure the API endpoint. Environment files are provided for different environments:
 
-To use a custom API URL, create a `.env` file:
+#### Available Environment Files
 
-```env
-VITE_API_BASE=http://localhost:8000/api
-```
+- **`.env.example`** - Template file (committed to git)
+- **`.env.local`** - Local development (gitignored, create from `.env.example`)
+- **`.env.production`** - Production build (gitignored)
+
+#### Setup for Local Development
+
+1. Copy the example file:
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. Edit `.env.local` if needed (defaults to `http://localhost:8000/api`):
+   ```env
+   VITE_API_BASE=http://localhost:8000/api
+   ```
+
+#### Setup for Production
+
+For production builds, you can either:
+
+1. **Use `.env.production` file** (not recommended for sensitive data):
+   ```bash
+   cp .env.example .env.production
+   # Edit .env.production with production URL
+   ```
+
+2. **Set environment variables in your deployment platform** (recommended):
+   - Set `VITE_API_BASE` in your hosting platform's environment variables
+   - Vite will automatically use these during build
+
+#### API Base URL Configuration
+
+The API base URL is configured via `VITE_API_BASE`:
+- **Development (default)**: `http://localhost:8000/api` (automatic if no env var set)
+- **Production (default)**: `https://api.nyem.online/backend/public/api` (fallback if no env var set)
+
+**Note**: Environment variables must be prefixed with `VITE_` to be accessible in the browser.
 
 ## Troubleshooting
 

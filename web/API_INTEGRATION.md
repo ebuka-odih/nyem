@@ -12,7 +12,7 @@ The web application has been fully integrated with the backend API. All authenti
 
 The API base URL is automatically configured based on your environment:
 - **Development (localhost)**: Automatically uses `http://localhost:8000/api`
-- **Production**: Uses `https://nyem.gnosisbrand.com/backend/public/api`
+- **Production**: Uses `https://api.nyem.online/backend/public/api`
 - **Custom**: Can be overridden via environment variable `VITE_API_BASE`
 
 To use a custom API URL, create a `.env` file in the `web/` directory:
@@ -184,12 +184,12 @@ You can test the API directly using curl:
 
 ```bash
 # Test login
-curl -X POST https://nyem.gnosisbrand.com/backend/public/api/auth/login \
+curl -X POST https://api.nyem.online/backend/public/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username_or_phone":"test","password":"password"}'
 
 # Test authenticated endpoint (replace TOKEN)
-curl https://nyem.gnosisbrand.com/backend/public/api/profile/me \
+curl https://api.nyem.online/backend/public/api/profile/me \
   -H "Authorization: Bearer TOKEN"
 ```
 
@@ -199,7 +199,7 @@ Create a `.env` file in the `web/` directory:
 
 ```env
 # API Configuration
-VITE_API_BASE=https://nyem.gnosisbrand.com/backend/public/api
+VITE_API_BASE=https://api.nyem.online/backend/public/api
 
 # For local development
 # VITE_API_BASE=http://localhost:8000/api
