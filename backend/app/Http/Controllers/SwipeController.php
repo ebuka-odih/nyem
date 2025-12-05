@@ -19,7 +19,7 @@ class SwipeController extends Controller
         $data = $request->validate([
             'target_item_id' => 'required|exists:items,id',
             'direction' => 'required|in:left,right',
-            'offered_item_id' => 'required_if:direction,right|nullable|exists:items,id',
+            'offered_item_id' => 'nullable|exists:items,id',
         ]);
 
         $user = $request->user();
@@ -37,19 +37,34 @@ class SwipeController extends Controller
             return response()->json(['message' => 'User blocked'], 403);
         }
 
-        // For right swipes, validate that offered_item_id belongs to the user
+        // Determine item type - default to 'barter' if not set
+        $itemType = $targetItem->type ?? 'barter';
+
+        // For right swipes, validate based on item type
         if ($data['direction'] === 'right') {
-            if (empty($data['offered_item_id'])) {
-                return response()->json(['message' => 'offered_item_id is required for right swipes'], 422);
-            }
+            if ($itemType === 'barter') {
+                // Barter items require an offered_item_id
+                if (empty($data['offered_item_id'])) {
+                    return response()->json(['message' => 'offered_item_id is required for barter items'], 422);
+                }
 
-            $offeredItem = Item::findOrFail($data['offered_item_id']);
-            if ($offeredItem->user_id !== $user->id) {
-                return response()->json(['message' => 'offered_item_id must belong to you'], 422);
-            }
+                $offeredItem = Item::findOrFail($data['offered_item_id']);
+                if ($offeredItem->user_id !== $user->id) {
+                    return response()->json(['message' => 'offered_item_id must belong to you'], 422);
+                }
 
-            if ($offeredItem->id === $targetItem->id) {
-                return response()->json(['message' => 'Cannot offer the same item you are swiping on'], 422);
+                if ($offeredItem->id === $targetItem->id) {
+                    return response()->json(['message' => 'Cannot offer the same item you are swiping on'], 422);
+                }
+            } else {
+                // Marketplace items: offered_item_id is optional (just indicates interest)
+                // If provided, validate it belongs to user, but don't require it
+                if (!empty($data['offered_item_id'])) {
+                    $offeredItem = Item::findOrFail($data['offered_item_id']);
+                    if ($offeredItem->user_id !== $user->id) {
+                        return response()->json(['message' => 'offered_item_id must belong to you'], 422);
+                    }
+                }
             }
         }
 
@@ -79,6 +94,9 @@ class SwipeController extends Controller
                     ->update(['status' => 'declined']);
             }
 
+            // Determine item type
+            $itemType = $targetItem->type ?? 'barter';
+            
             // Create or update swipe
             $swipe = Swipe::updateOrCreate(
                 [
@@ -87,32 +105,42 @@ class SwipeController extends Controller
                 ],
                 [
                     'direction' => $data['direction'],
-                    'offered_item_id' => $data['direction'] === 'right' ? $data['offered_item_id'] : null,
+                    'offered_item_id' => ($data['direction'] === 'right' && $itemType === 'barter') ? $data['offered_item_id'] : null,
                 ]
             );
 
             if ($data['direction'] === 'right') {
-                // Create or update trade offer
-                $tradeOffer = TradeOffer::firstOrCreate(
-                    [
-                        'from_user_id' => $user->id,
-                        'to_user_id' => $targetItem->user_id,
-                        'offered_item_id' => $data['offered_item_id'],
-                        'target_item_id' => $targetItem->id,
-                    ],
-                    [
-                        'status' => 'pending',
-                    ]
-                );
+                if ($itemType === 'barter') {
+                    // Barter items: create trade offer (requires offered_item_id)
+                    if (!empty($data['offered_item_id'])) {
+                        $tradeOffer = TradeOffer::firstOrCreate(
+                            [
+                                'from_user_id' => $user->id,
+                                'to_user_id' => $targetItem->user_id,
+                                'offered_item_id' => $data['offered_item_id'],
+                                'target_item_id' => $targetItem->id,
+                            ],
+                            [
+                                'status' => 'pending',
+                            ]
+                        );
 
-                // Check for reciprocal swipe
-                // User B must have swiped right on User A's offered_item
-                // AND User B's offered_item must be User A's target_item
-                $reciprocal = Swipe::where('from_user_id', $targetItem->user_id)
-                    ->where('target_item_id', $data['offered_item_id']) // User B swiped on User A's offered item
-                    ->where('offered_item_id', $targetItem->id) // User B offered User A's target item
-                    ->where('direction', 'right')
-                    ->first();
+                        // Check for reciprocal swipe
+                        // User B must have swiped right on User A's offered_item
+                        // AND User B's offered_item must be User A's target_item
+                        $reciprocal = Swipe::where('from_user_id', $targetItem->user_id)
+                            ->where('target_item_id', $data['offered_item_id']) // User B swiped on User A's offered item
+                            ->where('offered_item_id', $targetItem->id) // User B offered User A's target item
+                            ->where('direction', 'right')
+                            ->first();
+                    } else {
+                        $reciprocal = null;
+                    }
+                } else {
+                    // Marketplace items: just record interest, no trade offer needed
+                    // Conversations/matches can be created separately when users chat
+                    $reciprocal = null;
+                }
 
                 if ($reciprocal) {
                     // Create match

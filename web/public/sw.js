@@ -28,15 +28,18 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Delete old caches that don't match current version
-          if (cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE) {
-            console.log('Service Worker: Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+      // Filter to only get caches that need to be deleted, then map to delete promises
+      const deletePromises = cacheNames
+        .filter((cacheName) => {
+          // Only delete old caches that don't match current version
+          return cacheName !== CACHE_NAME && cacheName !== RUNTIME_CACHE;
         })
-      );
+        .map((cacheName) => {
+          console.log('Service Worker: Deleting old cache:', cacheName);
+          return caches.delete(cacheName);
+        });
+      
+      return Promise.all(deletePromises);
     }).then(() => {
       // Take control of all pages immediately
       return self.clients.claim();

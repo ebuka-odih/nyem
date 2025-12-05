@@ -10,6 +10,7 @@ export const Button: React.FC<ButtonProps> = ({
   variant = 'primary', 
   fullWidth = false, 
   className = '', 
+  disabled,
   ...props 
 }) => {
   const baseStyles = "py-4 px-6 rounded-full font-bold transition-transform active:scale-95 shadow-md flex items-center justify-center";
@@ -21,10 +22,12 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const widthClass = fullWidth ? "w-full" : "";
+  const disabledClass = disabled ? "opacity-50 cursor-not-allowed active:scale-100" : "";
 
   return (
     <button 
-      className={`${baseStyles} ${variants[variant]} ${widthClass} ${className}`}
+      className={`${baseStyles} ${variants[variant]} ${widthClass} ${disabledClass} ${className}`}
+      disabled={disabled}
       {...props}
     >
       {children}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SignInScreenProps {
   onSignIn: () => void;
@@ -12,10 +13,30 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, on
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSignIn();
+    setError(null);
+    setLoading(true);
+
+    try {
+      if (!username.trim() || !password.trim()) {
+        setError('Please enter both username and password');
+        setLoading(false);
+        return;
+      }
+
+      await login(username.trim(), password);
+      onSignIn();
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
+      console.error('Login error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,6 +94,13 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, on
                     </div>
                 </div>
 
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                        {error}
+                    </div>
+                )}
+
                 {/* Forgot Password */}
                 <div className="w-full text-right">
                     <button type="button" className="text-gray-500 font-bold text-sm hover:text-brand transition-colors">Forgot password?</button>
@@ -80,8 +108,13 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, on
                 
                 {/* Submit Button */}
                 <div className="pt-4">
-                     <Button fullWidth type="submit" className="shadow-xl py-4 uppercase text-lg tracking-wide">
-                        Sign In
+                     <Button 
+                        fullWidth 
+                        type="submit" 
+                        className="shadow-xl py-4 uppercase text-lg tracking-wide"
+                        disabled={loading}
+                     >
+                        {loading ? 'Signing In...' : 'Sign In'}
                     </Button>
                 </div>
 

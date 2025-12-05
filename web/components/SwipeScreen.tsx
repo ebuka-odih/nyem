@@ -4,6 +4,9 @@ import { X, Heart, MapPin, Filter, Info, Check, RefreshCw, Flame } from 'lucide-
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
 import { SwipeItem } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+import { apiFetch } from '../utils/api';
+import { ENDPOINTS } from '../constants/endpoints';
 
 interface Owner {
     name: string;
@@ -60,9 +63,11 @@ interface SwipeScreenProps {
 }
 
 export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick }) => {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState<'exchange' | 'marketplace'>('exchange');
-  const [items, setItems] = useState<SwipeItem[]>(MOCK_BARTER_ITEMS);
+  const [items, setItems] = useState<SwipeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
   
   // Modal States
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -74,14 +79,55 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedLocation, setSelectedLocation] = useState('Abuja');
 
+  // Fetch items from API
   useEffect(() => {
-    if (activeTab === 'exchange') {
-      setItems(MOCK_BARTER_ITEMS);
-    } else {
-      setItems(MOCK_MARKETPLACE_ITEMS);
-    }
-    setCurrentIndex(0); 
-  }, [activeTab]);
+    const fetchItems = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const res = await apiFetch(ENDPOINTS.items.feed, { token });
+        const apiItems = res.data || res.items || [];
+        
+        // Transform API items to SwipeItem format
+        const transformedItems: SwipeItem[] = apiItems.map((item: any) => ({
+          id: item.id,
+          type: item.type || (item.price ? 'marketplace' : 'barter'),
+          title: item.title || item.name || 'Untitled Item',
+          condition: item.condition || 'Used',
+          image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800"%3E%3Crect fill="%23f3f4f6" width="800" height="800"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
+          description: item.description || '',
+          lookingFor: item.looking_for || item.lookingFor || '',
+          price: item.price ? `₦${item.price}` : undefined,
+          owner: {
+            name: item.user?.username || item.owner?.name || 'Unknown',
+            image: item.user?.profile_photo || item.owner?.image || 'https://i.pravatar.cc/150',
+            location: item.user?.city || item.owner?.location || 'Unknown',
+            distance: item.distance ? `${item.distance}km` : 'Unknown',
+          },
+          gallery: item.images || [item.image].filter(Boolean),
+        }));
+
+        // Filter by type based on active tab
+        const filteredItems = activeTab === 'exchange' 
+          ? transformedItems.filter(item => item.type === 'barter')
+          : transformedItems.filter(item => item.type === 'marketplace');
+
+        setItems(filteredItems.length > 0 ? filteredItems : (activeTab === 'exchange' ? MOCK_BARTER_ITEMS : MOCK_MARKETPLACE_ITEMS));
+      } catch (error) {
+        console.error('Failed to fetch items:', error);
+        // Fallback to mock data on error
+        setItems(activeTab === 'exchange' ? MOCK_BARTER_ITEMS : MOCK_MARKETPLACE_ITEMS);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchItems();
+  }, [activeTab, token]);
   
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -268,7 +314,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
                              <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
                                  You Want to Exchange For:
                              </div>
-                             <div className="flex items-center bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                             <div className="flex items-center bg-brand/5 p-3 rounded-xl border-2 border-brand shadow-sm">
                                  <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0">
                                      <img src={currentItem.image} alt={currentItem.title} className="w-full h-full object-cover" />
                                  </div>

@@ -21,10 +21,13 @@ class Item extends Model
         'looking_for',
         'city',
         'status',
+        'type',
+        'price',
     ];
 
     protected $casts = [
         'photos' => 'array',
+        'price' => 'decimal:2',
     ];
 
     public function user()

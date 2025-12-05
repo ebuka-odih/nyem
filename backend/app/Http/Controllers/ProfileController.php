@@ -32,15 +32,18 @@ class ProfileController extends Controller
         
         $data = $request->validate([
             'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
-            'bio' => 'sometimes|nullable|string',
+            'bio' => 'sometimes|nullable|string|max:500',
             'profile_photo' => 'sometimes|nullable|string|max:65535', // TEXT field can hold up to 65,535 characters
             'city' => 'sometimes|string|max:255',
-            'password' => 'sometimes|nullable|string|min:6',
         ]);
 
-        // Check username change limit (24 hours)
+        // Check username change limit (24 hours) - but allow first-time setup
         if (isset($data['username']) && $data['username'] !== $user->username) {
-            if ($user->username_updated_at) {
+            // Allow username change if username_updated_at is null (initial setup) or if username starts with 'user_' (auto-generated)
+            $isInitialSetup = !$user->username_updated_at || 
+                             (str_starts_with($user->username ?? '', 'user_') && strlen($user->username ?? '') === 11);
+            
+            if (!$isInitialSetup && $user->username_updated_at) {
                 $hoursSinceUpdate = now()->diffInHours($user->username_updated_at);
                 if ($hoursSinceUpdate < 24) {
                     $hoursRemaining = 24 - $hoursSinceUpdate;
@@ -49,15 +52,17 @@ class ProfileController extends Controller
                     ]);
                 }
             }
+            
+            // Set username_updated_at timestamp
             $data['username_updated_at'] = now();
         }
 
         try {
             $user->fill($data);
-            if (isset($data['password']) && $data['password']) {
-                $user->password = Hash::make($data['password']);
-            }
             $user->save();
+            
+            // Reload user to get fresh data
+            $user->refresh();
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle database errors (like column size issues)
             if (str_contains($e->getMessage(), 'profile_photo') || str_contains($e->getMessage(), 'too long') || str_contains($e->getMessage(), 'Data too long')) {
@@ -69,7 +74,7 @@ class ProfileController extends Controller
         }
 
         return response()->json([
-            'user' => $user,
+            'user' => $user->fresh(),
             'message' => 'Profile updated successfully',
         ]);
     }
@@ -83,10 +88,23 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        // Verify current password
-        if (!$user->password || !Hash::check($data['current_password'], $user->password)) {
+        // Verify current password exists and is correct
+        if (!$user->password) {
+            throw ValidationException::withMessages([
+                'current_password' => ['No password is set for this account. Please set a password first.'],
+            ]);
+        }
+
+        if (!Hash::check($data['current_password'], $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        // Prevent using the same password
+        if (Hash::check($data['new_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'new_password' => ['The new password must be different from your current password.'],
             ]);
         }
 

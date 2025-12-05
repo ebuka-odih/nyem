@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from './Button';
 import { ArrowLeft, Camera, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SetupProfileScreenProps {
   onComplete: () => void;
@@ -10,11 +11,32 @@ interface SetupProfileScreenProps {
 export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComplete, onBack }) => {
   const [username, setUsername] = useState('');
   const [location, setLocation] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { updateProfile } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you would save the profile data here
-    onComplete();
+    setError(null);
+
+    if (!username.trim()) {
+      setError('Username is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await updateProfile({
+        username: username.trim(),
+        city: location || undefined,
+      });
+      onComplete();
+    } catch (err: any) {
+      setError(err.message || 'Failed to update profile. Please try again.');
+      console.error('Update profile error:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,6 +62,13 @@ export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComple
             
             <form onSubmit={handleSubmit} className="flex flex-col flex-1">
                 
+                {/* Error Message */}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+                        {error}
+                    </div>
+                )}
+
                 {/* Avatar Upload */}
                 <div className="flex justify-center mb-8">
                     <div className="relative group cursor-pointer">
@@ -88,8 +117,13 @@ export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComple
                 
                 {/* Submit Button */}
                 <div className="mt-auto">
-                     <Button fullWidth type="submit" className="shadow-xl py-4 font-extrabold text-lg tracking-wide rounded-full">
-                        Complete Setup
+                     <Button 
+                        fullWidth 
+                        type="submit" 
+                        className="shadow-xl py-4 font-extrabold text-lg tracking-wide rounded-full"
+                        disabled={loading}
+                     >
+                        {loading ? 'Saving...' : 'Complete Setup'}
                     </Button>
                 </div>
 
