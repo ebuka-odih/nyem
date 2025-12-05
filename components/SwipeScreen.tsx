@@ -98,7 +98,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
           type: item.type || (item.price ? 'marketplace' : 'barter'),
           title: item.title || item.name || 'Untitled Item',
           condition: item.condition || 'Used',
-          image: item.images?.[0] || item.image || 'https://via.placeholder.com/800',
+          image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800"%3E%3Crect fill="%23f3f4f6" width="800" height="800"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
           description: item.description || '',
           lookingFor: item.looking_for || item.lookingFor || '',
           price: item.price ? `₦${item.price}` : undefined,
@@ -191,7 +191,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
     <div className="flex flex-col h-full bg-white relative">
       
       {/* HEADER & FILTERS */}
-      <div className="px-6 pt-4 pb-1 bg-white z-20 shrink-0">
+      <div className="px-6 pt-4 pb-1 bg-white z-20 shrink-0 app-header-safe">
         <div className="flex justify-center items-center mb-2">
              <h1 className="text-lg font-extrabold text-gray-900 tracking-wide">Discover</h1>
         </div>

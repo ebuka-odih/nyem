@@ -6,22 +6,41 @@
 // API Base URL - can be configured via environment variable
 // Defaults to localhost for development, production URL for production
 const getApiBase = () => {
-  // Check for explicit environment variable first
-  if (import.meta.env.VITE_API_BASE) {
-    return import.meta.env.VITE_API_BASE;
+  // Check for explicit environment variable first (highest priority)
+  const envApiBase = import.meta.env.VITE_API_BASE;
+  if (envApiBase && envApiBase.trim() !== '') {
+    console.log('[API Config] Using VITE_API_BASE from environment:', envApiBase);
+    return envApiBase.trim();
   }
   
-  // In development (localhost), use local Laravel server
-  if (import.meta.env.DEV || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'http://localhost:8000/api';
+  // Check if we're in development mode
+  const isDev = import.meta.env.DEV;
+  const isLocalhost = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' ||
+     window.location.hostname === '0.0.0.0');
+  
+  // In development mode or on localhost, use local Laravel server
+  if (isDev || isLocalhost) {
+    const localUrl = 'http://localhost:8000/api';
+    console.log('[API Config] Development mode detected, using local URL:', localUrl);
+    return localUrl;
   }
   
   // Production fallback
-  return 'https://nyem.gnosisbrand.com/backend/public/api';
+  const prodUrl = 'https://api.nyem.online/backend/public/api';
+  console.log('[API Config] Production mode, using production URL:', prodUrl);
+  return prodUrl;
 };
 
 const API_BASE = getApiBase();
-console.log('[API Config] Using API Base URL:', API_BASE);
+console.log('[API Config] Final API Base URL:', API_BASE);
+console.log('[API Config] Environment check:', {
+  VITE_API_BASE: import.meta.env.VITE_API_BASE,
+  DEV: import.meta.env.DEV,
+  MODE: import.meta.env.MODE,
+  hostname: typeof window !== 'undefined' ? window.location.hostname : 'N/A'
+});
 
 // CSRF cookie cache to avoid fetching it multiple times
 let csrfCookieFetched = false;
@@ -52,6 +71,7 @@ function getXsrfToken(): string | null {
 /**
  * Get CSRF cookie from Sanctum for stateful authentication
  * This is required when using Sanctum with stateful domains (like localhost)
+ * For production/cross-domain APIs, CSRF cookies are not used - only token auth
  */
 async function ensureCsrfCookie(forceRefresh = false): Promise<void> {
   // Force refresh if requested (e.g., after a 419 error)
@@ -68,11 +88,17 @@ async function ensureCsrfCookie(forceRefresh = false): Promise<void> {
     return csrfCookiePromise;
   }
 
-  // Only fetch CSRF cookie for localhost/stateful domains
-  const isLocalhost = window.location.hostname === 'localhost' || 
-                      window.location.hostname === '127.0.0.1';
+  // Check if API is on localhost (stateful domain)
+  // Only fetch CSRF cookie for localhost APIs, not for production/cross-domain
+  const apiUrl = new URL(API_BASE);
+  const isLocalhostApi = apiUrl.hostname === 'localhost' || 
+                         apiUrl.hostname === '127.0.0.1' ||
+                         apiUrl.hostname === '0.0.0.0';
   
-  if (!isLocalhost) {
+  if (!isLocalhostApi) {
+    // For production/cross-domain APIs, skip CSRF cookie fetching
+    // These should use token-based authentication only
+    console.log('[API] Skipping CSRF cookie fetch for production/cross-domain API');
     csrfCookieFetched = true;
     return;
   }
@@ -137,8 +163,9 @@ export async function apiFetch<T = any>(
 ): Promise<ApiResponse<T>> {
   const { method = 'GET', body, token, headers = {} } = options;
 
-  // For POST/PUT/DELETE requests on localhost, ensure we have CSRF cookie
-  // This is required for Sanctum stateful authentication
+  // For POST/PUT/DELETE requests, ensure we have CSRF cookie (only for localhost APIs)
+  // This is required for Sanctum stateful authentication on same-domain
+  // Production/cross-domain APIs use token-based auth only (no CSRF)
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
     await ensureCsrfCookie();
   }
@@ -155,11 +182,21 @@ export async function apiFetch<T = any>(
     requestHeaders['Content-Type'] = 'application/json; charset=utf-8';
   }
 
-  // Add XSRF token from cookie if available (required for Laravel Sanctum stateful auth)
+  // Determine if this is a localhost API (for CSRF handling)
+  // Use API_BASE from environment (VITE_API_BASE)
+  const apiUrl = new URL(API_BASE);
+  const isLocalhostApi = apiUrl.hostname === 'localhost' || 
+                         apiUrl.hostname === '127.0.0.1' ||
+                         apiUrl.hostname === '0.0.0.0';
+  
+  // Add XSRF token from cookie if available (only for localhost/stateful domains)
   // Laravel stores the CSRF token in XSRF-TOKEN cookie and expects it as X-XSRF-TOKEN header
-  const xsrfToken = getXsrfToken();
-  if (xsrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    requestHeaders['X-XSRF-TOKEN'] = xsrfToken;
+  // For production/cross-domain APIs, skip CSRF token (use token auth only)
+  if (isLocalhostApi) {
+    const xsrfToken = getXsrfToken();
+    if (xsrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      requestHeaders['X-XSRF-TOKEN'] = xsrfToken;
+    }
   }
 
   // Add authentication token if provided
@@ -167,9 +204,9 @@ export async function apiFetch<T = any>(
     requestHeaders.Authorization = `Bearer ${token}`;
   }
 
-  // Build full URL
+  // Build full URL using API_BASE from environment
   const url = `${API_BASE}${path}`;
-  console.log('[apiFetch]', method, url);
+  console.log('[apiFetch]', method, url, isLocalhostApi ? '(localhost - CSRF enabled)' : '(production - token auth only)');
 
   try {
     // Prepare body data
@@ -182,12 +219,13 @@ export async function apiFetch<T = any>(
       }
     }
 
-    // Make request with credentials for CSRF cookie support
+    // Make request - only include credentials for localhost APIs
+    // For production APIs, don't send cookies (token auth only)
     const response = await fetch(url, {
       method,
       headers: requestHeaders,
       body: bodyData,
-      credentials: 'include', // Include cookies for CSRF token
+      credentials: isLocalhostApi ? 'include' : 'omit', // Only include cookies for localhost (CSRF)
     });
 
     // Parse response
@@ -220,55 +258,66 @@ export async function apiFetch<T = any>(
       let message = data?.message || data?.error || `Request failed with status ${response.status}`;
       
       if (response.status === 419) {
-        // CSRF token mismatch - reset CSRF cookie and retry once if enabled
-        resetCsrfCookie();
+        // CSRF token mismatch - only retry for localhost APIs
+        // Production/cross-domain APIs should not use CSRF
+        // Use API_BASE from environment (VITE_API_BASE)
+        const apiUrl = new URL(API_BASE);
+        const isLocalhostApi = apiUrl.hostname === 'localhost' || 
+                               apiUrl.hostname === '127.0.0.1' ||
+                               apiUrl.hostname === '0.0.0.0';
         
-        // Retry the request once with a fresh CSRF cookie
-        if (retryOn419 && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-          console.log('[apiFetch] 419 error - retrying with fresh CSRF cookie...');
+        if (isLocalhostApi) {
+          // For localhost, reset CSRF cookie and retry once if enabled
+          resetCsrfCookie();
           
-          // Fetch fresh CSRF cookie
-          await ensureCsrfCookie(true);
-          
-          // Retry the request once
-          try {
-            const retryResponse = await fetch(url, {
-              method,
-              headers: requestHeaders,
-              body: bodyData,
-              credentials: 'include',
-            });
+          // Retry the request once with a fresh CSRF cookie
+          if (retryOn419 && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+            console.log('[apiFetch] 419 error - retrying with fresh CSRF cookie...');
+            
+            // Fetch fresh CSRF cookie
+            await ensureCsrfCookie(true);
+            
+            // Retry the request once
+            try {
+              const retryResponse = await fetch(url, {
+                method,
+                headers: requestHeaders,
+                body: bodyData,
+                credentials: 'include',
+              });
 
-            // If retry succeeds, parse and return the response
-            if (retryResponse.ok) {
-              const contentType = retryResponse.headers.get('content-type');
-              let retryData: any = {};
-              if (contentType && contentType.includes('application/json')) {
-                retryData = await retryResponse.json().catch(() => ({}));
-              } else {
-                const text = await retryResponse.text().catch(() => '');
-                if (text) {
-                  try {
-                    retryData = JSON.parse(text);
-                  } catch {
-                    retryData = { message: text || `Server returned ${retryResponse.status}` };
+              // If retry succeeds, parse and return the response
+              if (retryResponse.ok) {
+                const contentType = retryResponse.headers.get('content-type');
+                let retryData: any = {};
+                if (contentType && contentType.includes('application/json')) {
+                  retryData = await retryResponse.json().catch(() => ({}));
+                } else {
+                  const text = await retryResponse.text().catch(() => '');
+                  if (text) {
+                    try {
+                      retryData = JSON.parse(text);
+                    } catch {
+                      retryData = { message: text || `Server returned ${retryResponse.status}` };
+                    }
                   }
                 }
+                console.log('[apiFetch] Retry successful after 419 error');
+                return retryData;
               }
-              console.log('[apiFetch] Retry successful after 419 error');
-              return retryData;
+            } catch (retryError) {
+              console.warn('[apiFetch] Retry after 419 error failed:', retryError);
+              // Fall through to throw the original error
             }
-          } catch (retryError) {
-            console.warn('[apiFetch] Retry after 419 error failed:', retryError);
-            // Fall through to throw the original error
           }
         }
         
-        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        if (isLocalhost) {
+        // Set error message based on API type (reuse variables declared above)
+        if (isLocalhostApi) {
           message = `CSRF token mismatch (419). This usually means the session expired. Please try again.`;
         } else {
-          message = `CSRF token mismatch (419). Please refresh the page and try again.`;
+          // For production APIs, 419 shouldn't happen if backend is configured correctly
+          message = `CSRF token mismatch (419). The production API should use token-based authentication. Please check backend configuration.`;
         }
       } else if (response.status === 503) {
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';

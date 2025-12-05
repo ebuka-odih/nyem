@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, ArrowRight, ArrowRightLeft, Send } from 'lucide-react';
+import { AppHeader } from './AppHeader';
 
 interface ChatScreenProps {
   onBack: () => void;
@@ -43,22 +44,17 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onBack }) => {
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 bg-white border-b border-gray-100 flex items-center z-20 shadow-sm">
-        <button 
-            onClick={onBack}
-            className="p-2 -ml-1 hover:bg-gray-100 rounded-full transition-colors text-gray-700"
-        >
-            <ArrowLeft size={22} />
-        </button>
-        
-        {/* User Info Header */}
-        <div className="flex items-center ml-2">
-             <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border border-gray-100 mr-2">
-                 <img src="https://i.pravatar.cc/150?img=11" alt="Ebuka" className="w-full h-full object-cover" />
-             </div>
-             <h1 className="text-lg font-bold text-gray-900">Ebuka</h1>
+      <AppHeader 
+        onBack={onBack}
+        className="shadow-sm"
+      >
+        <div className="flex items-center">
+          <div className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden border border-gray-100 mr-2">
+            <img src="https://i.pravatar.cc/150?img=11" alt="Ebuka" className="w-full h-full object-cover" />
+          </div>
+          <h1 className="text-lg font-bold text-gray-900">Ebuka</h1>
         </div>
-      </div>
+      </AppHeader>
 
       {/* Trade Match Context Card */}
       <div className="bg-gray-50 p-4 shrink-0 border-b border-gray-100">

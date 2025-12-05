@@ -3,7 +3,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Nyem - Tinder for Barter</title>
     
     <!-- PWA Meta Tags -->
@@ -54,16 +54,147 @@
       }
     </script>
     <style>
+      :root {
+        /* Safe area insets for iOS devices */
+        --safe-area-inset-top: env(safe-area-inset-top, 0px);
+        --safe-area-inset-right: env(safe-area-inset-right, 0px);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-inset-left: env(safe-area-inset-left, 0px);
+      }
+
+      * {
+        /* Improve touch responsiveness */
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+
+      html {
+        /* Prevent browser UI from showing on drag */
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        /* Prevent pull-to-refresh and overscroll */
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+
       body {
         margin: 0;
         padding: 0;
         font-family: 'Inter', sans-serif;
         background-color: #1a1a1a; /* Dark background for desktop framing */
+        /* Prevent browser UI from showing on drag */
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        /* Prevent pull-to-refresh on mobile */
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+        /* Prevent text selection on mobile for better UX */
+        -webkit-user-select: none;
+        user-select: none;
+        /* Prevent zoom on double tap */
+        touch-action: pan-x pan-y;
       }
+
+      /* Allow text selection in input fields and text areas */
+      input, textarea, [contenteditable] {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+
       /* Hide scrollbar for clean mobile look */
       ::-webkit-scrollbar {
         width: 0px;
         background: transparent;
+      }
+
+      /* Safe area bottom padding utility */
+      .pb-safe-bottom {
+        padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));
+      }
+
+      .safe-area-bottom {
+        padding-bottom: var(--safe-area-inset-bottom);
+      }
+
+      /* Bottom nav safe area extension - extends footer bg into home indicator area */
+      .footer-safe-bottom {
+        padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));
+        margin-bottom: calc(-1 * var(--safe-area-inset-bottom));
+      }
+
+      /* For white footer - extends white background into safe area */
+      .footer-safe-bottom-white {
+        padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));
+        margin-bottom: calc(-1 * var(--safe-area-inset-bottom));
+        background-color: white !important;
+        /* Ensure background extends all the way down */
+        background-clip: padding-box;
+      }
+
+      .safe-area-container {
+        /* Remove top and bottom padding - headers/footers will handle their own safe areas */
+        padding-left: var(--safe-area-inset-left);
+        padding-right: var(--safe-area-inset-right);
+        padding-bottom: 0;
+      }
+
+      /* Header safe area extension - extends header bg into notch area */
+      .header-safe-top {
+        padding-top: calc(var(--safe-area-inset-top) + 1rem);
+        margin-top: calc(-1 * var(--safe-area-inset-top));
+      }
+
+      /* For brand-colored headers */
+      .header-safe-top-brand {
+        padding-top: calc(var(--safe-area-inset-top) + 1rem);
+        margin-top: calc(-1 * var(--safe-area-inset-top));
+        background-color: #880e4f !important;
+      }
+
+      /* For white headers - extends into notch (for auth pages) */
+      .header-safe-top-white {
+        padding-top: calc(var(--safe-area-inset-top) + 1rem);
+        margin-top: calc(-1 * var(--safe-area-inset-top));
+        background-color: white !important;
+      }
+
+      /* App header - starts below notch with proper spacing */
+      .app-header-safe {
+        padding-top: calc(var(--safe-area-inset-top) + 0.5rem);
+        /* No negative margin - content starts below notch */
+      }
+
+      /* Touch-friendly button interactions */
+      .touch-manipulation {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+
+      /* Smooth scrolling */
+      * {
+        scroll-behavior: smooth;
+      }
+
+      /* Better focus styles for accessibility */
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid #880e4f;
+        outline-offset: 2px;
       }
     </style>
 </head>

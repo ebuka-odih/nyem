@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Heart } from 'lucide-react';
+import { AppHeader } from './AppHeader';
 
 interface MatchRequestsScreenProps {
   onBack: () => void;
@@ -9,15 +10,10 @@ export const MatchRequestsScreen: React.FC<MatchRequestsScreenProps> = ({ onBack
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 flex items-center z-10">
-        <button 
-            onClick={onBack}
-            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors text-gray-700"
-        >
-            <ArrowLeft size={22} />
-        </button>
-        <h1 className="text-xl font-extrabold text-gray-900 ml-2">Match Requests</h1>
-      </div>
+      <AppHeader 
+        title="Match Requests"
+        onBack={onBack}
+      />
 
       {/* Empty State Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50/50">

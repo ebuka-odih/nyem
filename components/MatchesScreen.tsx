@@ -89,9 +89,10 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 sticky top-0 z-10">
-        <h1 className="text-xl font-extrabold text-gray-900">Matches</h1>
-      </div>
+      <AppHeader 
+        title="Matches" 
+        className="sticky top-0"
+      />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         

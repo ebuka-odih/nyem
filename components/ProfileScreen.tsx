@@ -4,6 +4,7 @@ import { MapPin, Pencil, Settings, HelpCircle, LogOut, ChevronRight, Grid, List 
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { AppHeader } from './AppHeader';
 
 interface ProfileScreenProps {
   onEditProfile: () => void;
@@ -36,7 +37,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) =
         const formattedItems = items.slice(0, 4).map((item: any) => ({
           id: item.id,
           title: item.title || item.name || 'Untitled Item',
-          image: item.images?.[0] || item.image || 'https://via.placeholder.com/300',
+          image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f3f4f6" width="300" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
         }));
         setUserItems(formattedItems);
       } catch (error) {
@@ -59,9 +60,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) =
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 sticky top-0 z-10">
-        <h1 className="text-xl font-extrabold text-gray-900">Profile</h1>
-      </div>
+      <AppHeader 
+        title="Profile" 
+        className="sticky top-0"
+      />
 
       <div className="flex-1 overflow-y-auto">
         {/* Profile Card Section */}

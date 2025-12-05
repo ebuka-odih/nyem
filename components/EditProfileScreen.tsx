@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { ArrowLeft, Camera, ChevronDown, Lock, ChevronRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { AppHeader } from './AppHeader';
 
 interface EditProfileScreenProps {
   onBack: () => void;
@@ -52,15 +53,11 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ onBack }) 
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 flex items-center z-10 sticky top-0">
-        <button 
-            onClick={onBack}
-            className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors text-gray-700"
-        >
-            <ArrowLeft size={22} />
-        </button>
-        <h1 className="text-xl font-extrabold text-gray-900 ml-2">Edit Profile</h1>
-      </div>
+      <AppHeader 
+        title="Edit Profile"
+        onBack={onBack}
+        className="sticky top-0"
+      />
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
