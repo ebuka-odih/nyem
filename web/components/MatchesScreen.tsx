@@ -3,6 +3,7 @@ import { Bell, ChevronRight, Search } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { AppHeader } from './AppHeader';
 
 interface MatchesScreenProps {
   onNavigateToRequests: () => void;
