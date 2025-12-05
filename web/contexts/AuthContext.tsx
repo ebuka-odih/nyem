@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiFetch, getStoredToken, storeToken, removeToken, getStoredUser, storeUser } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { getCurrentLocation, updateLocationOnBackend, requestLocationPermission } from '../utils/location';
 
 // User type definition
 export interface User {
@@ -124,6 +125,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     storeToken(authToken);
     storeUser(userData);
 
+    // Request location after successful login
+    requestUserLocation(authToken);
+
     return { new_user: Boolean(res.new_user) };
   };
 
@@ -140,6 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
     storeToken(authToken);
     storeUser(userData);
+
+    // Request location after successful login
+    requestUserLocation(authToken);
   };
 
   const register = async (payload: {
@@ -161,6 +168,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
     storeToken(authToken);
     storeUser(userData);
+
+    // Request location after successful registration
+    requestUserLocation(authToken);
+  };
+
+  /**
+   * Request user location and update on backend
+   * Shows a confirmation dialog to ask for permission first
+   */
+  const requestUserLocation = async (authToken: string) => {
+    try {
+      // Check if geolocation is available
+      if (!navigator.geolocation) {
+        console.warn('Geolocation is not supported by this browser');
+        return;
+      }
+
+      // Show confirmation dialog
+      const userConfirmed = window.confirm(
+        'To help you find nearby users and items, we need your location. Would you like to share your location?'
+      );
+
+      if (!userConfirmed) {
+        console.log('User declined location access');
+        return;
+      }
+
+      // Request permission and get location
+      const hasPermission = await requestLocationPermission();
+      
+      if (!hasPermission) {
+        alert('Location permission is required to find nearby users. You can enable it later in your browser settings.');
+        return;
+      }
+
+      // Get current location
+      const location = await getCurrentLocation({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      });
+
+      // Update location on backend
+      await updateLocationOnBackend(location.latitude, location.longitude, authToken);
+      console.log('Location updated successfully');
+    } catch (error: any) {
+      console.error('Failed to get/update location:', error);
+      // Don't show alert for user cancellation, only for errors
+      if (error.message && !error.message.includes('denied')) {
+        alert(error.message || 'Failed to get your location. You can update it later in your profile settings.');
+      }
+    }
   };
 
   const logout = async (): Promise<void> => {

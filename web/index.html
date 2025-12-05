@@ -77,13 +77,15 @@
         /* Prevent pull-to-refresh and overscroll */
         overscroll-behavior: none;
         -webkit-overflow-scrolling: touch;
+        background-color: white;
       }
 
       body {
         margin: 0;
         padding: 0;
         font-family: 'Inter', sans-serif;
-        background-color: #1a1a1a; /* Dark background for desktop framing */
+        /* Dark background for desktop framing only, white on mobile */
+        background-color: white;
         /* Prevent browser UI from showing on drag */
         position: fixed;
         width: 100%;
@@ -97,6 +99,13 @@
         user-select: none;
         /* Prevent zoom on double tap */
         touch-action: pan-x pan-y;
+      }
+      
+      /* Dark background for desktop only */
+      @media (min-width: 768px) {
+        body {
+          background-color: #1a1a1a;
+        }
       }
 
       /* Allow text selection in input fields and text areas */
@@ -136,13 +145,22 @@
       }
 
       .safe-area-container {
-        /* Remove top and bottom padding - headers/footers will handle their own safe areas */
+        /* Remove top padding - headers will handle their own safe areas */
         padding-left: var(--safe-area-inset-left);
         padding-right: var(--safe-area-inset-right);
-        padding-bottom: 0;
         padding-top: 0;
+        /* Extend background to cover bottom safe area */
+        background-color: white !important;
+        /* Ensure full height coverage including safe areas - extend into bottom safe area */
+        height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+        min-height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+        /* Extend beyond viewport to cover safe area at bottom */
+        margin-bottom: 0;
+        padding-bottom: 0;
         /* Ensure container respects safe areas */
         margin-top: 0;
+        /* Ensure background extends all the way down */
+        background-clip: padding-box;
       }
 
       /* Header safe area extension - extends header bg into notch area */
@@ -198,6 +216,12 @@
         left: 0;
         right: 0;
         bottom: 0;
+        background-color: white !important;
+        /* Ensure root covers entire viewport including safe areas - extend into bottom safe area */
+        height: calc(100vh + env(safe-area-inset-bottom, 0px));
+        height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+        min-height: calc(100vh + env(safe-area-inset-bottom, 0px));
+        min-height: calc(100dvh + env(safe-area-inset-bottom, 0px));
       }
 
       /* Smooth scrolling */
