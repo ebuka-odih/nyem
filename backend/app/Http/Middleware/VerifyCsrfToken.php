@@ -14,68 +14,22 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        'api/*', // Exclude all API routes by default - they use token-based auth
     ];
 
     /**
      * Determine if the request should be excluded from CSRF verification.
      * 
-     * For API routes, we only apply CSRF protection if the request is from
-     * a stateful domain (as configured in Sanctum). Non-stateful API requests
-     * should use token-based authentication only.
+     * For API routes, we exclude them from CSRF verification by default since
+     * they should use token-based authentication. The EnsureFrontendRequestsAreStateful
+     * middleware will handle enabling CSRF for stateful requests if needed.
      */
     protected function inExceptArray($request)
     {
-        // If this is an API route, check if it's from a stateful domain
+        // Exclude all API routes from CSRF verification
+        // API routes should use token-based authentication, not CSRF tokens
         if ($request->is('api/*')) {
-            // Get the stateful domains from Sanctum config
-            $statefulDomains = Config::get('sanctum.stateful', []);
-            
-            // Get the request origin/referer
-            $origin = $request->header('Origin');
-            $referer = $request->header('Referer');
-            
-            // Extract host from origin or referer
-            $requestHost = null;
-            if ($origin) {
-                $parsed = parse_url($origin);
-                $requestHost = $parsed['host'] ?? null;
-                if (isset($parsed['port'])) {
-                    $requestHost .= ':' . $parsed['port'];
-                }
-            } elseif ($referer) {
-                $parsed = parse_url($referer);
-                $requestHost = $parsed['host'] ?? null;
-                if (isset($parsed['port'])) {
-                    $requestHost .= ':' . $parsed['port'];
-                }
-            }
-            
-            // Also check the request host directly (for same-origin requests)
-            if (!$requestHost) {
-                $requestHost = $request->getHost();
-                if ($request->getPort()) {
-                    $requestHost .= ':' . $request->getPort();
-                }
-            }
-            
-            // Normalize stateful domains (remove protocol, paths, etc.)
-            $normalizedStatefulDomains = array_map(function ($domain) {
-                // Remove protocol if present
-                $domain = preg_replace('#^https?://#', '', $domain);
-                // Remove path if present
-                $domain = explode('/', $domain)[0];
-                return trim($domain);
-            }, $statefulDomains);
-            
-            // Normalize request host
-            $normalizedRequestHost = trim($requestHost);
-            
-            // If we can't determine the origin, or it's not in the stateful domains list,
-            // exclude from CSRF verification (use token-based auth)
-            if (!$requestHost || !in_array($normalizedRequestHost, $normalizedStatefulDomains, true)) {
-                return true; // Exclude from CSRF verification
-            }
+            return true;
         }
         
         return parent::inExceptArray($request);

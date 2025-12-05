@@ -32,8 +32,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
 
+        // Conditionally apply EnsureFrontendRequestsAreStateful only for stateful domains
+        // For production/cross-domain APIs, we skip this and use token-based auth only
         $middleware->api([
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \App\Http\Middleware\ConditionalStatefulMiddleware::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ]);
     })
