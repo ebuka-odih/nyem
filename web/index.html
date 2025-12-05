@@ -140,6 +140,9 @@
         padding-left: var(--safe-area-inset-left);
         padding-right: var(--safe-area-inset-right);
         padding-bottom: 0;
+        padding-top: 0;
+        /* Ensure container respects safe areas */
+        margin-top: 0;
       }
 
       /* Header safe area extension - extends header bg into notch area */
@@ -162,10 +165,22 @@
         background-color: white !important;
       }
 
-      /* App header - starts below notch with proper spacing */
+      /* App header - starts below notch with proper spacing like native iOS apps */
       .app-header-safe {
-        padding-top: calc(var(--safe-area-inset-top) + 0.5rem);
-        /* No negative margin - content starts below notch */
+        /* Safe area inset (accounts for notch) + spacing for header content */
+        /* On devices with notch: safe-area-inset-top is ~44-47px (includes status bar) */
+        /* We add 12px (0.75rem) for comfortable spacing below status bar content */
+        padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+        /* Ensure minimum spacing on devices without notch */
+        padding-top: max(calc(env(safe-area-inset-top, 0px) + 0.75rem), 0.75rem);
+        /* No negative margin - content starts below notch/status bar */
+      }
+      
+      /* Fallback using CSS custom property if env() not supported */
+      @supports not (padding: env(safe-area-inset-top)) {
+        .app-header-safe {
+          padding-top: calc(var(--safe-area-inset-top) + 0.75rem);
+        }
       }
 
       /* Touch-friendly button interactions */

@@ -191,8 +191,8 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
     <div className="flex flex-col h-full bg-white relative">
       
       {/* HEADER & FILTERS */}
-      <div className="px-6 pt-4 pb-1 bg-white z-20 shrink-0 app-header-safe">
-        <div className="flex justify-center items-center mb-2">
+      <div className="px-6 pb-1 bg-white z-20 shrink-0 app-header-safe">
+        <div className="flex justify-center items-center mb-2 pt-1">
              <h1 className="text-lg font-extrabold text-gray-900 tracking-wide">Discover</h1>
         </div>
         <div className="bg-gray-100 p-1 rounded-full flex items-center mb-3 w-full">

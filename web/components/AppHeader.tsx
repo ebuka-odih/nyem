@@ -25,7 +25,7 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
 }) => {
   return (
     <div className={`app-header-safe bg-white z-20 shrink-0 ${showBorder ? 'border-b border-gray-100' : ''} ${className}`}>
-      <div className="px-4 md:px-6 flex items-center justify-between min-h-[56px]">
+      <div className="px-4 md:px-6 flex items-center justify-between min-h-[44px] py-2">
         {/* Left side - Back button or empty */}
         <div className="flex items-center min-w-[44px]">
           {onBack && (
