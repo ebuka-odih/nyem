@@ -115,7 +115,7 @@ const AppContent: React.FC = () => {
     <div className="w-full h-[100dvh] md:max-w-md md:mx-auto md:h-[95dvh] md:my-[2.5dvh] bg-white relative overflow-hidden md:rounded-[3rem] shadow-2xl md:border-[8px] md:border-gray-900 flex flex-col safe-area-container">
       
       {/* Screen Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative w-full" data-scrollable>
+      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative w-full overscroll-none" data-scrollable style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none' }}>
         {currentScreen === 'welcome' && (
           <WelcomeScreen onGetStarted={() => navigateTo('signin')} />
         )}
@@ -174,13 +174,13 @@ const AppContent: React.FC = () => {
         )}
 
         {currentScreen === 'home' && (
-          <div className="flex flex-col h-full w-full">
-              {/* Content Area */}
-              <div className="flex-1 overflow-hidden relative">
+          <div className="flex flex-col h-full w-full relative">
+              {/* Content Area with bottom padding for fixed nav */}
+              <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
                   {renderMainContent()}
               </div>
 
-              {/* Persistent Bottom Navigation */}
+              {/* Persistent Bottom Navigation - Fixed to bottom of container */}
               <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
         )}

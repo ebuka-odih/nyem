@@ -52,7 +52,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ onBack }) 
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 flex items-center z-10 sticky top-0">
+      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 flex items-center z-10 sticky top-0 header-safe-top-white">
         <button 
             onClick={onBack}
             className="p-2 -ml-2 hover:bg-gray-100 rounded-full transition-colors text-gray-700"

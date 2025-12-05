@@ -43,7 +43,7 @@ export const ChatScreen: React.FC<ChatScreenProps> = ({ onBack }) => {
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 bg-white border-b border-gray-100 flex items-center z-20 shadow-sm">
+      <div className="px-4 pt-4 pb-3 bg-white border-b border-gray-100 flex items-center z-20 shadow-sm header-safe-top-white">
         <button 
             onClick={onBack}
             className="p-2 -ml-1 hover:bg-gray-100 rounded-full transition-colors text-gray-700"

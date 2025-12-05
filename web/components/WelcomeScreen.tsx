@@ -8,7 +8,7 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) => {
   return (
-    <div className="flex flex-col min-h-full bg-brand relative">
+    <div className="flex flex-col min-h-full bg-brand relative header-safe-top-brand">
       
       {/* Top Section: Branding */}
       <div className="flex-grow flex flex-col items-center justify-center py-8 md:py-12 px-6 text-white z-10 shrink-0">

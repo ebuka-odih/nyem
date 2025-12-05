@@ -40,7 +40,7 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, on
   };
 
   return (
-    <div className="flex flex-col min-h-full bg-brand relative">
+    <div className="flex flex-col min-h-full bg-brand relative header-safe-top-brand">
         {/* Top Section: Header */}
         <div className="px-6 pt-8 pb-8 md:pt-10 md:pb-10 shrink-0">
             <button 
