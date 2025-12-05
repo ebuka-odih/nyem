@@ -5,6 +5,7 @@ import { Button } from './Button';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { AppHeader } from './AppHeader';
 
 interface Category {
   id: number;
@@ -209,8 +210,10 @@ export const UploadScreen: React.FC = () => {
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 border-b border-gray-100 bg-white z-10 header-safe-top-white">
-        <h1 className="text-xl font-extrabold text-gray-900 mb-4 text-center">Upload</h1>
+      <AppHeader 
+        title="Upload"
+        className="pb-4"
+      />
         
         {/* Tabs */}
         <div className="bg-gray-100 p-1 rounded-full flex items-center">

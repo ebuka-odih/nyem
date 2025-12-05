@@ -4,6 +4,7 @@ import { MapPin, Pencil, Settings, HelpCircle, LogOut, ChevronRight, Grid, List 
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { AppHeader } from './AppHeader';
 
 interface ProfileScreenProps {
   onEditProfile: () => void;
@@ -59,9 +60,10 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile }) =
   return (
     <div className="flex flex-col h-full bg-gray-50">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 bg-white border-b border-gray-100 sticky top-0 z-10 header-safe-top-white">
-        <h1 className="text-xl font-extrabold text-gray-900">Profile</h1>
-      </div>
+      <AppHeader 
+        title="Profile" 
+        className="sticky top-0"
+      />
 
       <div className="flex-1 overflow-y-auto">
         {/* Profile Card Section */}
