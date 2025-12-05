@@ -174,7 +174,7 @@ const AppContent: React.FC = () => {
         )}
 
         {currentScreen === 'home' && (
-          <div className="flex flex-col h-full w-full relative overflow-hidden">
+          <div className="flex flex-col h-full w-full relative">
               {/* Content Area with bottom padding for fixed nav */}
               <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
                   {renderMainContent()}

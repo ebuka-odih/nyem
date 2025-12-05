@@ -142,6 +142,10 @@
         background-color: white !important;
         /* Ensure background extends all the way down */
         background-clip: padding-box;
+        /* Ensure content is not clipped */
+        overflow: visible;
+        /* Ensure minimum height for icon + text */
+        min-height: calc(60px + var(--safe-area-inset-bottom));
       }
 
       .safe-area-container {
