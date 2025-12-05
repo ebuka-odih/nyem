@@ -8,6 +8,8 @@
   "theme_color": "#880e4f",
   "orientation": "portrait-primary",
   "scope": "/",
+  "prefer_related_applications": false,
+  "display_override": ["standalone", "fullscreen", "minimal-ui"],
   "icons": [
     {
       "src": "/icon-72x72.png",
