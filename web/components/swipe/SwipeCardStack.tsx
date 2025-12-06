@@ -7,7 +7,7 @@ import { SwipeCard } from './SwipeCard';
 interface SwipeCardStackProps {
   items: SwipeItem[];
   currentIndex: number;
-  activeTab: 'Shop' | 'Services' | 'Swap';
+  activeTab: 'Marketplace' | 'Services' | 'Swap';
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onItemClick: (item: SwipeItem) => void;

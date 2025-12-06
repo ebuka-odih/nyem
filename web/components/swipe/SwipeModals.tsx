@@ -8,7 +8,7 @@ interface SwipeModalsProps {
   showOfferModal: boolean;
   showMarketplaceModal: boolean;
   currentItem: SwipeItem | null;
-  activeTab: 'Shop' | 'Services' | 'Swap';
+  activeTab: 'Marketplace' | 'Services' | 'Swap';
   onCloseOffer: () => void;
   onCloseMarketplace: () => void;
   onComplete: () => void;

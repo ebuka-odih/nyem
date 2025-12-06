@@ -10,7 +10,7 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
   return (
-    <div className="bg-white border-t border-gray-100 pt-3 px-4 flex justify-between items-start z-50 shrink-0 w-full footer-safe-bottom-white absolute bottom-0 left-0 right-0 md:relative md:bottom-auto md:mb-0" style={{ 
+    <div className="bg-white border-t border-gray-100 pt-3 px-4 flex justify-between items-start shrink-0 w-full footer-safe-bottom-white md:relative md:bottom-auto md:mb-0" style={{ 
       paddingLeft: 'calc(1rem + env(safe-area-inset-left, 0px))', 
       paddingRight: 'calc(1rem + env(safe-area-inset-right, 0px))', 
       paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom, 0px))',

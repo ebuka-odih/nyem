@@ -201,11 +201,13 @@ const AppContent: React.FC = () => {
         {currentScreen === 'home' && (
           <div className="flex flex-col h-full w-full relative">
               {/* Content Area with bottom padding for fixed nav */}
-              <div className="flex-1 overflow-hidden relative pb-20 md:pb-0">
+              <div className="flex-1 overflow-y-auto relative md:pb-0" style={{ 
+                paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 1.5rem)'
+              }}>
                   {renderMainContent()}
               </div>
 
-              {/* Persistent Bottom Navigation - Fixed to bottom, extends into safe area */}
+              {/* Persistent Bottom Navigation - Sticky/Fixed to bottom, extends into safe area */}
               <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
         )}

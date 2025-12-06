@@ -197,5 +197,60 @@ class DemoDataSeeder extends Seeder
                 ...$itemData,
             ]);
         }
+
+        // Create 3 marketplace items for testing (Shop category)
+        $marketplaceItems = [
+            [
+                'title' => 'iPhone 13 Pro',
+                'description' => '128GB, Space Gray. Excellent condition, comes with original box and charger. Screen protector applied.',
+                'category_name' => 'Phones & Gadgets', // Shop > Phones & Gadgets
+                'condition' => 'like_new',
+                'photos' => ['https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=800'],
+                'price' => 450000.00,
+                'city' => 'Lagos',
+                'status' => 'active',
+                'type' => 'marketplace',
+            ],
+            [
+                'title' => 'Designer Handbag',
+                'description' => 'Authentic leather handbag, perfect for everyday use. Spacious compartments, elegant design.',
+                'category_name' => 'Shoes & Bags', // Shop > Shoes & Bags
+                'condition' => 'new',
+                'photos' => ['https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800'],
+                'price' => 85000.00,
+                'city' => 'Lagos',
+                'status' => 'active',
+                'type' => 'marketplace',
+            ],
+            [
+                'title' => 'Smart TV 55 inch',
+                'description' => '4K Ultra HD Smart TV with built-in streaming apps. Perfect for home entertainment. Like new condition.',
+                'category_name' => 'Home & Lifestyle', // Shop > Home & Lifestyle
+                'condition' => 'like_new',
+                'photos' => ['https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800'],
+                'price' => 320000.00,
+                'city' => 'Lagos',
+                'status' => 'active',
+                'type' => 'marketplace',
+            ],
+        ];
+
+        foreach ($marketplaceItems as $itemData) {
+            $categoryName = $itemData['category_name'];
+            unset($itemData['category_name']);
+            
+            $categoryId = $this->getCategoryId($categoryName);
+            if (!$categoryId) {
+                // Fallback to first available Shop category if not found
+                $shopCategory = Category::where('name', 'Shop')->first();
+                $categoryId = $shopCategory?->id ?? 1;
+            }
+            
+            Item::create([
+                'user_id' => $user->id,
+                'category_id' => $categoryId,
+                ...$itemData,
+            ]);
+        }
     }
 }

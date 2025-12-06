@@ -146,6 +146,17 @@
         overflow: visible;
         /* Ensure minimum height for icon + text */
         min-height: calc(60px + var(--safe-area-inset-bottom));
+        /* Prevent footer from shifting - sticky positioning */
+        position: sticky;
+        bottom: 0;
+        /* Ensure footer stays on top */
+        z-index: 50;
+        /* Prevent any layout shifts during scroll */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        /* Smooth rendering */
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
       }
 
       .safe-area-container {
@@ -231,6 +242,24 @@
       /* Smooth scrolling */
       * {
         scroll-behavior: smooth;
+      }
+
+      /* Prevent footer shift during scroll in PWA */
+      @supports (position: sticky) {
+        .footer-safe-bottom-white {
+          /* Ensure sticky positioning works correctly */
+          position: -webkit-sticky;
+          position: sticky;
+        }
+      }
+
+      /* Prevent layout shift when scrolling */
+      [data-scrollable] {
+        /* Use hardware acceleration for smooth scrolling */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        /* Prevent scroll bounce that might affect footer */
+        overscroll-behavior-y: contain;
       }
 
       /* Better focus styles for accessibility */
