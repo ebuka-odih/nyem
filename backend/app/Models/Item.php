@@ -15,7 +15,7 @@ class Item extends Model
         'user_id',
         'title',
         'description',
-        'category',
+        'category_id',
         'condition',
         'photos',
         'looking_for',
@@ -33,6 +33,11 @@ class Item extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
     }
 
     public function swipes()

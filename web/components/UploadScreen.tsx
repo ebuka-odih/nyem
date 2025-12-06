@@ -158,9 +158,9 @@ export const UploadScreen: React.FC = () => {
 
     setLoading(true);
     try {
-      // Find category name from selected category ID
-      const selectedCategoryObj = categories.find(cat => cat.id.toString() === category);
-      if (!selectedCategoryObj) {
+      // Validate category ID
+      const categoryId = parseInt(category, 10);
+      if (!categoryId || isNaN(categoryId)) {
         setError('Please select a valid category');
         setLoading(false);
         return;
@@ -175,7 +175,7 @@ export const UploadScreen: React.FC = () => {
       const payload: any = {
         title: title.trim(),
         description: description.trim() || undefined,
-        category: selectedCategoryObj.name, // Backend expects category name, not ID
+        category_id: categoryId, // Backend now expects category_id
         condition: conditionValue,
         type: activeTab === 'exchange' ? 'barter' : 'marketplace',
       };

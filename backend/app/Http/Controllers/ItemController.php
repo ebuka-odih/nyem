@@ -14,17 +14,12 @@ class ItemController extends Controller
         protected LocationService $locationService
     ) {}
 
-    private function getCategoryNames(): array
-    {
-        return Category::pluck('name')->toArray();
-    }
-
     public function store(Request $request)
     {
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'category' => ['required', 'string', Rule::in($this->getCategoryNames())],
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
             'condition' => ['required', Rule::in(['new', 'like_new', 'used'])],
             'photos' => 'nullable|array|min:1',
             'photos.*' => 'string|max:2048',
@@ -71,7 +66,7 @@ class ItemController extends Controller
         $user = $request->user(); // Can be null if not authenticated
         $blockedIds = $user ? $this->blockedUserIds($user) : [];
 
-        $query = Item::with('user')
+        $query = Item::with(['user', 'category'])
             ->where('status', 'active');
         
         // Only exclude user's own items and blocked users if authenticated
@@ -109,8 +104,19 @@ class ItemController extends Controller
             }
         }
 
+        // Filter by category_id (from Category model)
         if ($request->filled('category')) {
-            $query->where('category', $request->string('category'));
+            $categoryName = $request->string('category');
+            // Allow filtering by category name or ID
+            if (is_numeric($categoryName)) {
+                $query->where('category_id', $categoryName);
+            } else {
+                // Find category by name
+                $category = Category::where('name', $categoryName)->first();
+                if ($category) {
+                    $query->where('category_id', $category->id);
+                }
+            }
         }
 
         // Filter by type (barter or marketplace)
@@ -193,7 +199,8 @@ class ItemController extends Controller
             }
             
             // Include all original fields for backward compatibility
-            $formattedItem['category'] = $item->category;
+            $formattedItem['category'] = $item->category->name ?? null;
+            $formattedItem['category_id'] = $item->category_id;
             $formattedItem['city'] = $item->city;
             $formattedItem['status'] = $item->status;
             $formattedItem['created_at'] = $item->created_at;
@@ -245,7 +252,7 @@ class ItemController extends Controller
         $data = $request->validate([
             'title' => 'sometimes|string|max:255',
             'description' => 'sometimes|nullable|string',
-            'category' => ['sometimes', 'string', Rule::in($this->getCategoryNames())],
+            'category_id' => ['sometimes', 'integer', 'exists:categories,id'],
             'condition' => ['sometimes', Rule::in(['new', 'like_new', 'used'])],
             'photos' => 'sometimes|array|min:1',
             'photos.*' => 'string|max:2048',

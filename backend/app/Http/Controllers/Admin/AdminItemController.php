@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Item;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class AdminItemController extends Controller
         $status = $request->get('status');
         $category = $request->get('category');
 
-        $query = Item::with('user');
+        $query = Item::with(['user', 'category']);
 
         // Search by title or description
         if ($search) {
@@ -34,9 +35,17 @@ class AdminItemController extends Controller
             $query->where('status', $status);
         }
 
-        // Filter by category
+        // Filter by category (accepts category_id or category name)
         if ($category) {
-            $query->where('category', $category);
+            if (is_numeric($category)) {
+                $query->where('category_id', $category);
+            } else {
+                // Find category by name
+                $categoryModel = Category::where('name', $category)->first();
+                if ($categoryModel) {
+                    $query->where('category_id', $categoryModel->id);
+                }
+            }
         }
 
         $items = $query->orderBy('created_at', 'desc')
