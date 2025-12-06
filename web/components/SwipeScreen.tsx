@@ -125,17 +125,23 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   // Fetch items from API - works with or without authentication
   useEffect(() => {
     const fetchItems = async () => {
+      // Services tab is coming soon - show empty state
+      if (activeTab === 'Services') {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
         // Build query parameters
         const params: string[] = [];
         
         // Add type parameter based on active tab
-        // Map: Shop -> marketplace, Services -> services, Swap -> barter
+        // Map: Shop -> marketplace, Swap -> barter
+        // Services is coming soon, so skip fetching
         let itemType = 'marketplace';
-        if (activeTab === 'Services') {
-          itemType = 'services';
-        } else if (activeTab === 'Swap') {
+        if (activeTab === 'Swap') {
           itemType = 'barter';
         }
         params.push(`type=${encodeURIComponent(itemType)}`);
@@ -430,10 +436,20 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         <div className="relative w-full h-[65vh] md:h-[68vh]">
             {!currentItem && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0">
-                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4"><Flame size={40} className="text-gray-300" /></div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-2">You're all caught up!</h3>
-                    <p className="text-gray-500 mb-6">Check back later for more items.</p>
-                    <button onClick={resetStack} className="flex items-center space-x-2 px-6 py-3 bg-brand text-white rounded-full font-bold shadow-lg active:scale-95 transition-transform"><RefreshCw size={20} /><span>Start Over</span></button>
+                    {activeTab === 'Services' ? (
+                        <>
+                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4"><Flame size={40} className="text-gray-300" /></div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2">Coming Soon</h3>
+                            <p className="text-gray-500 mb-6">Services feature is under development. Check back soon!</p>
+                        </>
+                    ) : (
+                        <>
+                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-4"><Flame size={40} className="text-gray-300" /></div>
+                            <h3 className="text-xl font-bold text-gray-800 mb-2">You're all caught up!</h3>
+                            <p className="text-gray-500 mb-6">Check back later for more items.</p>
+                            <button onClick={resetStack} className="flex items-center space-x-2 px-6 py-3 bg-brand text-white rounded-full font-bold shadow-lg active:scale-95 transition-transform"><RefreshCw size={20} /><span>Start Over</span></button>
+                        </>
+                    )}
                 </div>
             )}
             

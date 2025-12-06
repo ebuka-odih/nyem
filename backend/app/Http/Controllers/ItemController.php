@@ -120,6 +120,7 @@ class ItemController extends Controller
         }
 
         // Filter by type (barter or marketplace)
+        // Note: Services tab is coming soon, so we don't handle 'services' type here
         if ($request->filled('type')) {
             $type = $request->string('type');
             if (in_array($type, ['barter', 'marketplace'])) {
