@@ -96,31 +96,47 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   const [locations, setLocations] = useState<Location[]>([]);
   const [loadingFilters, setLoadingFilters] = useState(true);
 
-  // Fetch categories and locations from API
+  // Map activeTab to parent category name for filtering
+  const getParentCategoryName = (tab: 'Shop' | 'Services' | 'Swap'): string => {
+    return tab; // Shop, Services, or Swap
+  };
+
+  // Fetch categories and locations from API - filtered by active tab
   useEffect(() => {
     const fetchFilters = async () => {
       try {
         setLoadingFilters(true);
+        
+        // Reset selected category when tab changes
+        setSelectedCategory('All Categories');
+        
+        // Fetch categories filtered by parent (activeTab)
+        const parentCategory = getParentCategoryName(activeTab);
+        const categoriesUrl = `${ENDPOINTS.categories}?parent=${encodeURIComponent(parentCategory)}`;
+        
         const [categoriesRes, locationsRes] = await Promise.all([
-          apiFetch(ENDPOINTS.categories),
+          apiFetch(categoriesUrl),
           apiFetch(ENDPOINTS.locations),
         ]);
         
         const cats = (categoriesRes.categories || []) as Category[];
         const locs = (locationsRes.locations || []) as Location[];
         
+        console.log(`[SwipeScreen] Loaded ${cats.length} categories for ${activeTab} tab:`, cats.map(c => c.name));
+        
         setCategories(cats);
         setLocations(locs);
       } catch (error) {
         console.error('Failed to fetch categories/locations:', error);
         // Fallback to empty arrays - will show "All Categories" and "all" as defaults
+        setCategories([]);
       } finally {
         setLoadingFilters(false);
       }
     };
 
     fetchFilters();
-  }, []);
+  }, [activeTab]);
 
   // Fetch items from API - works with or without authentication
   useEffect(() => {

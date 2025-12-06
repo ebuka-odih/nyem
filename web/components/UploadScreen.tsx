@@ -47,31 +47,39 @@ export const UploadScreen: React.FC = () => {
     }
   }, [isAuthenticated, user]);
 
-  // Fetch categories on mount
+  // Map activeTab to parent category name for filtering
+  const getParentCategoryName = (tab: 'exchange' | 'marketplace'): string => {
+    // Exchange items use Swap categories, marketplace items use Shop categories
+    return tab === 'exchange' ? 'Swap' : 'Shop';
+  };
+
+  // Fetch categories filtered by active tab
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true);
-        const response = await apiFetch(ENDPOINTS.categories);
+        
+        // Reset category selection when tab changes
+        setCategory('');
+        
+        // Fetch categories filtered by parent (based on activeTab)
+        const parentCategory = getParentCategoryName(activeTab);
+        const categoriesUrl = `${ENDPOINTS.categories}?parent=${encodeURIComponent(parentCategory)}`;
+        
+        const response = await apiFetch(categoriesUrl);
         const cats = (response.categories || []) as Category[];
         setCategories(cats);
       } catch (err) {
         console.error('Failed to fetch categories:', err);
-        // Fallback to hardcoded categories
-        setCategories([
-          { id: 1, name: 'Electronics', order: 1 },
-          { id: 2, name: 'Fashion', order: 2 },
-          { id: 3, name: 'Home & Garden', order: 3 },
-          { id: 4, name: 'Vehicles', order: 4 },
-          { id: 5, name: 'Other', order: 5 },
-        ]);
+        // Fallback to empty array
+        setCategories([]);
       } finally {
         setLoadingCategories(false);
       }
     };
 
     fetchCategories();
-  }, []);
+  }, [activeTab]);
 
   // Handle camera capture (instant snap only)
   const handleCameraCapture = () => {
