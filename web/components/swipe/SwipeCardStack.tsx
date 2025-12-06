@@ -57,7 +57,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   return (
     <div className="flex-1 flex flex-col items-center px-4 pb-4 w-full min-h-0">
       {/* Card Container - Fixed height that leaves room for buttons */}
-      <div className="relative w-full flex-1 max-h-[calc(100vh-280px)] min-h-[400px]">
+      <div className="relative w-full flex-1 max-h-[calc(100vh-260px)] min-h-[420px]">
         {/* Empty State */}
         {!currentItem && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">

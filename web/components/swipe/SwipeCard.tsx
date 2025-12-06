@@ -51,14 +51,21 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
 
       {/* Content Section - 40% of card height */}
       <div className="h-[40%] px-4 py-3 flex flex-col bg-white">
+        {/* Description - Limited to 2 lines */}
+        {item.description && (
+          <p className="text-gray-600 text-sm line-clamp-2 mb-2 leading-snug">
+            {item.description}
+          </p>
+        )}
+
         {/* Status Banner */}
         {isMarketplace ? (
-          <div className="bg-[#ECFDF5] rounded-lg px-3 py-2.5 flex items-center justify-center border border-green-100/50 shrink-0">
-            <span className="text-[#10B981] text-sm font-bold">Available for Purchase</span>
+          <div className="bg-[#ECFDF5] rounded-lg px-3 py-2 flex items-center justify-center border border-green-100/50 shrink-0">
+            <span className="text-[#10B981] text-xs font-bold">Available for Purchase</span>
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg px-3 py-2.5 flex items-center border border-gray-100 shrink-0">
-            <span className="text-gray-500 text-sm">Looking for: <span className="font-bold text-gray-900 ml-1">{item.lookingFor}</span></span>
+          <div className="bg-gray-50 rounded-lg px-3 py-2 flex items-center border border-gray-100 shrink-0">
+            <span className="text-gray-500 text-xs">Looking for: <span className="font-bold text-gray-900 ml-1">{item.lookingFor}</span></span>
           </div>
         )}
 
