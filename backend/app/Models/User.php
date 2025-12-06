@@ -21,6 +21,7 @@ class User extends Authenticatable
         'bio',
         'profile_photo',
         'city',
+        'is_artisan',
         'role',
         'otp_verified_at',
         'password',
@@ -43,12 +44,29 @@ class User extends Authenticatable
             'password' => 'hashed',
             'latitude' => 'decimal:7',
             'longitude' => 'decimal:7',
+            'is_artisan' => 'boolean',
         ];
     }
 
     public function items()
     {
         return $this->hasMany(Item::class);
+    }
+
+    /**
+     * Get all listings created by this user
+     */
+    public function listings()
+    {
+        return $this->hasMany(Listing::class);
+    }
+
+    /**
+     * Get the service provider profile for this user (if artisan)
+     */
+    public function serviceProvider()
+    {
+        return $this->hasOne(ServiceProvider::class);
     }
 
     public function swipes()

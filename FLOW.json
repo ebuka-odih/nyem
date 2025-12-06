@@ -1,4 +1,72 @@
 {
+  "app_flow": {
+    "welcome_screen": {
+      "title": "Discover. Trade. Book. All in One Swipe.",
+      "subtitle": "Find great deals, book trusted artisans, or swap items effortlessly — all with a single swipe.",
+      "bullets": [
+        "Shop: Buy and sell locally with ease",
+        "Services: Book trusted artisans instantly",
+        "Swap: Trade items the smart way"
+      ],
+      "cta": "Start Exploring",
+      "note": "No account needed to browse."
+    },
+    "discover_page": {
+      "tabs": ["Shop", "Services", "Swap"],
+      "browsing_mode": "preview_allowed",
+      "allowed_without_login": [
+        "swipe_left",
+        "browse_listings",
+        "switch_tabs",
+        "view_details",
+        "use_filters"
+      ],
+      "login_required_for": [
+        "swipe_right",
+        "buy_request",
+        "book_artisan",
+        "swap_request",
+        "send_message",
+        "upload_item",
+        "view_matches"
+      ],
+      "login_prompt_behavior": {
+        "title": "Create Your Account to Continue",
+        "subtitle": "Join thousands buying, booking, and swapping safely.",
+        "methods": ["phone_otp", "google", "email"],
+        "after_login": "return_to_previous_action"
+      }
+    },
+    "upload_flow": {
+      "pre_upload_profile": {
+        "trigger": "first_time_upload",
+        "fields": ["profile_photo", "username_auto", "city_auto", "short_bio_optional"]
+      },
+      "instant_upload": {
+        "steps": [
+          "snap_or_upload_photo",
+          "add_title",
+          "set_price",
+          "select_category",
+          "optional_description"
+        ],
+        "publish_behavior": "go_live_instantly"
+      }
+    },
+    "artisan_onboarding": {
+      "trigger": "become_artisan_button",
+      "fields": [
+        "profile_photo",
+        "service_category",
+        "starting_price",
+        "city",
+        "work_photos",
+        "short_bio",
+        "availability"
+      ],
+      "output": "artisan_profile_card"
+    }
+  },
     "matching_model": {
       "description": "Matching is now item-to-item specific. A match is created only when User A swipes right on User B's item AND explicitly selects the item they are offering in return. User B must then swipe right on that specific offered item for the match to form.",
       "user_action_right_swipe": {

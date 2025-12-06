@@ -14,8 +14,9 @@ interface Category {
 }
 
 export const UploadScreen: React.FC = () => {
-  const { token } = useAuth();
+  const { token, user, isAuthenticated, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'exchange' | 'marketplace'>('exchange');
+  const [showPreUploadProfile, setShowPreUploadProfile] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
@@ -32,6 +33,19 @@ export const UploadScreen: React.FC = () => {
   // Refs for file inputs
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if pre-upload profile setup is needed (first time upload)
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Check if user needs to complete profile before uploading
+      // According to flow: profile_photo, username_auto, city_auto, short_bio_optional
+      const needsProfileSetup = !user.profile_photo || !user.username || !user.city;
+      setShowPreUploadProfile(needsProfileSetup);
+    } else if (!isAuthenticated) {
+      // If not authenticated, show login prompt (handled by parent)
+      setShowPreUploadProfile(false);
+    }
+  }, [isAuthenticated, user]);
 
   // Fetch categories on mount
   useEffect(() => {

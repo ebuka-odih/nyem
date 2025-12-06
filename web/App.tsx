@@ -68,11 +68,13 @@ const AppContent: React.FC = () => {
           setCurrentScreen('home');
         }
       } else {
-        // User is not authenticated, show welcome screen
-        if (currentScreen === 'home' || currentScreen === 'edit_profile' || currentScreen === 'item_details' || currentScreen === 'match_requests' || currentScreen === 'chat') {
-          navigationHistory.reset('welcome');
-          setCurrentScreen('welcome');
+        // User is not authenticated
+        // Allow browsing (home/discover) but restrict authenticated-only screens
+        if (currentScreen === 'edit_profile' || currentScreen === 'match_requests' || currentScreen === 'chat') {
+          navigationHistory.reset('home');
+          setCurrentScreen('home');
         }
+        // Don't force welcome screen - allow browsing without login
       }
     }
   }, [isAuthenticated, loading, currentScreen, navigationHistory]);
@@ -92,10 +94,25 @@ const AppContent: React.FC = () => {
       navigateTo('item_details');
   };
 
+  const handleLoginRequest = (method: 'phone_otp' | 'google' | 'email') => {
+    if (method === 'phone_otp') {
+      navigateTo('signup_phone');
+    } else if (method === 'email') {
+      navigateTo('signin');
+    } else {
+      // Google login - navigate to signin for now
+      navigateTo('signin');
+    }
+  };
+
   const renderMainContent = () => {
       switch (activeTab) {
           case 'discover':
-              return <SwipeScreen onBack={() => navigateTo('welcome')} onItemClick={handleItemClick} />;
+              return <SwipeScreen 
+                onBack={() => navigateTo('welcome')} 
+                onItemClick={handleItemClick}
+                onLoginRequest={handleLoginRequest}
+              />;
           case 'upload':
               return <UploadScreen />;
           case 'matches':
@@ -106,7 +123,11 @@ const AppContent: React.FC = () => {
           case 'profile':
               return <ProfileScreen onEditProfile={() => navigateTo('edit_profile')} />;
           default:
-              return <SwipeScreen onBack={() => navigateTo('welcome')} onItemClick={handleItemClick} />;
+              return <SwipeScreen 
+                onBack={() => navigateTo('welcome')} 
+                onItemClick={handleItemClick}
+                onLoginRequest={handleLoginRequest}
+              />;
       }
   };
 
@@ -117,7 +138,7 @@ const AppContent: React.FC = () => {
       {/* Screen Content */}
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative w-full overscroll-none" data-scrollable style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none' }}>
         {currentScreen === 'welcome' && (
-          <WelcomeScreen onGetStarted={() => navigateTo('signin')} />
+          <WelcomeScreen onGetStarted={() => navigateTo('home')} />
         )}
 
         {currentScreen === 'signin' && (

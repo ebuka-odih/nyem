@@ -22,6 +22,9 @@ Route::get('/', function () {
 Route::get('/categories', [CategoryLocationController::class, 'categories']);
 Route::get('/locations', [CategoryLocationController::class, 'locations']);
 
+// Public feed endpoint - works with or without authentication
+Route::get('/items/feed', [ItemController::class, 'feed']);
+
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
@@ -45,7 +48,6 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/items', [ItemController::class, 'store']);
-    Route::get('/items/feed', [ItemController::class, 'feed']);
     Route::get('/items/{item}', [ItemController::class, 'show']);
     Route::put('/items/{item}', [ItemController::class, 'update']);
     Route::delete('/items/{item}', [ItemController::class, 'destroy']);

@@ -248,10 +248,17 @@ export async function apiFetch<T = any>(
     // Handle errors
     if (!response.ok) {
       if (response.status === 401) {
-        console.warn('[apiFetch] Unauthorized - token may be invalid');
-        // Clear invalid token from storage
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('auth_user');
+        // Only clear token if one was provided (it might be invalid)
+        // If no token was provided, this is expected for protected endpoints
+        if (token) {
+          console.warn('[apiFetch] Unauthorized - token may be invalid');
+          // Clear invalid token from storage
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+        } else {
+          // No token provided - this is expected for unauthenticated requests to protected endpoints
+          // Don't log as warning, just handle it gracefully
+        }
       }
       
       // Provide more specific error messages for common status codes
@@ -337,7 +344,14 @@ export async function apiFetch<T = any>(
 
     return data;
   } catch (error: any) {
-    console.error('[apiFetch][error]', method, url, error?.message || error);
+    // Don't log 401 errors as errors when no token was provided (expected behavior)
+    const isUnauthenticatedError = error?.message && 
+      (error.message.includes('Unauthenticated') || error.message.includes('Unauthorized')) &&
+      !token;
+    
+    if (!isUnauthenticatedError) {
+      console.error('[apiFetch][error]', method, url, error?.message || error);
+    }
     
     // Provide more helpful error messages for common network issues
     if (error.name === 'TypeError' && error.message === 'Failed to fetch') {

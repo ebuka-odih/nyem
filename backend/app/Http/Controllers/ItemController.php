@@ -68,14 +68,21 @@ class ItemController extends Controller
 
     public function feed(Request $request)
     {
-        $user = $request->user();
-        $blockedIds = $this->blockedUserIds($user);
+        $user = $request->user(); // Can be null if not authenticated
+        $blockedIds = $user ? $this->blockedUserIds($user) : [];
 
         $query = Item::with('user')
-            ->where('status', 'active')
-            ->where('user_id', '!=', $user->id)
-            ->whereNotIn('user_id', $blockedIds)
-            ->latest();
+            ->where('status', 'active');
+        
+        // Only exclude user's own items and blocked users if authenticated
+        if ($user) {
+            $query->where('user_id', '!=', $user->id);
+            if (!empty($blockedIds)) {
+                $query->whereNotIn('user_id', $blockedIds);
+            }
+        }
+        
+        $query->latest();
 
         // City filtering: case-insensitive comparison
         // Allow city filter via query parameter, or use user's city as default
@@ -90,16 +97,14 @@ class ItemController extends Controller
                 }
                 // If city='all', don't apply city filter (show all cities)
             } else {
-                // No city parameter provided, use user's city as default
-                if ($user->city) {
+                // No city parameter provided
+                if ($user && $user->city) {
+                    // If authenticated, use user's city as default
                     $userCity = trim($user->city);
                     $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
                 } else {
-                    // If user has no city, only show items with no city or empty city
-                    $query->where(function ($q) {
-                        $q->whereNull('city')
-                          ->orWhere('city', '');
-                    });
+                    // If not authenticated or user has no city, show all items (no city filter)
+                    // This allows unauthenticated users to browse all items
                 }
             }
         }
@@ -120,9 +125,9 @@ class ItemController extends Controller
 
         // Format items for frontend consumption
         $itemsArray = $items->map(function ($item) use ($user) {
-            // Calculate distance if both users have location
+            // Calculate distance if both users have location (only if authenticated)
             $distanceKm = null;
-            if ($user->hasLocation() && $item->user && $item->user->hasLocation()) {
+            if ($user && $user->hasLocation() && $item->user && $item->user->hasLocation()) {
                 $distanceKm = $this->locationService->calculateDistance(
                     $user->latitude,
                     $user->longitude,

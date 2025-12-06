@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Heart, MapPin, Filter, Info, Check, RefreshCw, Flame } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo, AnimatePresence } from 'framer-motion';
 import { Button } from './Button';
+import { LoginPromptModal } from './LoginPromptModal';
 import { SwipeItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
@@ -69,11 +70,12 @@ interface Location {
 interface SwipeScreenProps {
   onBack: () => void;
   onItemClick: (item: SwipeItem) => void;
+  onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
 }
 
-export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick }) => {
-  const { token } = useAuth();
-  const [activeTab, setActiveTab] = useState<'exchange' | 'marketplace'>('exchange');
+export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest }) => {
+  const { token, isAuthenticated } = useAuth();
+  const [activeTab, setActiveTab] = useState<'Shop' | 'Services' | 'Swap'>('Shop');
   const [items, setItems] = useState<SwipeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -81,6 +83,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
   // Modal States
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showMarketplaceModal, setShowMarketplaceModal] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   
   // Dropdowns
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -119,21 +122,22 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
     fetchFilters();
   }, []);
 
-  // Fetch items from API
+  // Fetch items from API - works with or without authentication
   useEffect(() => {
     const fetchItems = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       try {
         // Build query parameters
         const params: string[] = [];
         
         // Add type parameter based on active tab
-        const itemType = activeTab === 'exchange' ? 'barter' : 'marketplace';
+        // Map: Shop -> marketplace, Services -> services, Swap -> barter
+        let itemType = 'marketplace';
+        if (activeTab === 'Services') {
+          itemType = 'services';
+        } else if (activeTab === 'Swap') {
+          itemType = 'barter';
+        }
         params.push(`type=${encodeURIComponent(itemType)}`);
         
         // Add category filter if not "All Categories"
@@ -154,7 +158,9 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
           feedUrl += `?${params.join('&')}`;
         }
         
-        const res = await apiFetch(feedUrl, { token });
+        // Fetch items - token is optional (for browsing without login)
+        const res = await apiFetch(feedUrl, { token: token || undefined });
+        
         const apiItems = res.items || res.data || [];
         
         console.log(`[SwipeScreen] Fetched ${apiItems.length} items for ${activeTab} tab`, {
@@ -199,16 +205,27 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
 
         setItems(transformedItems.length > 0 ? transformedItems : []);
         setCurrentIndex(0); // Reset to first item when items change
-      } catch (error) {
-        console.error('Failed to fetch items:', error);
-        setItems([]);
+      } catch (error: any) {
+        // Handle 401 - token is invalid, but don't clear auth state if no token was provided
+        if (error.message && (error.message.includes('Unauthenticated') || error.message.includes('Unauthorized'))) {
+          if (token) {
+            // Token was provided but is invalid - this will be handled by apiFetch
+            console.log('[SwipeScreen] Token invalid, will be cleared by apiFetch');
+          }
+          // For unauthenticated users, 401 shouldn't happen now (endpoint is public)
+          // But handle gracefully just in case
+          setItems([]);
+        } else {
+          console.error('Failed to fetch items:', error);
+          setItems([]);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchItems();
-  }, [activeTab, token, selectedCategory, selectedLocation]);
+  }, [activeTab, selectedCategory, selectedLocation, token]);
   
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -223,15 +240,51 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
   const currentItem = items[currentIndex];
   const nextItem = items[currentIndex + 1];
 
+  // Check if action requires login
+  const requiresLogin = (action: string): boolean => {
+    if (isAuthenticated) return false;
+    const loginRequiredActions = [
+      'swipe_right',
+      'buy_request',
+      'book_artisan',
+      'swap_request',
+      'send_message',
+      'upload_item',
+      'view_matches'
+    ];
+    return loginRequiredActions.includes(action);
+  };
+
   // INTERCEPTOR: Handle Right Swipe to show modals
   const handleRightSwipe = () => {
+    // Check if login is required
+    if (requiresLogin('swipe_right')) {
+      setShowLoginPrompt(true);
+      controls.start({ x: 0, opacity: 1, rotate: 0 });
+      return;
+    }
+
     // Reset the card position so it stays visible behind the modal
     controls.start({ x: 0, opacity: 1, rotate: 0 });
 
-    if (activeTab === 'exchange') {
+    if (activeTab === 'Swap') {
       setShowOfferModal(true);
-    } else {
+    } else if (activeTab === 'Shop') {
       setShowMarketplaceModal(true);
+    } else if (activeTab === 'Services') {
+      // Services: book artisan action
+      if (requiresLogin('book_artisan')) {
+        setShowLoginPrompt(true);
+      } else {
+        setShowMarketplaceModal(true); // Or create a specific booking modal
+      }
+    }
+  };
+
+  const handleLoginMethod = (method: 'phone_otp' | 'google' | 'email') => {
+    setShowLoginPrompt(false);
+    if (onLoginRequest) {
+      onLoginRequest(method);
     }
   };
 
@@ -285,16 +338,22 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
         </div>
         <div className="bg-gray-100 p-1 rounded-full flex items-center mb-3 w-full">
             <button 
-                className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all text-center ${activeTab === 'exchange' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
-                onClick={() => setActiveTab('exchange')}
+                className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all text-center ${activeTab === 'Shop' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                onClick={() => setActiveTab('Shop')}
             >
-                Exchange
+                Shop
             </button>
             <button 
-                className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all text-center ${activeTab === 'marketplace' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
-                onClick={() => setActiveTab('marketplace')}
+                className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all text-center ${activeTab === 'Services' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                onClick={() => setActiveTab('Services')}
             >
-                Marketplace
+                Services
+            </button>
+            <button 
+                className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all text-center ${activeTab === 'Swap' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
+                onClick={() => setActiveTab('Swap')}
+            >
+                Swap
             </button>
         </div>
         
@@ -410,6 +469,13 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick })
              <button onClick={() => currentItem && handleRightSwipe()} disabled={!currentItem} className="pointer-events-auto w-14 h-14 rounded-full bg-white border border-green-100 shadow-[0_8px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-95 transition-transform hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:scale-100"><Check size={28} strokeWidth={3} /></button>
         </div>
       </div>
+
+      {/* LOGIN PROMPT MODAL */}
+      <LoginPromptModal
+        isOpen={showLoginPrompt}
+        onClose={() => setShowLoginPrompt(false)}
+        onLogin={handleLoginMethod}
+      />
 
       {/* MODALS OVERLAY */}
       <AnimatePresence>
