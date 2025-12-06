@@ -12,8 +12,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
 
   return (
     <div className="w-full h-full flex flex-col rounded-[28px] overflow-hidden bg-white shadow-xl border border-gray-100/80">
-      {/* Image Section - 65% of card height for premium look */}
-      <div className="relative h-[65%] shrink-0">
+      {/* Image Section - 60% of card height */}
+      <div className="relative h-[60%] shrink-0">
         <img
           src={item.image}
           alt={item.title}
@@ -49,11 +49,11 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         </div>
       </div>
 
-      {/* Content Section - 35% of card height with premium spacing */}
-      <div className="h-[35%] px-5 pt-5 pb-4 flex flex-col bg-white">
-        {/* Description - Limited to 3 lines for readability */}
+      {/* Content Section - 40% of card height for full content visibility */}
+      <div className="h-[40%] px-5 pt-4 pb-3 flex flex-col bg-white">
+        {/* Description - Show 2 lines clearly */}
         {item.description && (
-          <p className="text-gray-600 text-[15px] line-clamp-3 mb-3 leading-relaxed">
+          <p className="text-gray-600 text-[15px] line-clamp-2 mb-3 leading-relaxed">
             {item.description}
           </p>
         )}
