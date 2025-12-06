@@ -1,11 +1,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, ChevronDown, Image as ImageIcon, X } from 'lucide-react';
-import { Button } from './Button';
 import { useAuth } from '../contexts/AuthContext';
 import { apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { AppHeader } from './AppHeader';
+import { LoginPrompt } from './common/LoginPrompt';
+import { UploadTabs } from './upload/UploadTabs';
+import { PhotoUpload } from './upload/PhotoUpload';
+import { UploadForm } from './upload/UploadForm';
 
 interface Category {
   id: number;
@@ -13,7 +15,11 @@ interface Category {
   order: number;
 }
 
-export const UploadScreen: React.FC = () => {
+interface UploadScreenProps {
+  onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+}
+
+export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest }) => {
   const { token, user, isAuthenticated, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'exchange' | 'marketplace'>('exchange');
   const [showPreUploadProfile, setShowPreUploadProfile] = useState(false);
@@ -229,6 +235,23 @@ export const UploadScreen: React.FC = () => {
     }
   };
 
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex flex-col h-full bg-white relative">
+        <AppHeader 
+          title="Upload"
+          className="pb-4"
+        />
+        <LoginPrompt 
+          title="Sign In Required"
+          message="Please sign in to upload items and start trading with others."
+          onLoginRequest={onLoginRequest}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
@@ -238,22 +261,7 @@ export const UploadScreen: React.FC = () => {
       />
         
       {/* Tabs */}
-      <div className="px-6 pb-4">
-        <div className="bg-gray-100 p-1 rounded-full flex items-center">
-          <button 
-            className={`flex-1 py-2 rounded-full text-sm font-bold transition-all text-center ${activeTab === 'exchange' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('exchange')}
-          >
-            Exchange Item
-          </button>
-          <button 
-            className={`flex-1 py-2 rounded-full text-sm font-bold transition-all text-center ${activeTab === 'marketplace' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500'}`}
-            onClick={() => setActiveTab('marketplace')}
-          >
-            Marketplace Item
-          </button>
-        </div>
-      </div>
+      <UploadTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Hidden file inputs */}
       <input
@@ -297,184 +305,34 @@ export const UploadScreen: React.FC = () => {
         </div>
 
         {/* Photo Upload */}
-        <div>
-            <label className="block text-brand font-bold text-sm mb-3">
-              Photos {activeTab === 'exchange' ? '(Camera Only)' : '(Select from Gallery)'}
-            </label>
-            <div className="flex space-x-3 overflow-x-auto pb-2">
-              {activeTab === 'exchange' ? (
-                // Camera only for exchange items
-                <>
-                  {photos.length === 0 ? (
-                    <button 
-                      type="button"
-                      onClick={handleCameraCapture}
-                      className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-brand hover:text-brand hover:bg-brand/5 transition-colors shrink-0"
-                    >
-                      <Camera size={24} className="mb-1" />
-                      <span className="text-[10px] font-bold">Take Photo</span>
-                    </button>
-                  ) : (
-                    photos.map((photo, index) => (
-                      <div key={index} className="relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 border-gray-200">
-                        <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(index)}
-                          className="absolute top-1 right-1 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                  {photos.length > 0 && photos.length < 5 && (
-                    <button 
-                      type="button"
-                      onClick={handleCameraCapture}
-                      className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-brand hover:text-brand hover:bg-brand/5 transition-colors shrink-0"
-                    >
-                      <Camera size={24} className="mb-1" />
-                      <span className="text-[10px] font-bold">Add Photo</span>
-                    </button>
-                  )}
-                </>
-              ) : (
-                // Gallery selection for marketplace items
-                <>
-                  {photos.map((photo, index) => (
-                    <div key={index} className="relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 border-gray-200">
-                      <img src={photo} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => removePhoto(index)}
-                        className="absolute top-1 right-1 w-6 h-6 bg-black/50 rounded-full flex items-center justify-center text-white hover:bg-black/70 transition-colors"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-                  {photos.length < 10 && (
-                    <button 
-                      type="button"
-                      onClick={handleGallerySelect}
-                      className="w-24 h-24 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-400 hover:border-brand hover:text-brand hover:bg-brand/5 transition-colors shrink-0"
-                    >
-                      <ImageIcon size={24} className="mb-1" />
-                      <span className="text-[10px] font-bold">Add Photo</span>
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-        </div>
+        <PhotoUpload
+          photos={photos}
+          activeTab={activeTab}
+          onCameraCapture={handleCameraCapture}
+          onGallerySelect={handleGallerySelect}
+          onRemovePhoto={removePhoto}
+        />
 
         {/* Form Fields */}
-        <div className="space-y-6">
-            {/* Title */}
-            <div>
-                <label className="block text-brand font-bold text-sm mb-2">Title *</label>
-                <input 
-                    type="text" 
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g., iPhone 13 Pro" 
-                    className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
-                />
-            </div>
-
-            {/* Description */}
-            <div>
-                <label className="block text-brand font-bold text-sm mb-2">Description</label>
-                <textarea 
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Describe your item..." 
-                    className="w-full h-24 px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all resize-none"
-                ></textarea>
-            </div>
-
-            {/* Category */}
-            <div>
-                <label className="block text-brand font-bold text-sm mb-2">Category *</label>
-                <div className="relative">
-                    <select 
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        disabled={loadingCategories}
-                        className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <option value="" disabled>Select category</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id.toString()}>
-                            {cat.name}
-                          </option>
-                        ))}
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                </div>
-            </div>
-
-            {/* Condition */}
-            <div>
-                <label className="block text-brand font-bold text-sm mb-2">Condition *</label>
-                <div className="relative">
-                    <select 
-                        value={condition}
-                        onChange={(e) => setCondition(e.target.value)}
-                        className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer"
-                    >
-                        <option value="" disabled>Select condition</option>
-                        <option value="new">New</option>
-                        <option value="like_new">Like New</option>
-                        <option value="used">Used</option>
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={20} />
-                </div>
-            </div>
-            
-            {/* Exchange-specific: Looking For */}
-            {activeTab === 'exchange' && (
-              <div>
-                <label className="block text-brand font-bold text-sm mb-2">Looking For *</label>
-                <input 
-                  type="text" 
-                  value={lookingFor}
-                  onChange={(e) => setLookingFor(e.target.value)}
-                  placeholder="What do you want in exchange?" 
-                  className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
-                />
-              </div>
-            )}
-
-            {/* Marketplace-specific: Price */}
-            {activeTab === 'marketplace' && (
-              <div>
-                <label className="block text-brand font-bold text-sm mb-2">Price (₦) *</label>
-                <input 
-                  type="text" 
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value.replace(/[^0-9,.]/g, ''))}
-                  placeholder="0.00" 
-                  className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
-                />
-              </div>
-            )}
-
-            {/* Submit */}
-            <form onSubmit={handleSubmit}>
-                <div className="pt-4 pb-8">
-                    <Button 
-                        fullWidth 
-                        type="submit"
-                        className="bg-brand hover:bg-brand-light text-white rounded-xl py-4 shadow-lg text-lg"
-                        disabled={loading}
-                    >
-                        {loading ? 'Posting...' : 'Post Item'}
-                    </Button>
-                </div>
-            </form>
-        </div>
+        <UploadForm
+          activeTab={activeTab}
+          title={title}
+          description={description}
+          category={category}
+          condition={condition}
+          lookingFor={lookingFor}
+          price={price}
+          categories={categories}
+          loadingCategories={loadingCategories}
+          loading={loading}
+          onTitleChange={setTitle}
+          onDescriptionChange={setDescription}
+          onCategoryChange={setCategory}
+          onConditionChange={setCondition}
+          onLookingForChange={setLookingFor}
+          onPriceChange={setPrice}
+          onSubmit={handleSubmit}
+        />
       </div>
     </div>
   );

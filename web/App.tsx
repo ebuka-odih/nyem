@@ -114,14 +114,18 @@ const AppContent: React.FC = () => {
                 onLoginRequest={handleLoginRequest}
               />;
           case 'upload':
-              return <UploadScreen />;
+              return <UploadScreen onLoginRequest={handleLoginRequest} />;
           case 'matches':
               return <MatchesScreen 
                         onNavigateToRequests={() => navigateTo('match_requests')} 
                         onNavigateToChat={() => navigateTo('chat')}
+                        onLoginRequest={handleLoginRequest}
                      />;
           case 'profile':
-              return <ProfileScreen onEditProfile={() => navigateTo('edit_profile')} />;
+              return <ProfileScreen 
+                        onEditProfile={() => navigateTo('edit_profile')} 
+                        onLoginRequest={handleLoginRequest}
+                     />;
           default:
               return <SwipeScreen 
                 onBack={() => navigateTo('welcome')} 
