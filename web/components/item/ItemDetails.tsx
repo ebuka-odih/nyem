@@ -9,7 +9,7 @@ export const ItemDetails: React.FC<ItemDetailsProps> = ({ item }) => {
   const isMarketplace = item.type === 'marketplace';
 
   return (
-    <div className="p-6 -mt-6 bg-white rounded-t-[32px] relative z-10">
+    <div className="pt-10 px-6 pb-6 -mt-6 bg-white rounded-t-[32px] relative z-10">
       {/* Gallery Thumbnails */}
       {item.gallery && item.gallery.length > 0 && (
         <div className="flex space-x-3 overflow-x-auto pb-6 -mx-6 px-6 no-scrollbar">
