@@ -56,7 +56,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
 
   return (
     <div className="flex-1 relative flex flex-col items-center pt-1 px-4 overflow-hidden w-full">
-      <div className="relative w-full h-[85vh] sm:h-[88vh] md:h-[90vh]">
+      <div className="relative w-full h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)] md:h-[calc(100vh-220px)] min-h-[600px]">
         {/* Empty State */}
         {!currentItem && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0">
@@ -98,7 +98,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         {currentItem && (
           <motion.div 
             key={currentItem.id} 
-            className="absolute inset-0 w-full h-full bg-white rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-10 overflow-hidden border border-gray-100 flex flex-col cursor-grab active:cursor-grabbing origin-bottom min-h-0" 
+            className="absolute inset-0 w-full h-full bg-white rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-10 overflow-visible border border-gray-100 flex flex-col cursor-grab active:cursor-grabbing origin-bottom min-h-0 relative" 
             style={{ x, rotate, opacity }} 
             animate={controls} 
             drag="x" 
@@ -111,30 +111,30 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
               item={currentItem} 
               onInfoClick={() => onItemClick(currentItem)} 
             />
+            
+            {/* Swipe Buttons - Positioned at bottom of card */}
+            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 flex justify-center space-x-10 w-full pointer-events-none z-30">
+              <button 
+                onClick={async () => {
+                  if (currentItem) {
+                    await swipe('left');
+                  }
+                }} 
+                disabled={!currentItem} 
+                className="pointer-events-auto w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_8px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-95 transition-transform hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:scale-100"
+              >
+                <X size={32} strokeWidth={2.5} />
+              </button>
+              <button 
+                onClick={() => currentItem && onSwipeRight()} 
+                disabled={!currentItem} 
+                className="pointer-events-auto w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_8px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-95 transition-transform hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:scale-100"
+              >
+                <Check size={32} strokeWidth={3} />
+              </button>
+            </div>
           </motion.div>
         )}
-      </div>
-      
-      {/* Swipe Buttons - Positioned in white space below card */}
-      <div className="flex justify-center space-x-10 mt-10 mb-4 w-full pointer-events-none">
-        <button 
-          onClick={async () => {
-            if (currentItem) {
-              await swipe('left');
-            }
-          }} 
-          disabled={!currentItem} 
-          className="pointer-events-auto w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_8px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-95 transition-transform hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:scale-100"
-        >
-          <X size={32} strokeWidth={2.5} />
-        </button>
-        <button 
-          onClick={() => currentItem && onSwipeRight()} 
-          disabled={!currentItem} 
-          className="pointer-events-auto w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_8px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-95 transition-transform hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:scale-100"
-        >
-          <Check size={32} strokeWidth={3} />
-        </button>
       </div>
     </div>
   );
