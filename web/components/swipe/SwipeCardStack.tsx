@@ -56,8 +56,8 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
 
   return (
     <div className="flex-1 flex flex-col items-center px-4 pb-4 w-full min-h-0">
-      {/* Card Container - Fixed height that leaves room for buttons */}
-      <div className="relative w-full flex-1 max-h-[calc(100vh-200px)] min-h-[520px]">
+      {/* Card Container - Takes available space, shrinks if needed */}
+      <div className="relative w-full flex-1 min-h-0">
         {/* Empty State */}
         {!currentItem && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
@@ -116,8 +116,8 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         )}
       </div>
 
-      {/* Swipe Buttons - Below the card in normal flow */}
-      <div className="flex justify-center items-center space-x-8 pt-5 pb-2 shrink-0">
+      {/* Swipe Buttons - Always visible at bottom, overlaps card slightly */}
+      <div className="flex justify-center items-center space-x-8 -mt-8 pt-0 pb-2 shrink-0 relative z-20">
         <button
           onClick={async () => {
             if (currentItem) {
