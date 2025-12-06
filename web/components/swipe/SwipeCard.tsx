@@ -12,7 +12,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   
   return (
     <>
-      <div className="h-[55%] bg-gray-100 relative shrink-0">
+      <div className="h-[50%] sm:h-[52%] md:h-[55%] bg-gray-100 relative shrink-0">
         <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
         
@@ -39,7 +39,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         </div>
       </div>
       
-      <div className="px-5 pt-5 pb-16 flex flex-col flex-1 bg-white relative overflow-y-auto min-h-0">
+      <div className="px-5 pt-5 pb-24 flex flex-col flex-1 bg-white relative overflow-y-auto">
         {/* Description - Always visible */}
         <div className="mb-4 shrink-0">
           <p className="text-gray-700 text-sm line-clamp-3 leading-relaxed font-medium select-none">
@@ -59,7 +59,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         
         <div className="flex-grow"></div>
         <div className="h-px bg-gray-50 w-full my-2"></div>
-        <div className="flex items-center pt-2 pb-10 shrink-0">
+        <div className="flex items-center pt-2 pb-16 shrink-0">
           <div className="w-9 h-9 rounded-full bg-gray-200 mr-3 overflow-hidden shrink-0 border">
             <img src={item.owner.image} alt={item.owner.name} className="w-full h-full object-cover" />
           </div>

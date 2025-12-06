@@ -56,7 +56,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
 
   return (
     <div className="flex-1 relative flex flex-col items-center pt-1 px-4 overflow-hidden w-full">
-      <div className="relative w-full h-[90vh] md:h-[92vh]">
+      <div className="relative w-full h-[85vh] sm:h-[88vh] md:h-[90vh]">
         {/* Empty State */}
         {!currentItem && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0">
@@ -98,7 +98,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         {currentItem && (
           <motion.div 
             key={currentItem.id} 
-            className="absolute inset-0 w-full h-full bg-white rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-10 overflow-hidden border border-gray-100 flex flex-col cursor-grab active:cursor-grabbing origin-bottom" 
+            className="absolute inset-0 w-full h-full bg-white rounded-[28px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] z-10 overflow-hidden border border-gray-100 flex flex-col cursor-grab active:cursor-grabbing origin-bottom min-h-0" 
             style={{ x, rotate, opacity }} 
             animate={controls} 
             drag="x" 
