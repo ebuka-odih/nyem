@@ -39,15 +39,20 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         </div>
       </div>
       
-      <div className="p-4 flex flex-col flex-1 bg-white relative overflow-y-auto pb-20">
-        <p className="text-gray-600 text-sm mb-3 line-clamp-2 leading-snug font-medium select-none">{item.description}</p>
+      <div className="p-4 flex flex-col flex-1 bg-white relative overflow-y-auto min-h-0">
+        {/* Description - Always visible */}
+        <div className="mb-3 shrink-0">
+          <p className="text-gray-700 text-sm line-clamp-2 leading-relaxed font-medium select-none">
+            {item.description || 'No description available'}
+          </p>
+        </div>
         
         {isMarketplace ? (
-          <div className="bg-green-50 rounded-lg px-3 py-2 mb-3 flex items-center border border-green-100 select-none">
+          <div className="bg-green-50 rounded-lg px-3 py-2 mb-3 flex items-center border border-green-100 select-none shrink-0">
             <span className="text-green-700 text-xs truncate font-bold">Available for Purchase</span>
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 flex items-center border border-gray-100 select-none">
+          <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3 flex items-center border border-gray-100 select-none shrink-0">
             <span className="text-gray-500 text-xs truncate">Looking for: <span className="font-bold text-gray-900 ml-1">{item.lookingFor}</span></span>
           </div>
         )}

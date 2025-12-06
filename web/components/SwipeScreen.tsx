@@ -201,7 +201,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           title: item.title || item.name || 'Untitled Item',
           condition: item.condition || 'Used',
           image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800"%3E%3Crect fill="%23f3f4f6" width="800" height="800"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
-          description: item.description || '',
+          description: item.description || 'This is a dummy description to demonstrate how the card displays longer text content. The description will be truncated to two lines with an ellipsis if it exceeds the available space. This helps maintain a clean and consistent card layout while still showing enough information to help users make informed decisions.',
           lookingFor: item.looking_for || item.lookingFor || '',
           price: item.price ? (typeof item.price === 'string' ? `₦${item.price}` : `₦${item.price}`) : undefined,
           owner: {
