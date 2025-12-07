@@ -16,10 +16,10 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   const formatLocation = () => {
     const location = item.owner.location || '';
     const distance = item.owner.distance && item.owner.distance !== 'Unknown' ? item.owner.distance : null;
-    
+
     // Clean location - remove trailing comma if present
     const cleanLocation = location.trim().replace(/,$/, '');
-    
+
     if (distance) {
       // Format with distance: "Wuse, Abuja [icon] 20km Away" or "Abuja [icon] 20km Away"
       return (
@@ -64,8 +64,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   return (
     <div className="w-full h-full flex flex-col rounded-[32px] overflow-hidden bg-white shadow-2xl shadow-black/10 border border-white/50">
 
-      {/* Image Section - Reduced height to show more content */}
-      <div className="relative h-[50%] shrink-0 overflow-hidden">
+      {/* Image Section - Larger image area */}
+      <div className="relative h-[60%] shrink-0 overflow-hidden">
         {/* Shimmer loading state */}
         {!imageLoaded && (
           <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 animate-pulse" />
@@ -109,8 +109,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
             <button
               onClick={handleLike}
               className={`w-9 h-9 rounded-xl backdrop-blur-md flex items-center justify-center border transition-all duration-300 ${isLiked
-                  ? 'bg-rose-500 border-rose-400 scale-110'
-                  : 'bg-white/20 border-white/40 hover:bg-white/30'
+                ? 'bg-rose-500 border-rose-400 scale-110'
+                : 'bg-white/20 border-white/40 hover:bg-white/30'
                 }`}
             >
               <Heart
@@ -163,12 +163,12 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
           </div>
         )}
 
-        {/* Seller Info - Compact layout with guaranteed visibility */}
+        {/* Seller Info - Larger text for better readability */}
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Avatar with verified badge */}
             <div className="relative shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-md">
+              <div className="w-11 h-11 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-md">
                 <img
                   src={item.owner.image}
                   alt={item.owner.name}
@@ -180,10 +180,10 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
               </div>
             </div>
 
-            {/* Seller details */}
+            {/* Seller details - Increased text sizes */}
             <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-gray-900 text-[14px] truncate">{item.owner.name}</h3>
-              <div className="flex items-center text-[10px] text-gray-400 mt-0.5 truncate">
+              <h3 className="font-bold text-gray-900 text-[16px] truncate">{item.owner.name}</h3>
+              <div className="flex items-center text-[12px] text-gray-500 mt-0.5 truncate">
                 {formatLocation()}
               </div>
             </div>
@@ -195,9 +195,9 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
               e.stopPropagation();
               onInfoClick && onInfoClick();
             }}
-            className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors group shrink-0 ml-2"
+            className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors group shrink-0 ml-2"
           >
-            <Info size={16} className="text-gray-500 group-hover:text-gray-700 transition-colors" />
+            <Info size={18} className="text-gray-500 group-hover:text-gray-700 transition-colors" />
           </button>
         </div>
       </div>
