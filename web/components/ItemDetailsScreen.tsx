@@ -38,12 +38,12 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({ item, onBa
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto pb-20 no-scrollbar">
+        <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}>
             {/* Image Gallery with Title Overlay */}
             <div className="h-[45vh] relative bg-gray-200">
                 <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
-                <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-4 left-4 right-4 text-white">
+                <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-12 left-4 right-4 text-white">
                     {isMarketplace ? (
                         <div className="inline-block bg-yellow-400 text-black text-xs font-bold px-3 py-1 rounded-full mb-2 shadow-sm">
                             ₦{item.price}
@@ -66,7 +66,7 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({ item, onBa
             </div>
         </div>
 
-        {/* Sticky Bottom Action */}
+        {/* Sticky Bottom Action Footer */}
         <ItemActions />
     </div>
   );

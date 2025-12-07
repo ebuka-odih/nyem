@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { MainLayout } from '@/components/MainLayout';
-import { Filter, MapPin, X, Check, Info } from 'lucide-react';
+import { Filter, MapPin, X, Check, Info, Share2 } from 'lucide-react';
 
 /**
  * Discover Screen
@@ -95,6 +95,31 @@ const Discover = () => {
       setCurrentIndex(prev => prev + 1);
       setSwiping(false);
     }, 300);
+  };
+
+  const handleShare = async (item: typeof items[0]) => {
+    try {
+      // Create shareable URL
+      const shareUrl = `${window.location.origin}/items/${item.id}`;
+      
+      // Use Web Share API if available, otherwise fallback to clipboard
+      if (navigator.share) {
+        await navigator.share({
+          title: item.title,
+          text: item.description,
+          url: shareUrl,
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Item link copied to clipboard!');
+      }
+    } catch (err: any) {
+      // User cancelled share or error occurred
+      if (err.name !== 'AbortError') {
+        console.error('Failed to share item:', err);
+      }
+    }
   };
 
   const getCardStyle = (index: number) => {
@@ -374,21 +399,53 @@ const Discover = () => {
                     >
                       {item.title}
                     </h2>
-                    <span
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontSize: '11px',
-                        fontWeight: '600',
-                        backgroundColor: '#E8F5E9',
-                        color: '#2E7D32',
-                        whiteSpace: 'nowrap',
-                        letterSpacing: '0.3px',
-                        border: 'none',
-                      }}
-                    >
-                      {item.condition}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          backgroundColor: '#E8F5E9',
+                          color: '#2E7D32',
+                          whiteSpace: 'nowrap',
+                          letterSpacing: '0.3px',
+                          border: 'none',
+                        }}
+                      >
+                        {item.condition}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShare(item);
+                        }}
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          backgroundColor: 'transparent',
+                          border: '1px solid #E0E0E0',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = '#F5F5F5';
+                          e.currentTarget.style.borderColor = '#CCCCCC';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = 'transparent';
+                          e.currentTarget.style.borderColor = '#E0E0E0';
+                        }}
+                      >
+                        <Share2 size={14} color="#666666" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Description */}

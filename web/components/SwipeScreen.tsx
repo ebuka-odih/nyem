@@ -69,16 +69,34 @@ interface Location {
 
 interface SwipeScreenProps {
   onBack: () => void;
-  onItemClick: (item: SwipeItem) => void;
+  onItemClick: (item: SwipeItem, currentTab?: 'Marketplace' | 'Services' | 'Swap') => void;
   onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  initialTab?: 'Marketplace' | 'Services' | 'Swap';
+  onTabChange?: (tab: 'Marketplace' | 'Services' | 'Swap') => void;
 }
 
-export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest }) => {
+export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, initialTab = 'Marketplace', onTabChange }) => {
   const { token, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
+  const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>(initialTab);
   const [items, setItems] = useState<SwipeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Sync with initialTab prop when it changes (e.g., when returning from item details)
+  useEffect(() => {
+    if (initialTab !== activeTab) {
+      setActiveTab(initialTab);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialTab]);
+
+  // Handle tab change and notify parent
+  const handleTabChange = (tab: 'Marketplace' | 'Services' | 'Swap') => {
+    setActiveTab(tab);
+    if (onTabChange) {
+      onTabChange(tab);
+    }
+  };
   
   // Modal States
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -327,7 +345,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
       {/* Header & Filters */}
       <SwipeHeader
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         selectedCategory={selectedCategory}
         selectedLocation={selectedLocation}
         showCategoryDropdown={showCategoryDropdown}
@@ -350,7 +368,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           setCurrentIndex(prev => prev + 1);
         }}
         onSwipeRight={handleRightSwipe}
-        onItemClick={onItemClick}
+        onItemClick={(item) => onItemClick(item, activeTab)}
         onReset={resetStack}
       />
 

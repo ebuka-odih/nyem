@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Trash2, Edit } from 'lucide-react';
+import { Search, Trash2, Edit, Share2 } from 'lucide-react';
 import { getItems, deleteItem, updateItem } from '@/services/adminApi';
 
 interface Item {
@@ -77,6 +77,31 @@ export default function AdminItems() {
     }
   };
 
+  const handleShare = async (item: Item) => {
+    try {
+      // Create shareable URL
+      const shareUrl = `${window.location.origin}/items/${item.id}`;
+      
+      // Use Web Share API if available, otherwise fallback to clipboard
+      if (navigator.share) {
+        await navigator.share({
+          title: item.title,
+          text: item.description,
+          url: shareUrl,
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Item link copied to clipboard!');
+      }
+    } catch (err: any) {
+      // User cancelled share or error occurred
+      if (err.name !== 'AbortError') {
+        console.error('Failed to share item:', err);
+      }
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="space-y-6">
@@ -130,7 +155,19 @@ export default function AdminItems() {
                 <TableBody>
                   {items.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium">{item.title}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex-1">{item.title}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleShare(item)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Share2 className="w-4 h-4 text-gray-600" />
+                          </Button>
+                        </div>
+                      </TableCell>
                       <TableCell>{item.category}</TableCell>
                       <TableCell>{item.user?.username || 'N/A'}</TableCell>
                       <TableCell>

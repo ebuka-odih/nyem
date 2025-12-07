@@ -47,3 +47,5 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({
   );
 };
 
+
+

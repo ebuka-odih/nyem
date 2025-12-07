@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, MapPin } from 'lucide-react';
+import { Info, MapPin, Share2 } from 'lucide-react';
 import { SwipeItem } from '../../types';
 
 interface SwipeCardProps {
@@ -10,10 +10,36 @@ interface SwipeCardProps {
 export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   const isMarketplace = item.type === 'marketplace';
 
+  const handleShare = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      // Create shareable URL
+      const shareUrl = `${window.location.origin}/items/${item.id}`;
+      
+      // Use Web Share API if available, otherwise fallback to clipboard
+      if (navigator.share) {
+        await navigator.share({
+          title: item.title,
+          text: item.description,
+          url: shareUrl,
+        });
+      } else {
+        // Fallback to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Item link copied to clipboard!');
+      }
+    } catch (err: any) {
+      // User cancelled share or error occurred
+      if (err.name !== 'AbortError') {
+        console.error('Failed to share item:', err);
+      }
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col rounded-[28px] overflow-hidden bg-white shadow-xl border border-gray-100/80">
-      {/* Image Section - 60% of card height */}
-      <div className="relative h-[60%] shrink-0">
+      {/* Image Section - 65% of card height */}
+      <div className="relative h-[65%] shrink-0">
         <img
           src={item.image}
           alt={item.title}
@@ -21,13 +47,13 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
 
-        {/* INFO BUTTON */}
+        {/* INFO BUTTON - Top Right */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onInfoClick && onInfoClick();
           }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors"
+          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors z-10"
         >
           <Info size={18} strokeWidth={1.5} className="text-white" />
         </button>
@@ -43,14 +69,23 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
               {item.condition}
             </span>
           )}
-          <h2 className="text-[26px] font-black text-white leading-tight drop-shadow-lg line-clamp-2">
-            {item.title}
-          </h2>
+          {/* Title and Share Button Row */}
+          <div className="w-full flex items-center justify-between gap-3">
+            <h2 className="text-[26px] font-black text-white leading-tight drop-shadow-lg line-clamp-2 flex-1 min-w-0">
+              {item.title}
+            </h2>
+            <button
+              onClick={handleShare}
+              className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors flex-shrink-0"
+            >
+              <Share2 size={18} strokeWidth={1.5} className="text-white" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Content Section - 40% of card height for full content visibility */}
-      <div className="h-[40%] px-5 pt-4 pb-3 flex flex-col bg-white">
+      {/* Content Section - 35% of card height for full content visibility */}
+      <div className="h-[35%] px-5 pt-4 pb-3 flex flex-col bg-white">
         {/* Description - Show 2 lines clearly */}
         {item.description && (
           <p className="text-gray-600 text-[15px] line-clamp-2 mb-3 leading-relaxed">

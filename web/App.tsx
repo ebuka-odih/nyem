@@ -23,6 +23,7 @@ const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('welcome');
   const [activeTab, setActiveTab] = useState<TabState>('discover');
+  const [swipeTab, setSwipeTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
   const [signupPhone, setSignupPhone] = useState('');
   const [selectedItem, setSelectedItem] = useState<SwipeItem | null>(null);
   const navigationHistory = useNavigationHistory();
@@ -89,7 +90,11 @@ const AppContent: React.FC = () => {
     setActiveTab('profile');
   };
   
-  const handleItemClick = (item: SwipeItem) => {
+  const handleItemClick = (item: SwipeItem, currentSwipeTab?: 'Marketplace' | 'Services' | 'Swap') => {
+      // Store the current swipe tab when opening item details
+      if (currentSwipeTab) {
+        setSwipeTab(currentSwipeTab);
+      }
       setSelectedItem(item);
       navigateTo('item_details');
   };
@@ -110,8 +115,10 @@ const AppContent: React.FC = () => {
           case 'discover':
               return <SwipeScreen 
                 onBack={() => navigateTo('welcome')} 
-                onItemClick={handleItemClick}
+                onItemClick={(item, currentTab) => handleItemClick(item, currentTab)}
                 onLoginRequest={handleLoginRequest}
+                initialTab={swipeTab}
+                onTabChange={setSwipeTab}
               />;
           case 'upload':
               return <UploadScreen onLoginRequest={handleLoginRequest} />;
@@ -129,8 +136,10 @@ const AppContent: React.FC = () => {
           default:
               return <SwipeScreen 
                 onBack={() => navigateTo('welcome')} 
-                onItemClick={handleItemClick}
+                onItemClick={(item, currentTab) => handleItemClick(item, currentTab)}
                 onLoginRequest={handleLoginRequest}
+                initialTab={swipeTab}
+                onTabChange={setSwipeTab}
               />;
       }
   };
