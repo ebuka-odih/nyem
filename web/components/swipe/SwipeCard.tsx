@@ -12,6 +12,29 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
+  // Format location display: "Wuse, Abuja [icon] 20km Away" or just "Abuja"
+  const formatLocation = () => {
+    const location = item.owner.location || '';
+    const distance = item.owner.distance && item.owner.distance !== 'Unknown' ? item.owner.distance : null;
+    
+    // Clean location - remove trailing comma if present
+    const cleanLocation = location.trim().replace(/,$/, '');
+    
+    if (distance) {
+      // Format with distance: "Wuse, Abuja [icon] 20km Away" or "Abuja [icon] 20km Away"
+      return (
+        <>
+          <span>{cleanLocation}</span>
+          <MapPin size={9} className="mx-1 shrink-0 text-gray-400" />
+          <span>{distance} Away</span>
+        </>
+      );
+    } else {
+      // Just location: "Wuse, Abuja" or "Abuja"
+      return <span>{cleanLocation}</span>;
+    }
+  };
+
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -160,15 +183,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
             {/* Seller details */}
             <div className="min-w-0 flex-1">
               <h3 className="font-bold text-gray-900 text-[14px] truncate">{item.owner.name}</h3>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="flex items-center text-[10px] text-gray-400 truncate">
-                  <MapPin size={9} className="mr-0.5 shrink-0" />
-                  {item.owner.location}
-                </span>
-                <span className="text-gray-300 shrink-0">•</span>
-                <span className="text-[10px] font-semibold text-[#990033] shrink-0">
-                  {item.owner.distance}
-                </span>
+              <div className="flex items-center text-[10px] text-gray-400 mt-0.5 truncate">
+                {formatLocation()}
               </div>
             </div>
           </div>
