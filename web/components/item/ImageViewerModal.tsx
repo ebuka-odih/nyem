@@ -62,7 +62,11 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          className="absolute z-10 w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          style={{ 
+            top: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+            right: 'calc(env(safe-area-inset-right, 0px) + 1rem)'
+          }}
         >
           <X size={24} />
         </button>
@@ -75,7 +79,12 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                 e.stopPropagation();
                 handlePrevious();
               }}
-              className="absolute left-4 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              className="absolute z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              style={{ 
+                left: 'calc(env(safe-area-inset-left, 0px) + 1rem)',
+                top: '50%',
+                transform: 'translateY(-50%)'
+              }}
             >
               <ChevronLeft size={24} />
             </button>
@@ -84,7 +93,12 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
                 e.stopPropagation();
                 handleNext();
               }}
-              className="absolute right-4 z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              className="absolute z-10 w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+              style={{ 
+                right: 'calc(env(safe-area-inset-right, 0px) + 1rem)',
+                top: '50%',
+                transform: 'translateY(-50%)'
+              }}
             >
               <ChevronRight size={24} />
             </button>
@@ -93,7 +107,13 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
         {/* Image Counter */}
         {images.length > 1 && (
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-medium">
+          <div 
+            className="absolute left-1/2 z-10 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-sm font-medium"
+            style={{ 
+              top: 'calc(env(safe-area-inset-top, 0px) + 1rem)',
+              transform: 'translateX(-50%)'
+            }}
+          >
             {currentIndex + 1} / {images.length}
           </div>
         )}
@@ -117,7 +137,13 @@ export const ImageViewerModal: React.FC<ImageViewerModalProps> = ({
 
         {/* Thumbnail Strip (if multiple images) */}
         {images.length > 1 && (
-          <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto pb-4">
+          <div 
+            className="absolute left-0 right-0 flex justify-center gap-2 px-4 overflow-x-auto"
+            style={{ 
+              bottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)',
+              paddingBottom: '1rem'
+            }}
+          >
             {images.map((img, index) => (
               <button
                 key={index}
