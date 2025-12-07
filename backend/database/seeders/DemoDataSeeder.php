@@ -198,7 +198,7 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
-        // Create 3 marketplace items for testing (Shop category)
+        // Create 5 marketplace items for testing (Shop category)
         $marketplaceItems = [
             [
                 'title' => 'iPhone 13 Pro',
@@ -229,6 +229,28 @@ class DemoDataSeeder extends Seeder
                 'condition' => 'like_new',
                 'photos' => ['https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=800'],
                 'price' => 320000.00,
+                'city' => 'Lagos',
+                'status' => 'active',
+                'type' => 'marketplace',
+            ],
+            [
+                'title' => 'Designer Leather Jacket',
+                'description' => 'Premium genuine leather jacket, size L. Classic black color, perfect for any occasion. Excellent condition with minimal wear.',
+                'category_name' => 'Fashion & Clothing', // Shop > Fashion & Clothing
+                'condition' => 'like_new',
+                'photos' => ['https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800'],
+                'price' => 125000.00,
+                'city' => 'Lagos',
+                'status' => 'active',
+                'type' => 'marketplace',
+            ],
+            [
+                'title' => 'Premium Perfume Set',
+                'description' => 'Luxury fragrance collection - 3 bottles of designer perfumes (100ml each). Includes men\'s and women\'s scents. Brand new, sealed boxes.',
+                'category_name' => 'Beauty & Perfume', // Shop > Beauty & Perfume
+                'condition' => 'new',
+                'photos' => ['https://images.unsplash.com/photo-1541643600914-78b084683601?w=800'],
+                'price' => 95000.00,
                 'city' => 'Lagos',
                 'status' => 'active',
                 'type' => 'marketplace',

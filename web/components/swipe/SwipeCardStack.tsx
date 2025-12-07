@@ -1,8 +1,9 @@
-import React from 'react';
-import { X, Check, RefreshCw, Flame } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Check, RefreshCw, Flame, Eye } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { SwipeItem } from '../../types';
 import { SwipeCard } from './SwipeCard';
+import { MarketplaceCard } from '../marketplace/MarketplaceCard';
 
 interface SwipeCardStackProps {
   items: SwipeItem[];
@@ -14,6 +15,7 @@ interface SwipeCardStackProps {
   onReset: () => void;
 }
 
+
 export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   items,
   currentIndex,
@@ -23,6 +25,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   onItemClick,
   onReset,
 }) => {
+  const [showDesignPreview, setShowDesignPreview] = useState(false);
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
@@ -60,30 +63,62 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
       <div className="relative w-full h-[calc(100%-80px)] min-h-[400px]">
         {/* Empty State */}
         {!currentItem && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
+          <div className="absolute inset-0 flex flex-col items-center justify-center z-0">
             {activeTab === 'Services' ? (
-              <>
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+              <div className="text-center p-8 bg-white rounded-[24px] border border-gray-100 shadow-sm">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 mx-auto">
                   <Flame size={32} className="text-gray-300" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Coming Soon</h3>
                 <p className="text-gray-500 text-sm">Services feature is under development.</p>
-              </>
+              </div>
+            ) : showDesignPreview ? (
+              /* Design Preview Mode - Show MarketplaceCard sample */
+              <div className="w-full h-full flex flex-col items-center overflow-y-auto py-4">
+                <div className="mb-3 text-center">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#990033] to-[#cc0044] text-white text-xs font-bold rounded-full">
+                    <Eye size={12} />
+                    Design Preview
+                  </span>
+                </div>
+                <MarketplaceCard
+                  variant="full"
+                  onBuyClick={() => alert('Buy button clicked - Design sample mode')}
+                />
+                <button
+                  onClick={() => setShowDesignPreview(false)}
+                  className="mt-4 px-4 py-2 text-sm text-gray-500 hover:text-gray-700 underline transition-colors"
+                >
+                  Hide Preview
+                </button>
+              </div>
             ) : (
-              <>
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+              /* Default Empty State */
+              <div className="text-center p-8 bg-white rounded-[24px] border border-gray-100 shadow-sm">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 mx-auto">
                   <Flame size={32} className="text-gray-300" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-2">You're all caught up!</h3>
-                <p className="text-gray-500 text-sm mb-4">Check back later for more items.</p>
-                <button
-                  onClick={onReset}
-                  className="flex items-center space-x-2 px-5 py-2.5 bg-brand text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform"
-                >
-                  <RefreshCw size={16} />
-                  <span>Start Over</span>
-                </button>
-              </>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">No items yet</h3>
+                <p className="text-gray-500 text-sm mb-4">Check back later for new items to browse.</p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={onReset}
+                    className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-brand text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform"
+                  >
+                    <RefreshCw size={16} />
+                    <span>Refresh</span>
+                  </button>
+                  {activeTab === 'Marketplace' && (
+                    <button
+                      onClick={() => setShowDesignPreview(true)}
+                      className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-[#990033] to-[#cc0044] text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform hover:shadow-xl"
+                    >
+                      <Eye size={16} />
+                      <span>View Card Design</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         )}

@@ -47,17 +47,6 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
 
-        {/* INFO BUTTON - Top Right */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onInfoClick && onInfoClick();
-          }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors z-10"
-        >
-          <Info size={18} strokeWidth={1.5} className="text-white" />
-        </button>
-
         {/* Badge & Title - Bottom of image with more spacing */}
         <div className="absolute bottom-4 left-4 right-4 flex flex-col items-start gap-2">
           {isMarketplace ? (
@@ -69,17 +58,28 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
               {item.condition}
             </span>
           )}
-          {/* Title and Share Button Row */}
+          {/* Title and Action Buttons Row */}
           <div className="w-full flex items-center justify-between gap-3">
             <h2 className="text-[26px] font-black text-white leading-tight drop-shadow-lg line-clamp-2 flex-1 min-w-0">
               {item.title}
             </h2>
-            <button
-              onClick={handleShare}
-              className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors flex-shrink-0"
-            >
-              <Share2 size={18} strokeWidth={1.5} className="text-white" />
-            </button>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button
+                onClick={handleShare}
+                className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors"
+              >
+                <Share2 size={18} strokeWidth={1.5} className="text-white" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onInfoClick && onInfoClick();
+                }}
+                className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors"
+              >
+                <Info size={18} strokeWidth={1.5} className="text-white" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
