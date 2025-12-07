@@ -117,7 +117,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
       </div>
 
       {/* Swipe Buttons - Below card with proper spacing */}
-      <div className="flex justify-center items-center space-x-8 mt-8 pt-2 -mb-[15px] shrink-0 relative z-20">
+      <div className="flex justify-center items-center space-x-8 mt-3 py-2 shrink-0 relative z-20">
         <button
           onClick={async () => {
             if (currentItem) {
