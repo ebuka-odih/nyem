@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
-import { X, Check, RefreshCw, Flame, Eye } from 'lucide-react';
+import React from 'react';
+import { X, Check, RefreshCw, Flame } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { SwipeItem } from '../../types';
 import { SwipeCard } from './SwipeCard';
-import { MarketplaceCard } from '../marketplace/MarketplaceCard';
 
 interface SwipeCardStackProps {
   items: SwipeItem[];
@@ -15,7 +14,6 @@ interface SwipeCardStackProps {
   onReset: () => void;
 }
 
-
 export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   items,
   currentIndex,
@@ -25,7 +23,6 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   onItemClick,
   onReset,
 }) => {
-  const [showDesignPreview, setShowDesignPreview] = useState(false);
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
@@ -58,67 +55,35 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center px-4 pb-3 w-full min-h-0">
-      {/* Card Container - Uses calc to fill available space minus header and buttons */}
-      <div className="relative w-full h-[calc(100%-80px)] min-h-[400px]">
+    <div className="flex-1 flex flex-col items-center px-4 pb-2 w-full min-h-0">
+      {/* Card Container - Maximize height, reserve minimal space for buttons */}
+      <div className="relative w-full h-[calc(100%-70px)] min-h-[420px]">
         {/* Empty State */}
         {!currentItem && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-0">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
             {activeTab === 'Services' ? (
-              <div className="text-center p-8 bg-white rounded-[24px] border border-gray-100 shadow-sm">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <>
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                   <Flame size={32} className="text-gray-300" />
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 mb-2">Coming Soon</h3>
                 <p className="text-gray-500 text-sm">Services feature is under development.</p>
-              </div>
-            ) : showDesignPreview ? (
-              /* Design Preview Mode - Show MarketplaceCard sample */
-              <div className="w-full h-full flex flex-col items-center overflow-y-auto py-4">
-                <div className="mb-3 text-center">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#990033] to-[#cc0044] text-white text-xs font-bold rounded-full">
-                    <Eye size={12} />
-                    Design Preview
-                  </span>
-                </div>
-                <MarketplaceCard
-                  variant="full"
-                  onBuyClick={() => alert('Buy button clicked - Design sample mode')}
-                />
-                <button
-                  onClick={() => setShowDesignPreview(false)}
-                  className="mt-4 px-4 py-2 text-sm text-gray-500 hover:text-gray-700 underline transition-colors"
-                >
-                  Hide Preview
-                </button>
-              </div>
+              </>
             ) : (
-              /* Default Empty State */
-              <div className="text-center p-8 bg-white rounded-[24px] border border-gray-100 shadow-sm">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 mx-auto">
+              <>
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                   <Flame size={32} className="text-gray-300" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-2">No items yet</h3>
-                <p className="text-gray-500 text-sm mb-4">Check back later for new items to browse.</p>
-                <div className="flex flex-col gap-3">
-                  <button
-                    onClick={onReset}
-                    className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-brand text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform"
-                  >
-                    <RefreshCw size={16} />
-                    <span>Refresh</span>
-                  </button>
-                  {activeTab === 'Marketplace' && (
-                    <button
-                      onClick={() => setShowDesignPreview(true)}
-                      className="flex items-center justify-center space-x-2 px-5 py-2.5 bg-gradient-to-r from-[#990033] to-[#cc0044] text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform hover:shadow-xl"
-                    >
-                      <Eye size={16} />
-                      <span>View Card Design</span>
-                    </button>
-                  )}
-                </div>
-              </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">You're all caught up!</h3>
+                <p className="text-gray-500 text-sm mb-4">Check back later for more items.</p>
+                <button
+                  onClick={onReset}
+                  className="flex items-center space-x-2 px-5 py-2.5 bg-brand text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform"
+                >
+                  <RefreshCw size={16} />
+                  <span>Start Over</span>
+                </button>
+              </>
             )}
           </div>
         )}
@@ -151,8 +116,8 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         )}
       </div>
 
-      {/* Swipe Buttons - Below card with proper spacing */}
-      <div className="flex justify-center items-center space-x-8 mt-3 py-2 shrink-0 relative z-20">
+      {/* Swipe Buttons - Compact to maximize card space */}
+      <div className="flex justify-center items-center space-x-6 mt-2 py-1 shrink-0 relative z-20">
         <button
           onClick={async () => {
             if (currentItem) {
@@ -160,16 +125,16 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             }
           }}
           disabled={!currentItem}
-          className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
+          className="w-14 h-14 rounded-full bg-white border border-red-100 shadow-[0_4px_16px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
         >
-          <X size={32} strokeWidth={2.5} />
+          <X size={28} strokeWidth={2.5} />
         </button>
         <button
           onClick={() => currentItem && onSwipeRight()}
           disabled={!currentItem}
-          className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
+          className="w-14 h-14 rounded-full bg-white border border-green-100 shadow-[0_4px_16px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
         >
-          <Check size={32} strokeWidth={3} />
+          <Check size={28} strokeWidth={3} />
         </button>
       </div>
     </div>

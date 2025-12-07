@@ -10,33 +10,33 @@ import { SwipeCardStack } from './swipe/SwipeCardStack';
 import { SwipeModals } from './swipe/SwipeModals';
 
 interface Owner {
-    name: string;
-    image: string;
-    location: string;
-    distance: string;
+  name: string;
+  image: string;
+  location: string;
+  distance: string;
 }
 
 interface BarterItem {
-    id: number;
-    type: 'barter';
-    title: string;
-    condition: string;
-    image: string;
-    description: string;
-    lookingFor: string;
-    owner: Owner;
-    gallery?: string[];
+  id: number;
+  type: 'barter';
+  title: string;
+  condition: string;
+  image: string;
+  description: string;
+  lookingFor: string;
+  owner: Owner;
+  gallery?: string[];
 }
 
 interface MarketplaceItem {
-    id: number;
-    type: 'marketplace';
-    title: string;
-    price: string;
-    image: string;
-    description: string;
-    owner: Owner;
-    gallery?: string[];
+  id: number;
+  type: 'marketplace';
+  title: string;
+  price: string;
+  image: string;
+  description: string;
+  owner: Owner;
+  gallery?: string[];
 }
 
 const MOCK_BARTER_ITEMS: BarterItem[] = [
@@ -50,9 +50,9 @@ const MOCK_MARKETPLACE_ITEMS: MarketplaceItem[] = [
 ];
 
 const MOCK_USER_ITEMS = [
-    { id: 101, title: "AirPod Pro", subtitle: "Used • Electronics", image: "https://images.unsplash.com/photo-1603351154351-5cf233081e35?auto=format&fit=crop&w=300&q=80" },
-    { id: 102, title: "Camera", subtitle: "Used • Electronics", image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=300&q=80" },
-    { id: 103, title: "Shoes", subtitle: "Used • Fashion", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80" },
+  { id: 101, title: "AirPod Pro", subtitle: "Used • Electronics", image: "https://images.unsplash.com/photo-1603351154351-5cf233081e35?auto=format&fit=crop&w=300&q=80" },
+  { id: 102, title: "Camera", subtitle: "Used • Electronics", image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=300&q=80" },
+  { id: 103, title: "Shoes", subtitle: "Used • Fashion", image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80" },
 ];
 
 interface Category {
@@ -97,18 +97,18 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
       onTabChange(tab);
     }
   };
-  
+
   // Modal States
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showMarketplaceModal, setShowMarketplaceModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  
+
   // Dropdowns
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [selectedLocation, setSelectedLocation] = useState('all');
-  
+
   // Categories and Locations from API
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -126,24 +126,24 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     const fetchFilters = async () => {
       try {
         setLoadingFilters(true);
-        
+
         // Reset selected category when tab changes
         setSelectedCategory('All Categories');
-        
+
         // Fetch categories filtered by parent (activeTab)
         const parentCategory = getParentCategoryName(activeTab);
         const categoriesUrl = `${ENDPOINTS.categories}?parent=${encodeURIComponent(parentCategory)}`;
-        
+
         const [categoriesRes, locationsRes] = await Promise.all([
           apiFetch(categoriesUrl),
           apiFetch(ENDPOINTS.locations),
         ]);
-        
+
         const cats = (categoriesRes.categories || []) as Category[];
         const locs = (locationsRes.locations || []) as Location[];
-        
+
         console.log(`[SwipeScreen] Loaded ${cats.length} categories for ${activeTab} tab:`, cats.map(c => c.name));
-        
+
         setCategories(cats);
         setLocations(locs);
       } catch (error) {
@@ -172,7 +172,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
       try {
         // Build query parameters
         const params: string[] = [];
-        
+
         // Add type parameter based on active tab
         // Map: Shop -> marketplace, Swap -> barter
         // Services is coming soon, so skip fetching
@@ -181,37 +181,37 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           itemType = 'barter';
         }
         params.push(`type=${encodeURIComponent(itemType)}`);
-        
+
         // Add category filter if not "All Categories"
         if (selectedCategory && selectedCategory !== 'All Categories') {
           params.push(`category=${encodeURIComponent(selectedCategory)}`);
         }
-        
+
         // Add city filter
         if (selectedLocation && selectedLocation !== 'all') {
           params.push(`city=${encodeURIComponent(selectedLocation)}`);
         } else if (selectedLocation === 'all') {
           params.push('city=all');
         }
-        
+
         // Build feed URL with query parameters
         let feedUrl = ENDPOINTS.items.feed;
         if (params.length > 0) {
           feedUrl += `?${params.join('&')}`;
         }
-        
+
         // Fetch items - token is optional (for browsing without login)
         const res = await apiFetch(feedUrl, { token: token || undefined });
-        
+
         const apiItems = res.items || res.data || [];
-        
+
         console.log(`[SwipeScreen] Fetched ${apiItems.length} items for ${activeTab} tab`, {
           type: itemType,
           category: selectedCategory,
           location: selectedLocation,
           items: apiItems.length,
         });
-        
+
         // Transform API items to SwipeItem format
         const transformedItems: SwipeItem[] = apiItems.map((item: any) => ({
           id: item.id,
@@ -231,8 +231,8 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
               // Check distance_km first, then distance, then owner.distance
               const distanceKm = item.distance_km ?? item.distance;
               if (distanceKm !== null && distanceKm !== undefined) {
-                return distanceKm < 1 
-                  ? `${Math.round(distanceKm * 1000)}m` 
+                return distanceKm < 1
+                  ? `${Math.round(distanceKm * 1000)}m`
                   : `${distanceKm}km`;
               }
               // Fallback to formatted distance from owner object
@@ -245,7 +245,18 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           gallery: item.images || item.gallery || [item.image].filter(Boolean),
         }));
 
-        setItems(transformedItems.length > 0 ? transformedItems : []);
+        // Use mock data as fallback if API returns no items (for design preview)
+        if (transformedItems.length === 0) {
+          const mockItems = activeTab === 'Marketplace'
+            ? MOCK_MARKETPLACE_ITEMS.map(item => ({
+              ...item,
+              price: `₦${item.price}`,
+            }))
+            : MOCK_BARTER_ITEMS;
+          setItems(mockItems as SwipeItem[]);
+        } else {
+          setItems(transformedItems);
+        }
         setCurrentIndex(0); // Reset to first item when items change
       } catch (error: any) {
         // Handle 401 - token is invalid, but don't clear auth state if no token was provided
@@ -323,20 +334,20 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
 
 
   const resetStack = () => setCurrentIndex(0);
-  
+
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
     setShowCategoryDropdown(false);
   };
-  
+
   const handleLocationSelect = (location: string) => {
     setSelectedLocation(location);
     setShowLocationDropdown(false);
   };
-  
+
   // Build category options list (with "All Categories" first)
   const categoryOptions = ['All Categories', ...categories.map(cat => cat.name)];
-  
+
   // Build location options list (with "All Locations" first)
   const locationOptions = ['all', ...locations.map(loc => loc.name)];
 
@@ -390,5 +401,5 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         onComplete={completeRightSwipe}
       />
     </div>
-    );
+  );
 };

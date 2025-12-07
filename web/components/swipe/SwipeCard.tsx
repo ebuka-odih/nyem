@@ -1,5 +1,5 @@
-import React from 'react';
-import { Info, MapPin, Share2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Info, MapPin, Share2, Heart, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
 import { SwipeItem } from '../../types';
 
 interface SwipeCardProps {
@@ -9,14 +9,13 @@ interface SwipeCardProps {
 
 export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   const isMarketplace = item.type === 'marketplace';
+  const [isLiked, setIsLiked] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleShare = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      // Create shareable URL
       const shareUrl = `${window.location.origin}/items/${item.id}`;
-
-      // Use Web Share API if available, otherwise fallback to clipboard
       if (navigator.share) {
         await navigator.share({
           title: item.title,
@@ -24,104 +23,166 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
           url: shareUrl,
         });
       } else {
-        // Fallback to clipboard
         await navigator.clipboard.writeText(shareUrl);
-        alert('Item link copied to clipboard!');
+        // Could add a toast notification here
       }
     } catch (err: any) {
-      // User cancelled share or error occurred
       if (err.name !== 'AbortError') {
         console.error('Failed to share item:', err);
       }
     }
   };
 
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsLiked(!isLiked);
+  };
+
   return (
-    <div className="w-full h-full flex flex-col rounded-[28px] overflow-hidden bg-white shadow-xl border border-gray-100/80">
-      {/* Image Section - 55% of card height */}
-      <div className="relative h-[55%] shrink-0">
+    <div className="w-full h-full flex flex-col rounded-[32px] overflow-hidden bg-white shadow-2xl shadow-black/10 border border-white/50">
+
+      {/* Image Section - Reduced height to show more content */}
+      <div className="relative h-[50%] shrink-0 overflow-hidden">
+        {/* Shimmer loading state */}
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 animate-pulse" />
+        )}
+
         <img
           src={item.image}
           alt={item.title}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover transition-all duration-700 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+          onLoad={() => setImageLoaded(true)}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
 
-        {/* Badge & Title - Bottom of image with more spacing */}
-        <div className="absolute bottom-4 left-4 right-4 flex flex-col items-start gap-2">
+        {/* Elegant gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+        {/* Subtle top gradient for badges */}
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/30 to-transparent" />
+
+        {/* Top Action Bar */}
+        <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
+          {/* Price/Condition Badge */}
           {isMarketplace ? (
-            <span className="bg-[#FFD700] text-black text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-              {item.price}
-            </span>
+            <div className="flex flex-col gap-1.5">
+              <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-gray-900 text-sm font-black px-3 py-1.5 rounded-xl shadow-lg">
+                <span className="text-[#990033]">{item.price}</span>
+              </span>
+              <span className="inline-flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <Sparkles size={9} />
+                For Sale
+              </span>
+            </div>
           ) : (
-            <span className="bg-[#10B981] text-white text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wide shadow-sm">
+            <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-gray-800 text-xs font-bold px-2.5 py-1 rounded-lg shadow-lg uppercase tracking-wide">
+              <CheckCircle2 size={11} className="text-emerald-500" />
               {item.condition}
             </span>
           )}
-          {/* Title and Action Buttons Row */}
-          <div className="w-full flex items-center justify-between gap-3">
-            <h2 className="text-[26px] font-black text-white leading-tight drop-shadow-lg line-clamp-2 flex-1 min-w-0">
-              {item.title}
-            </h2>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={handleShare}
-                className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors"
-              >
-                <Share2 size={18} strokeWidth={1.5} className="text-white" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onInfoClick && onInfoClick();
-                }}
-                className="w-8 h-8 rounded-full bg-black/20 backdrop-blur-sm flex items-center justify-center border border-white/30 hover:bg-black/30 transition-colors"
-              >
-                <Info size={18} strokeWidth={1.5} className="text-white" />
-              </button>
-            </div>
+
+          {/* Quick Actions */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={handleLike}
+              className={`w-9 h-9 rounded-xl backdrop-blur-md flex items-center justify-center border transition-all duration-300 ${isLiked
+                  ? 'bg-rose-500 border-rose-400 scale-110'
+                  : 'bg-white/20 border-white/40 hover:bg-white/30'
+                }`}
+            >
+              <Heart
+                size={16}
+                className={`transition-colors ${isLiked ? 'text-white fill-white' : 'text-white'}`}
+              />
+            </button>
+            <button
+              onClick={handleShare}
+              className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:bg-white/30 transition-all"
+            >
+              <Share2 size={16} className="text-white" />
+            </button>
           </div>
+        </div>
+
+        {/* Title Section - Bottom of image */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <h2 className="text-[22px] font-black text-white leading-tight tracking-tight line-clamp-2 drop-shadow-2xl">
+            {item.title}
+          </h2>
         </div>
       </div>
 
-      {/* Content Section - Flexible height to show all content */}
-      <div className="flex-1 px-5 pt-4 pb-4 flex flex-col bg-white overflow-hidden">
-        {/* Description - Always visible */}
+      {/* Content Section - More compact layout */}
+      <div className="flex-1 px-4 pt-3 pb-3 flex flex-col bg-gradient-to-b from-white to-gray-50/50 min-h-0">
+
+        {/* Description - Compact */}
         {item.description && (
-          <p className="text-gray-600 text-[14px] line-clamp-2 mb-2 leading-relaxed shrink-0">
+          <p className="text-gray-600 text-[13px] leading-relaxed line-clamp-2 mb-3">
             {item.description}
           </p>
         )}
 
-        {/* Status Banner */}
+        {/* Status/Action Banner - Compact */}
         {isMarketplace ? (
-          <div className="bg-[#ECFDF5] rounded-xl px-3 py-2 flex items-center justify-center border border-green-100/50 shrink-0">
-            <span className="text-[#10B981] text-sm font-bold">Available for Purchase</span>
+          <div className="bg-gradient-to-r from-[#990033]/10 to-[#cc0044]/5 rounded-xl px-3 py-2 flex items-center justify-between border border-[#990033]/10">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-[#990033]/10 flex items-center justify-center">
+                <Sparkles size={12} className="text-[#990033]" />
+              </div>
+              <span className="text-[#990033] text-sm font-bold">Ready to Buy</span>
+            </div>
+            <ArrowRight size={16} className="text-[#990033]/60" />
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-xl px-3 py-2 flex items-center border border-gray-100 shrink-0">
-            <span className="text-gray-500 text-sm">Looking for: <span className="font-bold text-gray-900 ml-1">{item.lookingFor}</span></span>
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-3 py-2 border border-amber-100/50">
+            <p className="text-[10px] text-amber-600/80 font-medium uppercase tracking-wider">Looking for</p>
+            <p className="text-gray-900 font-bold text-sm truncate">{item.lookingFor}</p>
           </div>
         )}
 
-        {/* Owner Info - Compact layout */}
-        <div className="flex items-center mt-auto pt-3 shrink-0">
-          <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden shrink-0 border-2 border-gray-100 shadow-sm">
-            <img src={item.owner.image} alt={item.owner.name} className="w-full h-full object-cover" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-gray-900 text-[15px] truncate">{item.owner.name}</h3>
-            <div className="flex items-center text-[12px] mt-0.5">
-              <div className="flex items-center text-gray-400 mr-2">
-                <MapPin size={11} className="mr-1 shrink-0" />
-                <span className="truncate">{item.owner.location}</span>
+        {/* Seller Info - Compact layout with guaranteed visibility */}
+        <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            {/* Avatar with verified badge */}
+            <div className="relative shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-md">
+                <img
+                  src={item.owner.image}
+                  alt={item.owner.name}
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div className="flex items-center text-[#BE185D]">
-                <MapPin size={11} className="mr-1 shrink-0" />
-                <span className="font-bold whitespace-nowrap">{item.owner.distance} away</span>
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#990033] rounded-md flex items-center justify-center ring-2 ring-white">
+                <CheckCircle2 size={8} className="text-white" />
+              </div>
+            </div>
+
+            {/* Seller details */}
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-gray-900 text-[14px] truncate">{item.owner.name}</h3>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="flex items-center text-[10px] text-gray-400 truncate">
+                  <MapPin size={9} className="mr-0.5 shrink-0" />
+                  {item.owner.location}
+                </span>
+                <span className="text-gray-300 shrink-0">•</span>
+                <span className="text-[10px] font-semibold text-[#990033] shrink-0">
+                  {item.owner.distance}
+                </span>
               </div>
             </div>
           </div>
+
+          {/* Info Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onInfoClick && onInfoClick();
+            }}
+            className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors group shrink-0 ml-2"
+          >
+            <Info size={16} className="text-gray-500 group-hover:text-gray-700 transition-colors" />
+          </button>
         </div>
       </div>
     </div>
