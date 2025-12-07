@@ -93,6 +93,8 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   // Handle tab change and notify parent
   const handleTabChange = (tab: 'Marketplace' | 'Services' | 'Swap') => {
     setActiveTab(tab);
+    setLoading(true); // Show loading immediately when tab changes
+    setCurrentIndex(0); // Reset to first item
     if (onTabChange) {
       onTabChange(tab);
     }
@@ -375,6 +377,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         items={items}
         currentIndex={currentIndex}
         activeTab={activeTab}
+        loading={loading}
         onSwipeLeft={async () => {
           setCurrentIndex(prev => prev + 1);
         }}

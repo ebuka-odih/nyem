@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Check, RefreshCw, Flame } from 'lucide-react';
+import { X, Check, RefreshCw, Flame, Loader2 } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { SwipeItem } from '../../types';
 import { SwipeCard } from './SwipeCard';
@@ -8,6 +8,7 @@ interface SwipeCardStackProps {
   items: SwipeItem[];
   currentIndex: number;
   activeTab: 'Marketplace' | 'Services' | 'Swap';
+  loading?: boolean;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onItemClick: (item: SwipeItem) => void;
@@ -18,6 +19,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   items,
   currentIndex,
   activeTab,
+  loading = false,
   onSwipeLeft,
   onSwipeRight,
   onItemClick,
@@ -58,8 +60,19 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
     <div className="flex-1 flex flex-col items-center px-4 pb-2 w-full min-h-0">
       {/* Card Container - Maximize card height, minimal button space */}
       <div className="relative w-full h-[calc(100%-60px)] min-h-[440px]">
+        {/* Loading State */}
+        {loading && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+              <Loader2 size={32} className="text-[#990033] animate-spin" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Loading items...</h3>
+            <p className="text-gray-500 text-sm">Please wait while we fetch the latest listings.</p>
+          </div>
+        )}
+
         {/* Empty State */}
-        {!currentItem && (
+        {!loading && !currentItem && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
             {activeTab === 'Services' ? (
               <>
@@ -89,14 +102,14 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         )}
 
         {/* Next Card (Background) */}
-        {nextItem && (
+        {!loading && nextItem && (
           <div className="absolute inset-0 w-full h-full scale-[0.96] translate-y-2 opacity-50 z-0 pointer-events-none">
             <SwipeCard item={nextItem} />
           </div>
         )}
 
         {/* Current Card */}
-        {currentItem && (
+        {!loading && currentItem && (
           <motion.div
             key={currentItem.id}
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
@@ -117,26 +130,28 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
       </div>
 
       {/* Swipe Buttons - Larger for better tap targets */}
-      <div className="flex justify-center items-center space-x-8 mt-2 py-1 shrink-0 relative z-20">
-        <button
-          onClick={async () => {
-            if (currentItem) {
-              await swipe('left');
-            }
-          }}
-          disabled={!currentItem}
-          className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
-        >
-          <X size={32} strokeWidth={2.5} />
-        </button>
-        <button
-          onClick={() => currentItem && onSwipeRight()}
-          disabled={!currentItem}
-          className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
-        >
-          <Check size={32} strokeWidth={3} />
-        </button>
-      </div>
+      {!loading && (
+        <div className="flex justify-center items-center space-x-8 mt-2 py-1 shrink-0 relative z-20">
+          <button
+            onClick={async () => {
+              if (currentItem) {
+                await swipe('left');
+              }
+            }}
+            disabled={!currentItem}
+            className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
+          >
+            <X size={32} strokeWidth={2.5} />
+          </button>
+          <button
+            onClick={() => currentItem && onSwipeRight()}
+            disabled={!currentItem}
+            className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
+          >
+            <Check size={32} strokeWidth={3} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

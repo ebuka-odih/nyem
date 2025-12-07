@@ -21,7 +21,6 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({
 }) => {
   return (
     <div>
-      <h3 className="text-lg font-bold text-gray-900 mb-4">Listed by</h3>
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <div className="w-12 h-12 rounded-full bg-gray-100 mr-3 overflow-hidden border border-gray-200">
