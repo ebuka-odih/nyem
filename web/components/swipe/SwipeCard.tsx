@@ -84,40 +84,40 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         </div>
       </div>
 
-      {/* Content Section - 45% of card height for full content visibility */}
-      <div className="h-[45%] px-5 pt-4 pb-5 flex flex-col bg-white">
-        {/* Description - Show 2 lines clearly */}
+      {/* Content Section - Flexible height to show all content */}
+      <div className="flex-1 px-5 pt-4 pb-4 flex flex-col bg-white overflow-hidden">
+        {/* Description - Always visible */}
         {item.description && (
-          <p className="text-gray-600 text-[15px] line-clamp-2 mb-3 leading-relaxed">
+          <p className="text-gray-600 text-[14px] line-clamp-2 mb-2 leading-relaxed shrink-0">
             {item.description}
           </p>
         )}
 
         {/* Status Banner */}
         {isMarketplace ? (
-          <div className="bg-[#ECFDF5] rounded-xl px-4 py-2.5 flex items-center justify-center border border-green-100/50 shrink-0">
+          <div className="bg-[#ECFDF5] rounded-xl px-3 py-2 flex items-center justify-center border border-green-100/50 shrink-0">
             <span className="text-[#10B981] text-sm font-bold">Available for Purchase</span>
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-xl px-4 py-2.5 flex items-center border border-gray-100 shrink-0">
+          <div className="bg-gray-50 rounded-xl px-3 py-2 flex items-center border border-gray-100 shrink-0">
             <span className="text-gray-500 text-sm">Looking for: <span className="font-bold text-gray-900 ml-1">{item.lookingFor}</span></span>
           </div>
         )}
 
-        {/* Owner Info - More spacious layout */}
-        <div className="flex items-center mt-auto pt-4 pb-1">
-          <div className="w-12 h-12 rounded-full bg-gray-200 mr-3.5 overflow-hidden shrink-0 border-2 border-gray-100 shadow-sm">
+        {/* Owner Info - Compact layout */}
+        <div className="flex items-center mt-auto pt-3 shrink-0">
+          <div className="w-10 h-10 rounded-full bg-gray-200 mr-3 overflow-hidden shrink-0 border-2 border-gray-100 shadow-sm">
             <img src={item.owner.image} alt={item.owner.name} className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-gray-900 text-[17px] truncate">{item.owner.name}</h3>
-            <div className="flex items-center text-[13px] mt-1">
-              <div className="flex items-center text-gray-400 mr-3">
-                <MapPin size={12} className="mr-1 shrink-0" />
+            <h3 className="font-bold text-gray-900 text-[15px] truncate">{item.owner.name}</h3>
+            <div className="flex items-center text-[12px] mt-0.5">
+              <div className="flex items-center text-gray-400 mr-2">
+                <MapPin size={11} className="mr-1 shrink-0" />
                 <span className="truncate">{item.owner.location}</span>
               </div>
               <div className="flex items-center text-[#BE185D]">
-                <MapPin size={12} className="mr-1 shrink-0" />
+                <MapPin size={11} className="mr-1 shrink-0" />
                 <span className="font-bold whitespace-nowrap">{item.owner.distance} away</span>
               </div>
             </div>
