@@ -37,7 +37,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   };
 
   return (
-    <div className="w-full h-full min-h-[520px] flex flex-col rounded-[28px] overflow-hidden bg-white shadow-xl border border-gray-100/80">
+    <div className="w-full h-full flex flex-col rounded-[28px] overflow-hidden bg-white shadow-xl border border-gray-100/80">
       {/* Image Section - 55% of card height */}
       <div className="relative h-[55%] shrink-0">
         <img
