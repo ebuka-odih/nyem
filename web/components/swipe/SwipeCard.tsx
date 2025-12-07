@@ -175,7 +175,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-[#990033] rounded-md flex items-center justify-center ring-2 ring-white">
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-md flex items-center justify-center ring-2 ring-white">
                 <CheckCircle2 size={8} className="text-white" />
               </div>
             </div>
