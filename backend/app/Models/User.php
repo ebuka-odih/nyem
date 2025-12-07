@@ -16,11 +16,15 @@ class User extends Authenticatable
 
     protected $fillable = [
         'phone',
+        'email',
+        'google_id',
         'username',
         'username_updated_at',
         'bio',
         'profile_photo',
         'city',
+        'city_id',
+        'area_id',
         'is_artisan',
         'role',
         'otp_verified_at',
@@ -82,6 +86,45 @@ class User extends Authenticatable
     public function matchesAsUser2()
     {
         return $this->hasMany(UserMatch::class, 'user2_id');
+    }
+
+    /**
+     * Get the city location (belongsTo Location where type='city')
+     */
+    public function cityLocation()
+    {
+        return $this->belongsTo(Location::class, 'city_id');
+    }
+
+    /**
+     * Get the area location (belongsTo Location where type='area')
+     */
+    public function areaLocation()
+    {
+        return $this->belongsTo(Location::class, 'area_id');
+    }
+
+    /**
+     * Get city name attribute (backward compatibility)
+     * Uses cityLocation relationship if available, falls back to city string
+     */
+    public function getCityNameAttribute()
+    {
+        if ($this->relationLoaded('cityLocation') && $this->cityLocation) {
+            return $this->cityLocation->name;
+        }
+        return $this->attributes['city'] ?? null;
+    }
+
+    /**
+     * Get area name attribute
+     */
+    public function getAreaNameAttribute()
+    {
+        if ($this->relationLoaded('areaLocation') && $this->areaLocation) {
+            return $this->areaLocation->name;
+        }
+        return null;
     }
 
     /**

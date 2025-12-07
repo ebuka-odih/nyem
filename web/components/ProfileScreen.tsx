@@ -13,6 +13,7 @@ import { SettingsList } from './profile/SettingsList';
 interface ProfileScreenProps {
   onEditProfile: () => void;
   onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onSignUpRequest?: () => void;
 }
 
 interface UserItem {
@@ -21,7 +22,7 @@ interface UserItem {
   image: string;
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile, onLoginRequest }) => {
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile, onLoginRequest, onSignUpRequest }) => {
   const { user, logout, token, refreshUser, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'items' | 'settings'>('items');
   const [userItems, setUserItems] = useState<UserItem[]>([]);
@@ -74,6 +75,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile, onL
           title="Sign In Required"
           message="Please sign in to view and manage your profile."
           onLoginRequest={onLoginRequest}
+          onSignUpRequest={onSignUpRequest}
         />
       </div>
     );

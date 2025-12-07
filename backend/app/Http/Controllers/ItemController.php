@@ -56,7 +56,7 @@ class ItemController extends Controller
             'status' => 'active',
         ]);
 
-        $item->load('user');
+        $item->load(['user.cityLocation', 'user.areaLocation']);
         
         return response()->json(['item' => $item], 201);
     }
@@ -66,7 +66,7 @@ class ItemController extends Controller
         $user = $request->user(); // Can be null if not authenticated
         $blockedIds = $user ? $this->blockedUserIds($user) : [];
 
-        $query = Item::with(['user', 'category'])
+        $query = Item::with(['user.cityLocation', 'user.areaLocation', 'category'])
             ->where('status', 'active');
         
         // Only exclude user's own items and blocked users if authenticated
@@ -181,12 +181,15 @@ class ItemController extends Controller
                     'id' => $item->user->id,
                     'username' => $item->user->username,
                     'profile_photo' => $item->user->profile_photo ?? 'https://i.pravatar.cc/150',
-                    'city' => $item->user->city ?? 'Unknown',
+                    'city' => $item->user->cityLocation->name ?? $item->user->city ?? 'Unknown',
+                    'area' => $item->user->areaLocation->name ?? null,
+                    'city_id' => $item->user->city_id,
+                    'area_id' => $item->user->area_id,
                 ],
                 'owner' => [
                     'name' => $item->user->username,
                     'image' => $item->user->profile_photo ?? 'https://i.pravatar.cc/150',
-                    'location' => $item->city ?? $item->user->city ?? 'Unknown', // Use item's city, fallback to user's city
+                    'location' => $this->formatUserLocation($item->user), // Format city and area
                     'distance' => $distanceKm !== null ? ($distanceKm < 1 ? round($distanceKm * 1000) . 'm' : $distanceKm . 'km') : 'Unknown',
                 ],
             ];
@@ -222,7 +225,7 @@ class ItemController extends Controller
             return response()->json(['message' => 'User blocked'], 403);
         }
 
-        $item->load('user');
+        $item->load(['user.cityLocation', 'user.areaLocation']);
         
         // Calculate distance if both users have location
         $user = $request->user();
@@ -280,5 +283,20 @@ class ItemController extends Controller
         if ($item->user_id !== $userId) {
             abort(403, 'You can only manage your own items');
         }
+    }
+
+    /**
+     * Format user location as "City, Area" or just "City"
+     */
+    private function formatUserLocation($user): string
+    {
+        $city = $user->cityLocation->name ?? $user->city ?? 'Unknown';
+        $area = $user->areaLocation->name ?? null;
+        
+        if ($area) {
+            return "{$city}, {$area}";
+        }
+        
+        return $city;
     }
 }

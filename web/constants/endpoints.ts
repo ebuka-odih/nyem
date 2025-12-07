@@ -8,6 +8,7 @@ export const ENDPOINTS = {
     verifyOtp: '/auth/verify-otp',
     login: '/auth/login',
     register: '/auth/register',
+    google: '/auth/google',
   },
   profile: {
     me: '/profile/me',

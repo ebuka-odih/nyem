@@ -9,11 +9,11 @@ interface SetupProfileScreenProps {
 }
 
 export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComplete, onBack }) => {
-  const [username, setUsername] = useState('');
-  const [location, setLocation] = useState('');
+  const { updateProfile, user } = useAuth();
+  const [username, setUsername] = useState(user?.username || '');
+  const [location, setLocation] = useState(user?.city || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { updateProfile } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

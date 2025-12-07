@@ -20,7 +20,10 @@ Route::get('/', function () {
 
 // Public endpoints for categories and locations
 Route::get('/categories', [CategoryLocationController::class, 'categories']);
-Route::get('/locations', [CategoryLocationController::class, 'locations']);
+Route::get('/locations', [CategoryLocationController::class, 'locations']); // Backward compatibility - returns cities
+Route::get('/locations/cities', [CategoryLocationController::class, 'cities']);
+Route::get('/locations/cities/{cityId}/areas', [CategoryLocationController::class, 'areas']);
+Route::get('/locations/areas', [CategoryLocationController::class, 'areas']); // Alternative: ?city_id=123
 
 // Public feed endpoint - works with or without authentication
 Route::get('/items/feed', [ItemController::class, 'feed']);
@@ -30,6 +33,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/google', [AuthController::class, 'googleAuth']);
 });
 
 

@@ -12,6 +12,7 @@ interface MatchesScreenProps {
   onNavigateToRequests: () => void;
   onNavigateToChat: () => void;
   onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onSignUpRequest?: () => void;
 }
 
 interface Match {
@@ -23,7 +24,7 @@ interface Match {
   unread: boolean;
 }
 
-export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToRequests, onNavigateToChat, onLoginRequest }) => {
+export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToRequests, onNavigateToChat, onLoginRequest, onSignUpRequest }) => {
   const { token, isAuthenticated } = useAuth();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +104,7 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
           title="Sign In Required"
           message="Please sign in to view your matches and connect with other users."
           onLoginRequest={onLoginRequest}
+          onSignUpRequest={onSignUpRequest}
         />
       </div>
     );

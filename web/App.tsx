@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SignInScreen } from './components/SignInScreen';
+import { SignUpScreen } from './components/SignUpScreen';
 import { SignUpPhoneScreen } from './components/SignUpPhoneScreen';
 import { SignUpOtpScreen } from './components/SignUpOtpScreen';
 import { SetupProfileScreen } from './components/SetupProfileScreen';
@@ -20,12 +21,18 @@ import { useNavigationHistory } from './hooks/useNavigationHistory';
 import { useSwipeToGoBack } from './hooks/useSwipeToGoBack';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, loginWithGoogle } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('welcome');
   const [activeTab, setActiveTab] = useState<TabState>('discover');
   const [swipeTab, setSwipeTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
   const [signupPhone, setSignupPhone] = useState('');
   const [selectedItem, setSelectedItem] = useState<SwipeItem | null>(null);
+  // Store current index per tab to preserve position when navigating back
+  const [swipeIndex, setSwipeIndex] = useState<Record<'Marketplace' | 'Services' | 'Swap', number>>({
+    Marketplace: 0,
+    Services: 0,
+    Swap: 0,
+  });
   const navigationHistory = useNavigationHistory();
 
   // Navigate to a new screen and track history
@@ -90,23 +97,42 @@ const AppContent: React.FC = () => {
     setActiveTab('profile');
   };
 
-  const handleItemClick = (item: SwipeItem, currentSwipeTab?: 'Marketplace' | 'Services' | 'Swap') => {
+  const handleItemClick = (item: SwipeItem, currentSwipeTab?: 'Marketplace' | 'Services' | 'Swap', currentIndex?: number) => {
     // Store the current swipe tab when opening item details
     if (currentSwipeTab) {
       setSwipeTab(currentSwipeTab);
+      // Preserve the current index when navigating to item details
+      if (currentIndex !== undefined) {
+        setSwipeIndex(prev => ({
+          ...prev,
+          [currentSwipeTab]: currentIndex,
+        }));
+      }
     }
     setSelectedItem(item);
     navigateTo('item_details');
   };
 
-  const handleLoginRequest = (method: 'phone_otp' | 'google' | 'email') => {
+  const handleLoginRequest = async (method: 'phone_otp' | 'google' | 'email') => {
     if (method === 'phone_otp') {
       navigateTo('signup_phone');
     } else if (method === 'email') {
       navigateTo('signin');
-    } else {
-      // Google login - navigate to signin for now
-      navigateTo('signin');
+    } else if (method === 'google') {
+      // Handle Google sign-in
+      try {
+        const result = await loginWithGoogle();
+        if (result.new_user) {
+          // New user - might need to complete profile
+          navigateTo('home', true);
+        } else {
+          // Existing user - go to home
+          navigateTo('home', true);
+        }
+      } catch (error: any) {
+        console.error('Google sign-in error:', error);
+        alert(error.message || 'Failed to sign in with Google. Please try again.');
+      }
     }
   };
 
@@ -119,33 +145,49 @@ const AppContent: React.FC = () => {
       case 'discover':
         return <SwipeScreen
           onBack={() => navigateTo('welcome')}
-          onItemClick={(item, currentTab) => handleItemClick(item, currentTab)}
+          onItemClick={(item, currentTab, currentIndex) => handleItemClick(item, currentTab, currentIndex)}
           onLoginRequest={handleLoginRequest}
           onSignUpRequest={handleSignUpRequest}
           initialTab={swipeTab}
           onTabChange={setSwipeTab}
+          initialIndex={swipeIndex[swipeTab]}
+          onIndexChange={(index) => {
+            setSwipeIndex(prev => ({
+              ...prev,
+              [swipeTab]: index,
+            }));
+          }}
         />;
       case 'upload':
-        return <UploadScreen onLoginRequest={handleLoginRequest} />;
+        return <UploadScreen onLoginRequest={handleLoginRequest} onSignUpRequest={handleSignUpRequest} />;
       case 'matches':
         return <MatchesScreen
           onNavigateToRequests={() => navigateTo('match_requests')}
           onNavigateToChat={() => navigateTo('chat')}
           onLoginRequest={handleLoginRequest}
+          onSignUpRequest={handleSignUpRequest}
         />;
       case 'profile':
         return <ProfileScreen
           onEditProfile={() => navigateTo('edit_profile')}
           onLoginRequest={handleLoginRequest}
+          onSignUpRequest={handleSignUpRequest}
         />;
       default:
         return <SwipeScreen
           onBack={() => navigateTo('welcome')}
-          onItemClick={(item, currentTab) => handleItemClick(item, currentTab)}
+          onItemClick={(item, currentTab, currentIndex) => handleItemClick(item, currentTab, currentIndex)}
           onLoginRequest={handleLoginRequest}
           onSignUpRequest={handleSignUpRequest}
           initialTab={swipeTab}
           onTabChange={setSwipeTab}
+          initialIndex={swipeIndex[swipeTab]}
+          onIndexChange={(index) => {
+            setSwipeIndex(prev => ({
+              ...prev,
+              [swipeTab]: index,
+            }));
+          }}
         />;
     }
   };
@@ -164,7 +206,15 @@ const AppContent: React.FC = () => {
           <SignInScreen
             onSignIn={() => navigateTo('home', true)}
             onBack={handleGoBack}
-            onSignUp={() => navigateTo('signup_phone')}
+            onSignUp={() => navigateTo('signup')}
+          />
+        )}
+
+        {currentScreen === 'signup' && (
+          <SignUpScreen
+            onSignUp={() => navigateTo('setup_profile')}
+            onBack={handleGoBack}
+            onSignIn={() => navigateTo('signin')}
           />
         )}
 

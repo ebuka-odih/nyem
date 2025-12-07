@@ -6,12 +6,14 @@ interface LoginPromptProps {
   title?: string;
   message?: string;
   onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onSignUpRequest?: () => void;
 }
 
 export const LoginPrompt: React.FC<LoginPromptProps> = ({ 
   title = 'Sign In Required',
   message = 'Please sign in to continue.',
-  onLoginRequest 
+  onLoginRequest,
+  onSignUpRequest
 }) => {
   return (
     <div className="flex-1 flex items-center justify-center px-6 py-12">
@@ -50,6 +52,19 @@ export const LoginPrompt: React.FC<LoginPromptProps> = ({
             >
               <Mail size={20} />
               <span>Continue with Email</span>
+            </button>
+          </div>
+        )}
+
+        {/* Sign Up Link */}
+        {onSignUpRequest && (
+          <div className="text-center mt-6">
+            <span className="text-gray-500 text-sm">Don't have an account? </span>
+            <button
+              onClick={onSignUpRequest}
+              className="text-brand font-semibold text-sm hover:underline transition-colors"
+            >
+              Create Account
             </button>
           </div>
         )}

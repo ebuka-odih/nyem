@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LoginPromptModal } from './LoginPromptModal';
 import { SwipeItem } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -69,19 +69,28 @@ interface Location {
 
 interface SwipeScreenProps {
   onBack: () => void;
-  onItemClick: (item: SwipeItem, currentTab?: 'Marketplace' | 'Services' | 'Swap') => void;
+  onItemClick: (item: SwipeItem, currentTab?: 'Marketplace' | 'Services' | 'Swap', currentIndex?: number) => void;
   onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
   onSignUpRequest?: () => void;
   initialTab?: 'Marketplace' | 'Services' | 'Swap';
   onTabChange?: (tab: 'Marketplace' | 'Services' | 'Swap') => void;
+  initialIndex?: number;
+  onIndexChange?: (index: number) => void;
 }
 
-export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, onSignUpRequest, initialTab = 'Marketplace', onTabChange }) => {
+export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, onSignUpRequest, initialTab = 'Marketplace', onTabChange, initialIndex = 0, onIndexChange }) => {
   const { token, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>(initialTab);
   const [items, setItems] = useState<SwipeItem[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [loading, setLoading] = useState(true);
+  
+  // Track previous filter values to detect when they change
+  const prevFiltersRef = useRef<{ tab: string; category: string; location: string }>({
+    tab: initialTab,
+    category: 'All Categories',
+    location: 'all',
+  });
 
   // Sync with initialTab prop when it changes (e.g., when returning from item details)
   useEffect(() => {
@@ -91,11 +100,30 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialTab]);
 
+  // Sync with initialIndex prop when it changes (e.g., when returning from item details)
+  useEffect(() => {
+    if (initialIndex !== undefined && initialIndex !== currentIndex) {
+      setCurrentIndex(initialIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialIndex]);
+
+  // Notify parent when index changes
+  useEffect(() => {
+    if (onIndexChange) {
+      onIndexChange(currentIndex);
+    }
+  }, [currentIndex, onIndexChange]);
+
   // Handle tab change and notify parent
   const handleTabChange = (tab: 'Marketplace' | 'Services' | 'Swap') => {
     setActiveTab(tab);
     setLoading(true); // Show loading immediately when tab changes
-    setCurrentIndex(0); // Reset to first item
+    // Reset to first item when tab changes (user explicitly changed tab)
+    setCurrentIndex(0);
+    if (onIndexChange) {
+      onIndexChange(0);
+    }
     if (onTabChange) {
       onTabChange(tab);
     }
@@ -249,6 +277,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         }));
 
         // Use mock data as fallback if API returns no items (for design preview)
+        let finalItems: SwipeItem[];
         if (transformedItems.length === 0) {
           const mockItems = activeTab === 'Marketplace'
             ? MOCK_MARKETPLACE_ITEMS.map(item => ({
@@ -256,11 +285,42 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
               price: `₦${item.price}`,
             }))
             : MOCK_BARTER_ITEMS;
-          setItems(mockItems as SwipeItem[]);
+          finalItems = mockItems as SwipeItem[];
         } else {
-          setItems(transformedItems);
+          finalItems = transformedItems;
         }
-        setCurrentIndex(0); // Reset to first item when items change
+        
+        setItems(finalItems);
+        
+        // Only reset index if filters actually changed (not when just navigating back)
+        const filtersChanged = 
+          prevFiltersRef.current.tab !== activeTab ||
+          prevFiltersRef.current.category !== selectedCategory ||
+          prevFiltersRef.current.location !== selectedLocation;
+        
+        if (filtersChanged) {
+          // Filters changed - reset to first item
+          setCurrentIndex(0);
+          if (onIndexChange) {
+            onIndexChange(0);
+          }
+          // Update ref to track current filters
+          prevFiltersRef.current = {
+            tab: activeTab,
+            category: selectedCategory,
+            location: selectedLocation,
+          };
+        } else {
+          // Filters didn't change - restore preserved index, but clamp to valid range
+          const maxIndex = Math.max(0, finalItems.length - 1);
+          const validIndex = Math.min(Math.max(0, initialIndex), maxIndex);
+          if (validIndex !== currentIndex) {
+            setCurrentIndex(validIndex);
+            if (onIndexChange) {
+              onIndexChange(validIndex);
+            }
+          }
+        }
       } catch (error: any) {
         // Handle 401 - token is invalid, but don't clear auth state if no token was provided
         if (error.message && (error.message.includes('Unauthenticated') || error.message.includes('Unauthorized'))) {
@@ -339,11 +399,22 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   const completeRightSwipe = () => {
     setShowOfferModal(false);
     setShowMarketplaceModal(false);
-    setCurrentIndex(prev => prev + 1);
+    setCurrentIndex(prev => {
+      const newIndex = prev + 1;
+      if (onIndexChange) {
+        onIndexChange(newIndex);
+      }
+      return newIndex;
+    });
   };
 
 
-  const resetStack = () => setCurrentIndex(0);
+  const resetStack = () => {
+    setCurrentIndex(0);
+    if (onIndexChange) {
+      onIndexChange(0);
+    }
+  };
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
@@ -387,10 +458,16 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         activeTab={activeTab}
         loading={loading}
         onSwipeLeft={async () => {
-          setCurrentIndex(prev => prev + 1);
+          setCurrentIndex(prev => {
+            const newIndex = prev + 1;
+            if (onIndexChange) {
+              onIndexChange(newIndex);
+            }
+            return newIndex;
+          });
         }}
         onSwipeRight={handleRightSwipe}
-        onItemClick={(item) => onItemClick(item, activeTab)}
+        onItemClick={(item) => onItemClick(item, activeTab, currentIndex)}
         onReset={resetStack}
       />
 

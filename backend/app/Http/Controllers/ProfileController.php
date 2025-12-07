@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Location;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
     public function me(Request $request)
     {
-        $user = $request->user()->load('items');
+        $user = $request->user()->load(['items', 'cityLocation', 'areaLocation']);
         
         // Check if username can be changed (24hr limit)
         $canChangeUsername = true;
@@ -34,8 +36,54 @@ class ProfileController extends Controller
             'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
             'bio' => 'sometimes|nullable|string|max:500',
             'profile_photo' => 'sometimes|nullable|string|max:65535', // TEXT field can hold up to 65,535 characters
-            'city' => 'sometimes|string|max:255',
+            'city' => 'sometimes|string|max:255', // Keep for backward compatibility
+            'city_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('locations', 'id')->where(function ($query) {
+                    $query->where('type', 'city');
+                }),
+            ],
+            'area_id' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                Rule::exists('locations', 'id')->where(function ($query) {
+                    $query->where('type', 'area');
+                }),
+            ],
         ]);
+
+        // Validate that area_id belongs to the selected city_id
+        if (isset($data['area_id']) && isset($data['city_id'])) {
+            $area = Location::where('id', $data['area_id'])
+                ->where('type', 'area')
+                ->where('parent_id', $data['city_id'])
+                ->first();
+
+            if (!$area) {
+                throw ValidationException::withMessages([
+                    'area_id' => ['The selected area does not belong to the selected city.'],
+                ]);
+            }
+        } elseif (isset($data['area_id'])) {
+            // If area_id is provided but city_id is not, validate against user's current city_id
+            $cityId = $data['city_id'] ?? $user->city_id;
+            
+            if ($cityId) {
+                $area = Location::where('id', $data['area_id'])
+                    ->where('type', 'area')
+                    ->where('parent_id', $cityId)
+                    ->first();
+
+                if (!$area) {
+                    throw ValidationException::withMessages([
+                        'area_id' => ['The selected area does not belong to your city. Please select a city first.'],
+                    ]);
+                }
+            }
+        }
 
         // Check username change limit (24 hours) - but allow first-time setup
         if (isset($data['username']) && $data['username'] !== $user->username) {
@@ -61,8 +109,9 @@ class ProfileController extends Controller
             $user->fill($data);
             $user->save();
             
-            // Reload user to get fresh data
+            // Reload user with relationships to get fresh data
             $user->refresh();
+            $user->load(['cityLocation', 'areaLocation']);
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle database errors (like column size issues)
             if (str_contains($e->getMessage(), 'profile_photo') || str_contains($e->getMessage(), 'too long') || str_contains($e->getMessage(), 'Data too long')) {
@@ -74,7 +123,7 @@ class ProfileController extends Controller
         }
 
         return response()->json([
-            'user' => $user->fresh(),
+            'user' => $user->fresh(['cityLocation', 'areaLocation']),
             'message' => 'Profile updated successfully',
         ]);
     }

@@ -17,9 +17,10 @@ interface Category {
 
 interface UploadScreenProps {
   onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onSignUpRequest?: () => void;
 }
 
-export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest }) => {
+export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSignUpRequest }) => {
   const { token, user, isAuthenticated, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState<'exchange' | 'marketplace'>('exchange');
   const [showPreUploadProfile, setShowPreUploadProfile] = useState(false);
@@ -247,6 +248,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest }) =>
           title="Sign In Required"
           message="Please sign in to upload items and start trading with others."
           onLoginRequest={onLoginRequest}
+          onSignUpRequest={onSignUpRequest}
         />
       </div>
     );
