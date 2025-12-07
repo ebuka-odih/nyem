@@ -56,8 +56,8 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
 
   return (
     <div className="flex-1 flex flex-col items-center px-4 pb-2 w-full min-h-0">
-      {/* Card Container - Maximize height, reserve minimal space for buttons */}
-      <div className="relative w-full h-[calc(100%-70px)] min-h-[420px]">
+      {/* Card Container - Maximize card height, minimal button space */}
+      <div className="relative w-full h-[calc(100%-60px)] min-h-[440px]">
         {/* Empty State */}
         {!currentItem && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
@@ -116,8 +116,8 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         )}
       </div>
 
-      {/* Swipe Buttons - Slightly larger for better tap targets */}
-      <div className="flex justify-center items-center space-x-6 mt-2 py-1 shrink-0 relative z-20">
+      {/* Swipe Buttons - Larger for better tap targets */}
+      <div className="flex justify-center items-center space-x-8 mt-2 py-1 shrink-0 relative z-20">
         <button
           onClick={async () => {
             if (currentItem) {
@@ -125,16 +125,16 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             }
           }}
           disabled={!currentItem}
-          className="w-[60px] h-[60px] rounded-full bg-white border border-red-100 shadow-[0_4px_16px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
+          className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
         >
-          <X size={30} strokeWidth={2.5} />
+          <X size={32} strokeWidth={2.5} />
         </button>
         <button
           onClick={() => currentItem && onSwipeRight()}
           disabled={!currentItem}
-          className="w-[60px] h-[60px] rounded-full bg-white border border-green-100 shadow-[0_4px_16px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
+          className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
         >
-          <Check size={30} strokeWidth={3} />
+          <Check size={32} strokeWidth={3} />
         </button>
       </div>
     </div>

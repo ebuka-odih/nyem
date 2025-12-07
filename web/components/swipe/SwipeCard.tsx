@@ -64,8 +64,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
   return (
     <div className="w-full h-full flex flex-col rounded-[32px] overflow-hidden bg-white shadow-2xl shadow-black/10 border border-white/50">
 
-      {/* Image Section - Larger image area */}
-      <div className="relative h-[60%] shrink-0 overflow-hidden">
+      {/* Image Section - Responsive height: smaller on mobile, larger on desktop */}
+      <div className="relative h-[55%] sm:h-[60%] shrink-0 overflow-hidden">
         {/* Shimmer loading state */}
         {!imageLoaded && (
           <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 animate-pulse" />
