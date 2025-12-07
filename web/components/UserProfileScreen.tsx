@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     ArrowLeft,
     MapPin,
@@ -8,7 +8,11 @@ import {
     Package,
     Calendar,
     Shield,
-    ExternalLink
+    ExternalLink,
+    Heart,
+    Share2,
+    UserPlus,
+    UserCheck
 } from 'lucide-react';
 
 interface UserProfileProps {
@@ -37,6 +41,9 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
     isAuthenticated = false,
     onLoginPrompt,
 }) => {
+    const [isLiked, setIsLiked] = useState(false);
+    const [isFollowed, setIsFollowed] = useState(false);
+
     // Generate mock data for demo purposes
     const userData = {
         ...user,
@@ -101,14 +108,58 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
 
                         {/* Location */}
                         <div className="flex items-center gap-1.5 text-gray-500 text-sm">
-                            <MapPin size={14} className="text-[#990033]" />
                             <span>{userData.location}</span>
                             {userData.distance && userData.distance !== 'Unknown' && (
                                 <>
-                                    <span className="text-gray-300">•</span>
+                                    <MapPin size={14} className="text-[#990033] ml-1" />
                                     <span className="text-[#990033] font-medium">{userData.distance} away</span>
                                 </>
                             )}
+                        </div>
+
+                        {/* Profile Actions */}
+                        <div className="flex items-center justify-center gap-3 mt-5 w-full px-6">
+                            <button
+                                onClick={() => {
+                                    if (isAuthenticated) setIsLiked(!isLiked);
+                                    else onLoginPrompt?.();
+                                }}
+                                className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all ${isLiked
+                                    ? 'bg-red-50 border-red-200 text-red-500'
+                                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <Heart size={20} className={isLiked ? "fill-current" : ""} />
+                            </button>
+
+                            <button
+                                className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-all"
+                            >
+                                <Share2 size={20} />
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    if (isAuthenticated) setIsFollowed(!isFollowed);
+                                    else onLoginPrompt?.();
+                                }}
+                                className={`flex-1 h-10 rounded-full flex items-center justify-center gap-2 text-sm font-semibold transition-all ${isFollowed
+                                    ? 'bg-gray-100 text-gray-800'
+                                    : 'bg-black text-white hover:bg-gray-800'
+                                    }`}
+                            >
+                                {isFollowed ? (
+                                    <>
+                                        <UserCheck size={18} />
+                                        Following
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus size={18} />
+                                        Follow
+                                    </>
+                                )}
+                            </button>
                         </div>
                     </div>
 

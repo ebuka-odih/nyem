@@ -110,6 +110,10 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleSignUpRequest = () => {
+    navigateTo('signup_phone');
+  };
+
   const renderMainContent = () => {
     switch (activeTab) {
       case 'discover':
@@ -117,6 +121,7 @@ const AppContent: React.FC = () => {
           onBack={() => navigateTo('welcome')}
           onItemClick={(item, currentTab) => handleItemClick(item, currentTab)}
           onLoginRequest={handleLoginRequest}
+          onSignUpRequest={handleSignUpRequest}
           initialTab={swipeTab}
           onTabChange={setSwipeTab}
         />;
@@ -138,6 +143,7 @@ const AppContent: React.FC = () => {
           onBack={() => navigateTo('welcome')}
           onItemClick={(item, currentTab) => handleItemClick(item, currentTab)}
           onLoginRequest={handleLoginRequest}
+          onSignUpRequest={handleSignUpRequest}
           initialTab={swipeTab}
           onTabChange={setSwipeTab}
         />;

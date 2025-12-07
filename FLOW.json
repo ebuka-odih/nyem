@@ -31,9 +31,10 @@
         "view_matches"
       ],
       "login_prompt_behavior": {
-        "title": "Create Your Account to Continue",
-        "subtitle": "Join thousands buying, booking, and swapping safely.",
+        "title": "Sign In to Continue",
+        "subtitle": "Already have an account? Sign in to continue.",
         "methods": ["phone_otp", "google", "email"],
+        "signup_option": "Create Account link available for new users",
         "after_login": "return_to_previous_action"
       }
     },

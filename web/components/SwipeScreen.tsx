@@ -71,11 +71,12 @@ interface SwipeScreenProps {
   onBack: () => void;
   onItemClick: (item: SwipeItem, currentTab?: 'Marketplace' | 'Services' | 'Swap') => void;
   onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onSignUpRequest?: () => void;
   initialTab?: 'Marketplace' | 'Services' | 'Swap';
   onTabChange?: (tab: 'Marketplace' | 'Services' | 'Swap') => void;
 }
 
-export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, initialTab = 'Marketplace', onTabChange }) => {
+export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, onSignUpRequest, initialTab = 'Marketplace', onTabChange }) => {
   const { token, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>(initialTab);
   const [items, setItems] = useState<SwipeItem[]>([]);
@@ -328,6 +329,13 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     }
   };
 
+  const handleSignUp = () => {
+    setShowLoginPrompt(false);
+    if (onSignUpRequest) {
+      onSignUpRequest();
+    }
+  };
+
   const completeRightSwipe = () => {
     setShowOfferModal(false);
     setShowMarketplaceModal(false);
@@ -391,6 +399,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         isOpen={showLoginPrompt}
         onClose={() => setShowLoginPrompt(false)}
         onLogin={handleLoginMethod}
+        onSignUp={onSignUpRequest ? handleSignUp : undefined}
       />
 
       {/* Modals */}

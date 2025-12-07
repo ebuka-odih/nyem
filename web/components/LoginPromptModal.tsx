@@ -7,6 +7,7 @@ interface LoginPromptModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLogin: (method: 'phone_otp' | 'google' | 'email') => void;
+  onSignUp?: () => void;
   title?: string;
   subtitle?: string;
 }
@@ -15,8 +16,9 @@ export const LoginPromptModal: React.FC<LoginPromptModalProps> = ({
   isOpen,
   onClose,
   onLogin,
-  title = "Create Your Account to Continue",
-  subtitle = "Join thousands buying, booking, and swapping safely.",
+  onSignUp,
+  title = "Sign In to Continue",
+  subtitle = "Already have an account? Sign in to continue.",
 }) => {
   return (
     <AnimatePresence>
@@ -72,6 +74,22 @@ export const LoginPromptModal: React.FC<LoginPromptModalProps> = ({
                 <span>Continue with Email</span>
               </button>
             </div>
+
+            {/* Sign Up Link */}
+            {onSignUp && (
+              <div className="text-center mb-3">
+                <span className="text-gray-500 text-sm">Don't have an account? </span>
+                <button
+                  onClick={() => {
+                    onClose();
+                    onSignUp();
+                  }}
+                  className="text-brand font-semibold text-sm hover:underline transition-colors"
+                >
+                  Create Account
+                </button>
+              </div>
+            )}
 
             {/* Close Button */}
             <button
