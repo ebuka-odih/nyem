@@ -15,7 +15,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
     try {
       // Create shareable URL
       const shareUrl = `${window.location.origin}/items/${item.id}`;
-      
+
       // Use Web Share API if available, otherwise fallback to clipboard
       if (navigator.share) {
         await navigator.share({
@@ -38,8 +38,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
 
   return (
     <div className="w-full h-full flex flex-col rounded-[28px] overflow-hidden bg-white shadow-xl border border-gray-100/80">
-      {/* Image Section - 65% of card height */}
-      <div className="relative h-[65%] shrink-0">
+      {/* Image Section - 55% of card height */}
+      <div className="relative h-[55%] shrink-0">
         <img
           src={item.image}
           alt={item.title}
@@ -84,8 +84,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         </div>
       </div>
 
-      {/* Content Section - 35% of card height for full content visibility */}
-      <div className="h-[35%] px-5 pt-4 pb-3 flex flex-col bg-white">
+      {/* Content Section - 45% of card height for full content visibility */}
+      <div className="h-[45%] px-5 pt-4 pb-5 flex flex-col bg-white">
         {/* Description - Show 2 lines clearly */}
         {item.description && (
           <p className="text-gray-600 text-[15px] line-clamp-2 mb-3 leading-relaxed">
@@ -105,7 +105,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         )}
 
         {/* Owner Info - More spacious layout */}
-        <div className="flex items-center mt-auto pt-4">
+        <div className="flex items-center mt-auto pt-4 pb-1">
           <div className="w-12 h-12 rounded-full bg-gray-200 mr-3.5 overflow-hidden shrink-0 border-2 border-gray-100 shadow-sm">
             <img src={item.owner.image} alt={item.owner.name} className="w-full h-full object-cover" />
           </div>
