@@ -4,7 +4,7 @@ import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 interface SignUpScreenProps {
-  onSignUp: () => void;
+  onSignUp: (email: string, name: string, password: string) => void;
   onBack: () => void;
   onSignIn: () => void;
 }
@@ -18,7 +18,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onBack, on
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { register } = useAuth();
+  const { register, sendEmailOtp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,14 +65,18 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ onSignUp, onBack, on
         return;
       }
 
-      // Register user - use name as username initially, will be updated in profile setup
-      await register({
-        username: name.trim(),
+      // Register user - this now just validates and triggers email OTP
+      const result = await register({
         email: email.trim(),
+        name: name.trim(),
         password: password.trim(),
       });
 
-      onSignUp();
+      // Send email OTP
+      await sendEmailOtp(email.trim());
+
+      // Navigate to email OTP verification screen
+      onSignUp(email.trim(), name.trim(), password.trim());
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
       console.error('Registration error:', err);

@@ -28,6 +28,8 @@ class User extends Authenticatable
         'is_artisan',
         'role',
         'otp_verified_at',
+        'email_verified_at',
+        'phone_verified_at',
         'password',
         'latitude',
         'longitude',
@@ -43,6 +45,8 @@ class User extends Authenticatable
     {
         return [
             'otp_verified_at' => 'datetime',
+            'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'username_updated_at' => 'datetime',
             'location_updated_at' => 'datetime',
             'password' => 'hashed',

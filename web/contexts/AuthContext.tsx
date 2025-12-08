@@ -11,8 +11,10 @@ import { getCurrentLocation, updateLocationOnBackend, requestLocationPermission 
 export interface User {
   id: number;
   username: string;
-  phone: string;
+  phone?: string;
   email?: string;
+  email_verified_at?: string;
+  phone_verified_at?: string;
   city?: string;
   bio?: string;
   profile_photo?: string;
@@ -26,24 +28,25 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticated: boolean;
   sendOtp: (phone: string) => Promise<{ debug_code?: string }>;
+  sendEmailOtp: (email: string) => Promise<{ debug_code?: string }>;
   verifyOtp: (payload: {
-    phone: string;
+    phone?: string;
+    email?: string;
     code: string;
+    name?: string;
     username?: string;
     bio?: string;
     profile_photo?: string;
     city?: string;
     password?: string;
   }) => Promise<{ new_user: boolean }>;
+  verifyPhoneForSeller: (phone: string, code: string) => Promise<void>;
   login: (usernameOrPhone: string, password: string) => Promise<void>;
   register: (payload: {
-    username: string;
-    phone?: string;
-    email?: string;
+    email: string;
+    name: string;
     password: string;
-    city?: string;
-    profile_photo?: string;
-  }) => Promise<void>;
+  }) => Promise<{ requires_verification: boolean; email: string }>;
   loginWithGoogle: () => Promise<{ new_user: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -102,9 +105,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { debug_code: res.debug_code as string | undefined };
   };
 
+  const sendEmailOtp = async (email: string): Promise<{ debug_code?: string }> => {
+    const res = await apiFetch(ENDPOINTS.auth.sendEmailOtp, {
+      method: 'POST',
+      body: { email },
+    });
+    return { debug_code: res.debug_code as string | undefined };
+  };
+
   const verifyOtp = async (payload: {
-    phone: string;
+    phone?: string;
+    email?: string;
     code: string;
+    name?: string;
     username?: string;
     bio?: string;
     profile_photo?: string;
@@ -133,6 +146,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { new_user: Boolean(res.new_user) };
   };
 
+  const verifyPhoneForSeller = async (phone: string, code: string): Promise<void> => {
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const res = await apiFetch<{ user: User }>(ENDPOINTS.auth.verifyPhoneForSeller, {
+      method: 'POST',
+      token,
+      body: { phone, code },
+    });
+
+    const userData = (res.user || res.data?.user) as User;
+    setUser(userData);
+    storeUser(userData);
+  };
+
   const login = async (usernameOrPhone: string, password: string): Promise<void> => {
     const res = await apiFetch<{ user: User; token: string }>(ENDPOINTS.auth.login, {
       method: 'POST',
@@ -152,27 +181,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const register = async (payload: {
-    username: string;
-    phone: string;
+    email: string;
+    name: string;
     password: string;
-    city?: string;
-    profile_photo?: string;
-  }): Promise<void> => {
-    const res = await apiFetch<{ user: User; token: string }>(ENDPOINTS.auth.register, {
-      method: 'POST',
-      body: payload,
-    });
+  }): Promise<{ requires_verification: boolean; email: string }> => {
+    const res = await apiFetch<{ requires_verification?: boolean; email?: string }>(
+      ENDPOINTS.auth.register,
+      {
+        method: 'POST',
+        body: payload,
+      }
+    );
 
-    const authToken = res.token as string;
-    const userData = (res.user || res.data?.user) as User;
-
-    setToken(authToken);
-    setUser(userData);
-    storeToken(authToken);
-    storeUser(userData);
-
-    // Request location after successful registration
-    requestUserLocation(authToken);
+    // Registration now requires email verification
+    // User is not created until email is verified
+    return {
+      requires_verification: res.requires_verification ?? true,
+      email: res.email ?? payload.email,
+    };
   };
 
   /**
@@ -389,7 +415,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     isAuthenticated: !!token && !!user,
     sendOtp,
+    sendEmailOtp,
     verifyOtp,
+    verifyPhoneForSeller,
     login,
     register,
     loginWithGoogle,

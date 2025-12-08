@@ -5,7 +5,9 @@
 export const ENDPOINTS = {
   auth: {
     sendOtp: '/auth/send-otp',
+    sendEmailOtp: '/auth/send-email-otp',
     verifyOtp: '/auth/verify-otp',
+    verifyPhoneForSeller: '/auth/verify-phone-for-seller',
     login: '/auth/login',
     register: '/auth/register',
     google: '/auth/google',

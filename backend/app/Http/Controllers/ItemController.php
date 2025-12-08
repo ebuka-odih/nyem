@@ -40,6 +40,15 @@ class ItemController extends Controller
             if (empty($data['price'])) {
                 return response()->json(['message' => 'Price is required for marketplace items'], 422);
             }
+            
+            // Check if user has verified their phone number (required for selling)
+            if (!$user->phone_verified_at) {
+                return response()->json([
+                    'message' => 'Phone number verification is required to sell items in the marketplace',
+                    'requires_phone_verification' => true,
+                ], 403);
+            }
+            
             $data['looking_for'] = null;
         } else {
             if (empty($data['looking_for'])) {

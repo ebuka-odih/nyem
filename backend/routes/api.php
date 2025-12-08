@@ -30,6 +30,7 @@ Route::get('/items/feed', [ItemController::class, 'feed']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);
+    Route::post('/send-email-otp', [AuthController::class, 'sendEmailOtp']);
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
@@ -75,4 +76,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/report', [ModerationController::class, 'report']);
     Route::post('/block', [ModerationController::class, 'block']);
+
+    // Phone verification for sellers (marketplace)
+    Route::post('/auth/verify-phone-for-seller', [AuthController::class, 'verifyPhoneForSeller']);
 });

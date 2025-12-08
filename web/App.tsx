@@ -5,6 +5,7 @@ import { SignInScreen } from './components/SignInScreen';
 import { SignUpScreen } from './components/SignUpScreen';
 import { SignUpPhoneScreen } from './components/SignUpPhoneScreen';
 import { SignUpOtpScreen } from './components/SignUpOtpScreen';
+import { SignUpEmailOtpScreen } from './components/SignUpEmailOtpScreen';
 import { SetupProfileScreen } from './components/SetupProfileScreen';
 import { SwipeScreen } from './components/SwipeScreen';
 import { UploadScreen } from './components/UploadScreen';
@@ -26,6 +27,9 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabState>('discover');
   const [swipeTab, setSwipeTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
   const [signupPhone, setSignupPhone] = useState('');
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupName, setSignupName] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
   const [selectedItem, setSelectedItem] = useState<SwipeItem | null>(null);
   // Store current index per tab to preserve position when navigating back
   const [swipeIndex, setSwipeIndex] = useState<Record<'Marketplace' | 'Services' | 'Swap', number>>({
@@ -71,7 +75,7 @@ const AppContent: React.FC = () => {
     if (!loading) {
       if (isAuthenticated) {
         // User is authenticated, show home screen
-        if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_phone' || currentScreen === 'signup_otp' || currentScreen === 'setup_profile') {
+        if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_phone' || currentScreen === 'signup_otp' || currentScreen === 'signup_email_otp' || currentScreen === 'setup_profile') {
           navigationHistory.reset('home');
           setCurrentScreen('home');
         }
@@ -212,7 +216,12 @@ const AppContent: React.FC = () => {
 
         {currentScreen === 'signup' && (
           <SignUpScreen
-            onSignUp={() => navigateTo('setup_profile')}
+            onSignUp={(email, name, password) => {
+              setSignupEmail(email);
+              setSignupName(name);
+              setSignupPassword(password);
+              navigateTo('signup_email_otp');
+            }}
             onBack={handleGoBack}
             onSignIn={() => navigateTo('signin')}
           />
@@ -234,6 +243,20 @@ const AppContent: React.FC = () => {
               } else {
                 navigateTo('home', true);
               }
+            }}
+            onBack={handleGoBack}
+          />
+        )}
+
+        {currentScreen === 'signup_email_otp' && (
+          <SignUpEmailOtpScreen
+            email={signupEmail}
+            name={signupName}
+            password={signupPassword}
+            onVerify={(isNewUser) => {
+              // After email verification, go directly to discover page
+              // Profile setup is optional and can be done later
+              navigateTo('home', true);
             }}
             onBack={handleGoBack}
           />

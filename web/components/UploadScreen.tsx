@@ -8,6 +8,7 @@ import { LoginPrompt } from './common/LoginPrompt';
 import { UploadTabs } from './upload/UploadTabs';
 import { PhotoUpload } from './upload/PhotoUpload';
 import { UploadForm } from './upload/UploadForm';
+import { PhoneVerificationModal } from './PhoneVerificationModal';
 
 interface Category {
   id: number;
@@ -36,6 +37,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
   const [success, setSuccess] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   
   // Refs for file inputs
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -171,6 +173,12 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       return;
     }
 
+    // Check if phone verification is required for marketplace items
+    if (activeTab === 'marketplace' && user && !user.phone_verified_at) {
+      setShowPhoneVerification(true);
+      return;
+    }
+
     setLoading(true);
     try {
       // Validate category ID
@@ -229,7 +237,13 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
         setSuccess(false);
       }, 3000);
     } catch (err: any) {
-      setError(err.message || 'Failed to post item. Please try again.');
+      // Check if error is due to phone verification requirement
+      if (err.message?.includes('phone verification') || err.message?.includes('requires_phone_verification')) {
+        setShowPhoneVerification(true);
+        setError(null);
+      } else {
+        setError(err.message || 'Failed to post item. Please try again.');
+      }
       console.error('Upload error:', err);
     } finally {
       setLoading(false);
@@ -336,6 +350,17 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
           onSubmit={handleSubmit}
         />
       </div>
+
+      {/* Phone Verification Modal */}
+      <PhoneVerificationModal
+        isOpen={showPhoneVerification}
+        onClose={() => setShowPhoneVerification(false)}
+        onVerified={async () => {
+          await refreshUser();
+          // Retry submission after verification
+          // Note: We'll need to store the form data or trigger submit again
+        }}
+      />
     </div>
   );
 };

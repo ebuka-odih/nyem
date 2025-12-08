@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\OtpCode;
 use App\Models\User;
 use App\Services\TwilioService;
+use App\Services\EmailService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Http;
 class AuthController extends Controller
 {
     protected $twilioService;
+    protected $emailService;
 
     public function __construct()
     {
@@ -25,10 +27,13 @@ class AuthController extends Controller
             // Twilio not configured, will handle in sendOtp method
             $this->twilioService = null;
         }
+
+        // Initialize EmailService
+        $this->emailService = app(EmailService::class);
     }
 
     /**
-     * Send OTP code to user's phone number via SMS
+     * Send OTP code to user's phone number via SMS or email
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -36,7 +41,97 @@ class AuthController extends Controller
     public function sendOtp(Request $request)
     {
         $data = $request->validate([
-            'phone' => 'required|string|max:20',
+            'phone' => 'required_without:email|nullable|string|max:20',
+            'email' => 'required_without:phone|nullable|string|email|max:255',
+        ]);
+
+        // Must provide either phone or email
+        if (empty($data['phone']) && empty($data['email'])) {
+            return response()->json(['message' => 'Either phone or email is required'], 422);
+        }
+
+        // Generate 6-digit OTP code
+        $code = (string) random_int(100000, 999999);
+        $expiry = now()->addMinutes(5);
+
+        // Store OTP in database
+        $otpData = [
+            'code' => $code,
+            'expires_at' => $expiry,
+        ];
+
+        if (!empty($data['phone'])) {
+            $otpData['phone'] = $data['phone'];
+        }
+
+        if (!empty($data['email'])) {
+            $otpData['email'] = $data['email'];
+        }
+
+        OtpCode::create($otpData);
+
+        // Send OTP via appropriate channel
+        if (!empty($data['phone'])) {
+            // Send via SMS using Twilio
+            if ($this->twilioService) {
+                $smsResult = $this->twilioService->sendOtpCode($data['phone'], $code);
+
+                if (!$smsResult['success']) {
+                    Log::warning('Failed to send OTP via SMS', [
+                        'phone' => $data['phone'],
+                        'error' => $smsResult['message'],
+                    ]);
+
+                    // Still return success to prevent phone number enumeration
+                    return response()->json([
+                        'message' => 'OTP code generated. Please check your phone.',
+                        'expires_at' => $expiry,
+                        'debug_code' => app()->environment('local', 'testing') ? $code : null,
+                    ], 200);
+                }
+            } else {
+                Log::warning('Twilio not configured, OTP not sent via SMS', [
+                    'phone' => $data['phone'],
+                ]);
+            }
+        } elseif (!empty($data['email'])) {
+            // Send via email
+            $emailResult = $this->emailService->sendOtpCode($data['email'], $code);
+
+            if (!$emailResult['success']) {
+                Log::warning('Failed to send OTP via email', [
+                    'email' => $data['email'],
+                    'error' => $emailResult['message'],
+                ]);
+
+                // Still return success to prevent email enumeration
+                return response()->json([
+                    'message' => 'OTP code generated. Please check your email.',
+                    'expires_at' => $expiry,
+                    'debug_code' => app()->environment('local', 'testing') ? $code : null,
+                ], 200);
+            }
+        }
+
+        return response()->json([
+            'message' => 'OTP sent successfully',
+            'expires_at' => $expiry,
+            // Include debug code only in non-production for testing
+            'debug_code' => app()->environment('local', 'testing') ? $code : null,
+        ], 200);
+    }
+
+    /**
+     * Send OTP code to user's email
+     * Dedicated endpoint for email OTPs
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function sendEmailOtp(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|string|email|max:255',
         ]);
 
         // Generate 6-digit OTP code
@@ -45,34 +140,26 @@ class AuthController extends Controller
 
         // Store OTP in database
         OtpCode::create([
-            'phone' => $data['phone'],
+            'email' => $data['email'],
             'code' => $code,
             'expires_at' => $expiry,
         ]);
 
-        // Send OTP via Twilio SMS if configured
-        if ($this->twilioService) {
-            $smsResult = $this->twilioService->sendOtpCode($data['phone'], $code);
+        // Send OTP via email
+        $emailResult = $this->emailService->sendOtpCode($data['email'], $code);
 
-            if (!$smsResult['success']) {
-                Log::warning('Failed to send OTP via SMS', [
-                    'phone' => $data['phone'],
-                    'error' => $smsResult['message'],
-                ]);
-
-                // Still return success to prevent phone number enumeration
-                // In production, you might want to handle this differently
-                return response()->json([
-                    'message' => 'OTP code generated. Please check your phone.',
-                    'expires_at' => $expiry,
-                    // Include debug code only in non-production for testing
-                    'debug_code' => app()->environment('local', 'testing') ? $code : null,
-                ], 200);
-            }
-        } else {
-            Log::warning('Twilio not configured, OTP not sent via SMS', [
-                'phone' => $data['phone'],
+        if (!$emailResult['success']) {
+            Log::warning('Failed to send OTP via email', [
+                'email' => $data['email'],
+                'error' => $emailResult['message'],
             ]);
+
+            // Still return success to prevent email enumeration
+            return response()->json([
+                'message' => 'OTP code generated. Please check your email.',
+                'expires_at' => $expiry,
+                'debug_code' => app()->environment('local', 'testing') ? $code : null,
+            ], 200);
         }
 
         return response()->json([
@@ -86,8 +173,10 @@ class AuthController extends Controller
     public function verifyOtp(Request $request)
     {
         $data = $request->validate([
-            'phone' => 'required|string|max:20',
+            'phone' => 'required_without:email|nullable|string|max:20',
+            'email' => 'required_without:phone|nullable|string|email|max:255',
             'code' => 'required|string|max:6',
+            'name' => 'sometimes|string|max:255', // For email registration
             'username' => 'sometimes|string|max:255',
             'bio' => 'sometimes|nullable|string',
             'profile_photo' => 'sometimes|nullable|string|max:65535',
@@ -95,51 +184,114 @@ class AuthController extends Controller
             'password' => 'sometimes|nullable|string|min:6',
         ]);
 
-        $otp = OtpCode::where('phone', $data['phone'])
-            ->latest()
-            ->first();
+        // Must provide either phone or email
+        if (empty($data['phone']) && empty($data['email'])) {
+            return response()->json(['message' => 'Either phone or email is required'], 422);
+        }
 
-        if (! $otp || ! $otp->isValidFor($data['phone'], $data['code'])) {
+        // Find OTP by phone or email
+        $otpQuery = OtpCode::query();
+        if (!empty($data['phone'])) {
+            $otpQuery->where('phone', $data['phone']);
+            $identifier = $data['phone'];
+        } else {
+            $otpQuery->where('email', $data['email']);
+            $identifier = $data['email'];
+        }
+
+        $otp = $otpQuery->latest()->first();
+
+        if (! $otp || ! $otp->isValidFor($identifier, $data['code'])) {
             return response()->json(['message' => 'Invalid or expired OTP'], 422);
         }
 
         $otp->update(['consumed' => true]);
 
-        $user = User::firstOrCreate(
-            ['phone' => $data['phone']],
-            [
-                'username' => $data['username'] ?? 'user_'.Str::random(6),
+        // Handle phone OTP verification (for seller verification)
+        if (!empty($data['phone'])) {
+            $user = User::where('phone', $data['phone'])->first();
+
+            if (!$user) {
+                // For phone verification, user should already exist (seller verification)
+                return response()->json(['message' => 'User not found. Please register first.'], 404);
+            }
+
+            // Update phone verification timestamp
+            $user->phone_verified_at = now();
+            $user->otp_verified_at = now(); // Keep for backward compatibility
+            $user->save();
+
+            $token = $user->createToken('mobile')->plainTextToken;
+
+            return response()->json([
+                'token' => $token,
+                'user' => $user,
+                'new_user' => false,
+            ]);
+        }
+
+        // Handle email OTP verification (for registration)
+        if (!empty($data['email'])) {
+            // For email registration, require name and password
+            if (empty($data['name']) || empty($data['password'])) {
+                return response()->json([
+                    'message' => 'Name and password are required for email registration'
+                ], 422);
+            }
+
+            // Check if user already exists
+            $user = User::where('email', $data['email'])->first();
+
+            if ($user) {
+                // Existing user - just verify email
+                $user->email_verified_at = now();
+                $user->otp_verified_at = now(); // Keep for backward compatibility
+                
+                // Update password if provided
+                if (!empty($data['password'])) {
+                    $user->password = Hash::make($data['password']);
+                }
+                
+                $user->save();
+
+                $token = $user->createToken('mobile')->plainTextToken;
+
+                return response()->json([
+                    'token' => $token,
+                    'user' => $user,
+                    'new_user' => false,
+                ]);
+            }
+
+            // Create new user - always generate username from name or email
+            // Username is auto-generated, not required from user input
+            $username = $this->generateUsernameFromName($data['name'] ?? '', $data['email']);
+            
+            // Final safety check - ensure username is never empty
+            if (empty($username)) {
+                $username = 'user_' . Str::random(6);
+            }
+
+            $user = User::create([
+                'email' => $data['email'],
+                'username' => $username,
+                'password' => Hash::make($data['password']),
                 'bio' => $data['bio'] ?? null,
                 'profile_photo' => $data['profile_photo'] ?? null,
                 'city' => $data['city'] ?? 'Unknown',
                 'role' => 'standard_user',
-                'otp_verified_at' => now(),
-                'password' => isset($data['password']) ? Hash::make($data['password']) : null,
-            ]
-        );
-
-        $isNewUser = $user->wasRecentlyCreated;
-
-        if (! $user->wasRecentlyCreated) {
-            $user->fill([
-                'username' => $data['username'] ?? $user->username,
-                'bio' => $data['bio'] ?? $user->bio,
-                'profile_photo' => $data['profile_photo'] ?? $user->profile_photo,
-                'city' => $data['city'] ?? $user->city,
-                'password' => isset($data['password']) ? Hash::make($data['password']) : $user->password,
+                'email_verified_at' => now(),
+                'otp_verified_at' => now(), // Keep for backward compatibility
             ]);
-            $user->otp_verified_at = now();
+
+            $token = $user->createToken('mobile')->plainTextToken;
+
+            return response()->json([
+                'token' => $token,
+                'user' => $user,
+                'new_user' => true,
+            ], 201);
         }
-
-        $user->save();
-
-        $token = $user->createToken('mobile')->plainTextToken;
-
-        return response()->json([
-            'token' => $token,
-            'user' => $user,
-            'new_user' => $isNewUser,
-        ]);
     }
 
     public function login(Request $request)
@@ -158,6 +310,14 @@ class AuthController extends Controller
             return response()->json(['message' => 'Invalid credentials'], 401);
         }
 
+        // Check if email-based user has verified their email
+        if ($user->email && !$user->phone && !$user->email_verified_at) {
+            return response()->json([
+                'message' => 'Please verify your email address before logging in',
+                'requires_verification' => true,
+            ], 403);
+        }
+
         $token = $user->createToken('mobile')->plainTextToken;
 
         return response()->json([
@@ -169,36 +329,25 @@ class AuthController extends Controller
     public function register(Request $request)
     {
         $data = $request->validate([
-            'phone' => 'required_without:email|nullable|string|unique:users,phone',
-            'email' => 'required_without:phone|nullable|string|email|unique:users,email',
-            'username' => 'required|string|unique:users,username',
+            'email' => 'required|string|email|unique:users,email',
+            'name' => 'required|string|max:255',
             'password' => 'required|string|min:6',
-            'city' => 'nullable|string|max:255',
-            'profile_photo' => 'nullable|string|max:2048',
         ]);
 
-        // Use email as phone identifier if phone not provided
-        $phone = $data['phone'] ?? $data['email'] ?? null;
-        $email = $data['email'] ?? null;
+        // Check if email already exists
+        if (User::where('email', $data['email'])->exists()) {
+            return response()->json([
+                'message' => 'Email already registered. Please login or verify your email.',
+            ], 422);
+        }
 
-        $user = User::create([
-            'phone' => $phone,
-            'email' => $email,
-            'username' => $data['username'],
-            'password' => Hash::make($data['password']),
-            'city' => $data['city'] ?? 'Unknown',
-            'profile_photo' => $data['profile_photo'] ?? null,
-            'role' => 'standard_user',
-            'otp_verified_at' => now(),
-        ]);
-
-        $token = $user->createToken('mobile')->plainTextToken;
-
+        // Don't create user yet - they need to verify email first
+        // Return response indicating email verification is needed
         return response()->json([
-            'token' => $token,
-            'user' => $user,
-            'new_user' => true,
-        ], 201);
+            'message' => 'Please verify your email address. An OTP has been sent.',
+            'requires_verification' => true,
+            'email' => $data['email'],
+        ], 200);
     }
 
     /**
@@ -261,13 +410,15 @@ class AuthController extends Controller
                         'profile_photo' => $picture,
                         'city' => 'Unknown',
                         'role' => 'standard_user',
-                        'otp_verified_at' => now(),
+                        'email_verified_at' => now(), // Google emails are pre-verified
+                        'otp_verified_at' => now(), // Keep for backward compatibility
                     ]);
                 } else {
                     // Link Google account to existing user
                     $user->google_id = $googleId;
                     if (!$user->email && $email) {
                         $user->email = $email;
+                        $user->email_verified_at = now(); // Google emails are pre-verified
                     }
                     if (!$user->profile_photo && $picture) {
                         $user->profile_photo = $picture;
@@ -309,6 +460,57 @@ class AuthController extends Controller
                 'error' => app()->environment('local') ? $e->getMessage() : null,
             ], 500);
         }
+    }
+
+    /**
+     * Verify phone number for seller (marketplace uploads)
+     * Requires authentication
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function verifyPhoneForSeller(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        // Check if phone is already verified
+        if ($user->phone_verified_at) {
+            return response()->json([
+                'message' => 'Phone number already verified',
+                'user' => $user,
+            ], 200);
+        }
+
+        $data = $request->validate([
+            'phone' => 'required|string|max:20',
+            'code' => 'required|string|max:6',
+        ]);
+
+        // Find OTP
+        $otp = OtpCode::where('phone', $data['phone'])
+            ->latest()
+            ->first();
+
+        if (! $otp || ! $otp->isValidForPhone($data['phone'], $data['code'])) {
+            return response()->json(['message' => 'Invalid or expired OTP'], 422);
+        }
+
+        $otp->update(['consumed' => true]);
+
+        // Update user's phone and verification status
+        $user->phone = $data['phone'];
+        $user->phone_verified_at = now();
+        $user->otp_verified_at = now(); // Keep for backward compatibility
+        $user->save();
+
+        return response()->json([
+            'message' => 'Phone number verified successfully',
+            'user' => $user,
+        ], 200);
     }
 
     /**
@@ -402,13 +604,18 @@ class AuthController extends Controller
     private function generateUsernameFromName(string $name, ?string $email): string
     {
         // Try to create username from name
-        $baseUsername = Str::slug($name, '');
+        $baseUsername = !empty($name) ? Str::slug(trim($name), '') : '';
         
         // If name is empty or too short, use email prefix
         if (empty($baseUsername) || strlen($baseUsername) < 3) {
             if ($email) {
                 $baseUsername = Str::before($email, '@');
-            } else {
+                // Clean up email prefix to make it a valid username
+                $baseUsername = Str::slug($baseUsername, '');
+            }
+            
+            // Final fallback if still empty
+            if (empty($baseUsername) || strlen($baseUsername) < 3) {
                 $baseUsername = 'user';
             }
         }

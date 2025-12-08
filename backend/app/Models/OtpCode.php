@@ -13,6 +13,7 @@ class OtpCode extends Model
 
     protected $fillable = [
         'phone',
+        'email',
         'code',
         'expires_at',
         'consumed',
@@ -23,11 +24,42 @@ class OtpCode extends Model
         'consumed' => 'boolean',
     ];
 
-    public function isValidFor(string $phone, string $code): bool
+    /**
+     * Check if OTP is valid for a given phone number
+     */
+    public function isValidForPhone(string $phone, string $code): bool
     {
         return $this->phone === $phone
             && $this->code === $code
             && ! $this->consumed
             && $this->expires_at->isFuture();
+    }
+
+    /**
+     * Check if OTP is valid for a given email
+     */
+    public function isValidForEmail(string $email, string $code): bool
+    {
+        return $this->email === $email
+            && $this->code === $code
+            && ! $this->consumed
+            && $this->expires_at->isFuture();
+    }
+
+    /**
+     * Check if OTP is valid for a given identifier (phone or email)
+     * Maintains backward compatibility
+     */
+    public function isValidFor(string $identifier, string $code): bool
+    {
+        if ($this->phone && $this->phone === $identifier) {
+            return $this->isValidForPhone($identifier, $code);
+        }
+        
+        if ($this->email && $this->email === $identifier) {
+            return $this->isValidForEmail($identifier, $code);
+        }
+        
+        return false;
     }
 }
