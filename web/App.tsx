@@ -144,6 +144,14 @@ const AppContent: React.FC = () => {
     navigateTo('signup_phone');
   };
 
+  // Memoize onIndexChange to prevent infinite loops
+  const handleIndexChange = useCallback((index: number) => {
+    setSwipeIndex(prev => ({
+      ...prev,
+      [swipeTab]: index,
+    }));
+  }, [swipeTab]);
+
   const renderMainContent = () => {
     switch (activeTab) {
       case 'discover':
@@ -155,12 +163,7 @@ const AppContent: React.FC = () => {
           initialTab={swipeTab}
           onTabChange={setSwipeTab}
           initialIndex={swipeIndex[swipeTab]}
-          onIndexChange={(index) => {
-            setSwipeIndex(prev => ({
-              ...prev,
-              [swipeTab]: index,
-            }));
-          }}
+          onIndexChange={handleIndexChange}
         />;
       case 'upload':
         return <UploadScreen onLoginRequest={handleLoginRequest} onSignUpRequest={handleSignUpRequest} />;
@@ -186,12 +189,7 @@ const AppContent: React.FC = () => {
           initialTab={swipeTab}
           onTabChange={setSwipeTab}
           initialIndex={swipeIndex[swipeTab]}
-          onIndexChange={(index) => {
-            setSwipeIndex(prev => ({
-              ...prev,
-              [swipeTab]: index,
-            }));
-          }}
+          onIndexChange={handleIndexChange}
         />;
     }
   };

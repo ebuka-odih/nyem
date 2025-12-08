@@ -122,6 +122,15 @@
         background: transparent;
       }
 
+      /* Utility class to hide scrollbar while maintaining scroll functionality */
+      .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;  /* Chrome, Safari and Opera */
+      }
+
       /* Safe area bottom padding utility */
       .pb-safe-bottom {
         padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));

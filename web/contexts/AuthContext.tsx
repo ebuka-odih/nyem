@@ -2,7 +2,7 @@
  * Authentication Context
  * Manages user authentication state and provides auth methods
  */
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import { apiFetch, getStoredToken, storeToken, removeToken, getStoredUser, storeUser } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { getCurrentLocation, updateLocationOnBackend, requestLocationPermission } from '../utils/location';
@@ -409,7 +409,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const value: AuthContextType = {
+  // Memoize the context value to prevent unnecessary re-renders and hot reload issues
+  // Functions are stable within the component, so we only need to depend on state values
+  const value: AuthContextType = useMemo(() => ({
     user,
     token,
     loading,
@@ -425,7 +427,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser,
     updateProfile,
     updatePassword,
-  };
+  }), [user, token, loading]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

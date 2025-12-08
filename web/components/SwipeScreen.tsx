@@ -92,6 +92,9 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     location: 'all',
   });
 
+  // Track last notified index to prevent unnecessary notifications
+  const lastNotifiedIndexRef = useRef<number>(initialIndex);
+
   // Sync with initialTab prop when it changes (e.g., when returning from item details)
   useEffect(() => {
     if (initialTab !== activeTab) {
@@ -104,13 +107,16 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   useEffect(() => {
     if (initialIndex !== undefined && initialIndex !== currentIndex) {
       setCurrentIndex(initialIndex);
+      // Update the last notified index to match, so we don't notify for this sync
+      lastNotifiedIndexRef.current = initialIndex;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialIndex]);
 
-  // Notify parent when index changes
+  // Notify parent when index changes (only if it's different from last notified)
   useEffect(() => {
-    if (onIndexChange) {
+    if (onIndexChange && currentIndex !== lastNotifiedIndexRef.current) {
+      lastNotifiedIndexRef.current = currentIndex;
       onIndexChange(currentIndex);
     }
   }, [currentIndex, onIndexChange]);

@@ -133,6 +133,25 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                             </button>
 
                             <button
+                                onClick={() => {
+                                    // Share functionality
+                                    if (navigator.share) {
+                                        navigator.share({
+                                            title: `${userData.name}'s Profile`,
+                                            text: `Check out ${userData.name}'s profile on Nyem`,
+                                            url: window.location.href,
+                                        }).catch((err) => {
+                                            console.log('Error sharing:', err);
+                                        });
+                                    } else {
+                                        // Fallback: copy to clipboard
+                                        navigator.clipboard.writeText(window.location.href).then(() => {
+                                            alert('Profile link copied to clipboard!');
+                                        }).catch((err) => {
+                                            console.log('Error copying to clipboard:', err);
+                                        });
+                                    }
+                                }}
                                 className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-all"
                             >
                                 <Share2 size={20} />

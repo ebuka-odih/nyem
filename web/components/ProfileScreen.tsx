@@ -97,7 +97,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile, onL
         <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Tab Content */}
-        <div className="px-6 pb-20">
+        <div className="px-6 pb-6">
           {activeTab === 'items' ? (
             <ItemsGrid items={userItems} loading={loading} />
           ) : (
