@@ -5,6 +5,11 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import { apiFetch, getStoredToken, storeToken, removeToken, getStoredUser, storeUser } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+
+// Debug: Verify endpoints are loaded correctly
+if (typeof ENDPOINTS === 'undefined' || !ENDPOINTS.auth) {
+  console.error('[AuthContext] ENDPOINTS not properly loaded:', ENDPOINTS);
+}
 import { getCurrentLocation, updateLocationOnBackend, requestLocationPermission } from '../utils/location';
 
 // User type definition
@@ -106,7 +111,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const sendEmailOtp = async (email: string): Promise<{ debug_code?: string }> => {
-    const res = await apiFetch(ENDPOINTS.auth.sendEmailOtp, {
+    // Ensure endpoint exists - use fallback if ENDPOINTS is not loaded
+    const endpoint = ENDPOINTS?.auth?.sendEmailOtp || '/auth/send-email-otp';
+    if (!endpoint || endpoint === 'undefined') {
+      console.error('[AuthContext] sendEmailOtp endpoint is invalid', { endpoint, ENDPOINTS });
+      throw new Error('Email OTP endpoint is not configured. Please check endpoints configuration.');
+    }
+    
+    const res = await apiFetch(endpoint, {
       method: 'POST',
       body: { email },
     });

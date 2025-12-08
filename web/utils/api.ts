@@ -204,6 +204,12 @@ export async function apiFetch<T = any>(
     requestHeaders.Authorization = `Bearer ${token}`;
   }
 
+  // Validate path is not undefined
+  if (!path || path === 'undefined' || path === 'null') {
+    console.error('[apiFetch] Invalid path provided:', path);
+    throw new Error(`Invalid API endpoint path: ${path}. Please check that the endpoint is properly defined in constants/endpoints.ts`);
+  }
+
   // Build full URL using API_BASE from environment
   const url = `${API_BASE}${path}`;
   console.log('[apiFetch]', method, url, isLocalhostApi ? '(localhost - CSRF enabled)' : '(production - token auth only)');
