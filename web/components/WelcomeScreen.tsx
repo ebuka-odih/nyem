@@ -56,12 +56,12 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
         <div className="flex-1 bg-white rounded-t-[2rem] px-6 pt-6 pb-6 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] animate-[slideUp_0.5s_ease-out_0.2s_both] flex flex-col">
 
           {/* Feature Pills */}
-          <div className="flex flex-col gap-2 mb-5">
+          <div className="flex flex-col gap-3 mb-6">
             
             {/* Marketplace Feature */}
-            <div className="group flex items-center gap-3 p-3 rounded-xl bg-brand/5 border border-brand/8 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.4s_both]">
-              <div className="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
-                <ShoppingBag size={18} className="text-brand" />
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-brand/5 border border-brand/8">
+              <div className="w-11 h-11 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <ShoppingBag size={20} className="text-brand" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 text-sm">Marketplace</h3>
@@ -70,9 +70,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
             </div>
 
             {/* Services Feature */}
-            <div className="group flex items-center gap-3 p-3 rounded-xl bg-brand/5 border border-brand/8 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.5s_both]">
-              <div className="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
-                <Briefcase size={18} className="text-brand" />
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-brand/5 border border-brand/8">
+              <div className="w-11 h-11 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <Briefcase size={20} className="text-brand" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 text-sm">Services</h3>
@@ -81,9 +81,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
             </div>
 
             {/* Swap Feature */}
-            <div className="group flex items-center gap-3 p-3 rounded-xl bg-brand/5 border border-brand/8 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.6s_both]">
-              <div className="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
-                <RefreshCw size={18} className="text-brand" />
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-brand/5 border border-brand/8">
+              <div className="w-11 h-11 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <RefreshCw size={20} className="text-brand" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-900 text-sm">Swap</h3>
@@ -105,7 +105,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
           </div>
 
           {/* Legal Footer */}
-          <div className="mt-6 text-center animate-[fadeIn_0.4s_ease-out_0.8s_both]">
+          <div className="mt-8 text-center animate-[fadeIn_0.4s_ease-out_0.8s_both]">
             <p className="text-xs text-gray-400 leading-relaxed">
               By continuing, you agree to our{' '}
               <a href="#" className="text-brand font-semibold hover:underline underline-offset-2">
