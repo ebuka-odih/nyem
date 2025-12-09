@@ -3,7 +3,7 @@ import { Camera, Image as ImageIcon, X } from 'lucide-react';
 
 interface PhotoUploadProps {
   photos: string[];
-  activeTab: 'exchange' | 'marketplace';
+  activeTab: 'Marketplace' | 'Services' | 'Swap';
   onCameraCapture: () => void;
   onGallerySelect: () => void;
   onRemovePhoto: (index: number) => void;
@@ -19,11 +19,11 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   return (
     <div>
       <label className="block text-brand font-bold text-sm mb-3">
-        Photos {activeTab === 'exchange' ? '(Camera Only)' : '(Select from Gallery)'}
+        Photos {activeTab === 'Swap' ? '(Camera Only)' : '(Select from Gallery)'}
       </label>
       <div className="flex space-x-3 overflow-x-auto pb-2">
-        {activeTab === 'exchange' ? (
-          // Camera only for exchange items
+        {activeTab === 'Swap' ? (
+          // Camera only for swap items
           <>
             {photos.length === 0 ? (
               <button 
@@ -60,7 +60,7 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
             )}
           </>
         ) : (
-          // Gallery selection for marketplace items
+          // Gallery selection for marketplace and services items
           <>
             {photos.map((photo, index) => (
               <div key={index} className="relative w-24 h-24 rounded-2xl overflow-hidden shrink-0 border-2 border-gray-200">

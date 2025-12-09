@@ -8,7 +8,7 @@ interface Category {
 }
 
 interface UploadFormProps {
-  activeTab: 'exchange' | 'marketplace';
+  activeTab: 'Marketplace' | 'Services' | 'Swap';
   title: string;
   description: string;
   category: string;
@@ -110,8 +110,8 @@ export const UploadForm: React.FC<UploadFormProps> = ({
         </div>
       </div>
       
-      {/* Exchange-specific: Looking For */}
-      {activeTab === 'exchange' && (
+      {/* Swap-specific: Looking For */}
+      {activeTab === 'Swap' && (
         <div>
           <label className="block text-brand font-bold text-sm mb-2">Looking For *</label>
           <input 
@@ -125,7 +125,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
       )}
 
       {/* Marketplace-specific: Price */}
-      {activeTab === 'marketplace' && (
+      {activeTab === 'Marketplace' && (
         <div>
           <label className="block text-brand font-bold text-sm mb-2">Price (₦) *</label>
           <input 

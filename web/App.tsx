@@ -296,9 +296,9 @@ const AppContent: React.FC = () => {
 
         {currentScreen === 'home' && (
           <div className="flex flex-col h-full w-full relative">
-            {/* Content Area with bottom padding for fixed nav */}
+            {/* Content Area with minimal bottom padding for nav */}
             <div className="flex-1 overflow-y-auto relative md:pb-0" style={{
-              paddingBottom: 'calc(60px + env(safe-area-inset-bottom, 0px) + 1.5rem)'
+              paddingBottom: 'calc(56px + env(safe-area-inset-bottom, 0px))'
             }}>
               {renderMainContent()}
             </div>

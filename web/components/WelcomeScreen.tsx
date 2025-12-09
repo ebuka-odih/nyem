@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
+import { ShoppingBag, Briefcase, RefreshCw, ArrowRight, Sparkles } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -7,79 +8,156 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) => {
   return (
-    <div className="flex flex-col h-full bg-brand relative overflow-hidden">
-
-      {/* Top Section: Branding */}
-      <div className="flex-shrink-0 flex flex-col items-center justify-center py-6 px-6 text-white z-10">
-
-        {/* Logo Circle */}
-        <div className="w-16 h-16 rounded-full border border-white/20 flex items-center justify-center bg-white/10 mb-3 backdrop-blur-md shadow-lg">
-          <span className="text-3xl font-bold tracking-tight">N</span>
-        </div>
-
-        {/* App Name */}
-        <h1 className="text-2xl font-bold tracking-wide mb-1">Nyem</h1>
-
-        {/* Headline */}
-        <h2 className="text-base font-medium text-white/90 tracking-wide text-center px-4">
-          Shop. Find Artisans. Swap Items.
-        </h2>
+    <div className="flex flex-col h-full bg-gradient-to-br from-brand via-brand to-brand-dark relative overflow-hidden">
+      
+      {/* Decorative Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Floating circles for depth */}
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/5 blur-3xl" />
+        <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full bg-white/3 blur-3xl" />
+        
+        {/* Subtle grid pattern */}
+        <div 
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `radial-gradient(circle at 1px 1px, white 1px, transparent 0)`,
+            backgroundSize: '40px 40px'
+          }}
+        />
       </div>
 
-      {/* Bottom Card Section */}
-      <div className="flex-grow bg-white rounded-t-[32px] w-full px-6 pt-8 pb-6 flex flex-col items-center shadow-[0_-10px_40px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom duration-500">
+      {/* Main Content Container */}
+      <div className="flex flex-col flex-1 relative z-10">
+        
+        {/* Hero Section */}
+        <div className="shrink-0 flex flex-col items-center px-6 pt-2 pb-8">
+          
+          {/* Logo - using transform to scale and reduce visible padding */}
+          <div className="animate-[fadeIn_0.6s_ease-out] mb-6">
+            <img 
+              src="/img/logo.png" 
+              alt="Nyem Logo" 
+              className="h-16 w-auto object-contain drop-shadow-2xl transform scale-[1.4] origin-center"
+            />
+          </div>
 
-        {/* Card Header */}
-        <div className="text-center mb-6 w-full">
-          <p className="text-gray-500 text-base leading-relaxed max-w-[340px] mx-auto">
-            Discover items, artisans, and swap opportunities around you — all in one place.
+          {/* Tagline */}
+          <h1 className="text-white text-2xl font-bold tracking-wide text-center animate-[fadeIn_0.6s_ease-out_0.1s_both] mb-3">
+            Your Local Marketplace
+          </h1>
+
+          {/* Description */}
+          <p className="text-white/70 text-center text-sm leading-relaxed max-w-xs animate-[fadeIn_0.4s_ease-out_0.2s_both]">
+            Connect with your community to buy, sell, trade, and hire — all in one app.
           </p>
         </div>
 
-        {/* Features List */}
-        <div className="w-full space-y-3 mb-6">
+        {/* Features & CTA Section - Takes remaining space */}
+        <div className="flex-1 bg-white rounded-t-[2rem] px-6 pt-6 pb-6 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] animate-[slideUp_0.5s_ease-out_0.2s_both] flex flex-col">
 
-          {/* Item 1 - Shop */}
-          <div className="flex items-center space-x-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">🛍</span>
+          {/* Feature Pills */}
+          <div className="flex flex-col gap-2.5 mb-6">
+            
+            {/* Marketplace Feature */}
+            <div 
+              className="group flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand/5 to-transparent border border-brand/10 hover:border-brand/20 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.4s_both]"
+            >
+              <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center shrink-0 group-hover:bg-brand/15 transition-colors">
+                <ShoppingBag size={20} className="text-brand" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 text-sm">Marketplace</h3>
+                <p className="text-gray-500 text-xs">Buy & sell from local sellers</p>
+              </div>
+              <Sparkles size={12} className="text-brand/40 group-hover:text-brand/60 transition-colors" />
             </div>
-            <span className="text-gray-700 font-medium text-sm">Shop: Great deals near you</span>
+
+            {/* Services Feature */}
+            <div 
+              className="group flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand/5 to-transparent border border-brand/10 hover:border-brand/20 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.5s_both]"
+            >
+              <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center shrink-0 group-hover:bg-brand/15 transition-colors">
+                <Briefcase size={20} className="text-brand" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 text-sm">Services</h3>
+                <p className="text-gray-500 text-xs">Hire skilled professionals nearby</p>
+              </div>
+              <Sparkles size={12} className="text-brand/40 group-hover:text-brand/60 transition-colors" />
+            </div>
+
+            {/* Swap Feature */}
+            <div 
+              className="group flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand/5 to-transparent border border-brand/10 hover:border-brand/20 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.6s_both]"
+            >
+              <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center shrink-0 group-hover:bg-brand/15 transition-colors">
+                <RefreshCw size={20} className="text-brand" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-gray-900 text-sm">Swap</h3>
+                <p className="text-gray-500 text-xs">Trade items — no cash needed</p>
+              </div>
+              <Sparkles size={12} className="text-brand/40 group-hover:text-brand/60 transition-colors" />
+            </div>
+
           </div>
 
-          {/* Item 2 - Services */}
-          <div className="flex items-center space-x-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">💼</span>
-            </div>
-            <span className="text-gray-700 font-medium text-sm">Services: Book trusted artisans</span>
+          {/* Spacer to push button down */}
+          <div className="flex-1" />
+
+          {/* CTA Button */}
+          <div className="animate-[fadeIn_0.4s_ease-out_0.7s_both]">
+            <Button 
+              fullWidth 
+              onClick={onGetStarted} 
+              className="py-4 text-base font-bold rounded-2xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-brand/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group"
+            >
+              <span>Get Started</span>
+              <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
+            </Button>
           </div>
 
-          {/* Item 3 - Swap */}
-          <div className="flex items-center space-x-3 bg-white border border-gray-100 rounded-xl p-3 shadow-sm">
-            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-              <span className="text-lg">🔁</span>
-            </div>
-            <span className="text-gray-700 font-medium text-sm">Swap: Trade items effortlessly</span>
+          {/* Legal Footer */}
+          <div className="mt-4 text-center animate-[fadeIn_0.4s_ease-out_0.8s_both]">
+            <p className="text-xs text-gray-400 leading-relaxed">
+              By continuing, you agree to our{' '}
+              <a href="#" className="text-brand font-semibold hover:underline underline-offset-2">
+                Terms of Use
+              </a>{' '}
+              and{' '}
+              <a href="#" className="text-brand font-semibold hover:underline underline-offset-2">
+                Privacy Policy
+              </a>
+            </p>
           </div>
 
         </div>
-
-        {/* Action Button */}
-        <div className="w-full mt-10">
-          <Button fullWidth onClick={onGetStarted} className="py-4 text-base font-bold shadow-xl shadow-brand/20 rounded-full hover:shadow-2xl hover:scale-[1.02] transition-all duration-300">
-            Start Exploring
-          </Button>
-        </div>
-
-        {/* Footer Legal */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-400 font-medium">
-            By continuing, you agree to our <a href="#" className="text-brand font-semibold hover:underline">Terms of Use</a> and <a href="#" className="text-brand font-semibold hover:underline">Privacy Policy</a>
-          </p>
-        </div>
-
       </div>
+
+      {/* CSS Animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(40px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </div>
   );
 };

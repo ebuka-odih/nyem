@@ -23,7 +23,7 @@ interface UploadScreenProps {
 
 export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSignUpRequest }) => {
   const { token, user, isAuthenticated, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'exchange' | 'marketplace'>('exchange');
+  const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
   const [showPreUploadProfile, setShowPreUploadProfile] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -57,9 +57,10 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
   }, [isAuthenticated, user]);
 
   // Map activeTab to parent category name for filtering
-  const getParentCategoryName = (tab: 'exchange' | 'marketplace'): string => {
-    // Exchange items use Swap categories, marketplace items use Shop categories
-    return tab === 'exchange' ? 'Swap' : 'Shop';
+  const getParentCategoryName = (tab: 'Marketplace' | 'Services' | 'Swap'): string => {
+    // Map Marketplace to Shop for backend API (backend uses 'Shop' as parent category)
+    if (tab === 'Marketplace') return 'Shop';
+    return tab; // Services or Swap
   };
 
   // Fetch categories filtered by active tab
@@ -159,11 +160,11 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       setError('Condition is required');
       return;
     }
-    if (activeTab === 'exchange' && !lookingFor.trim()) {
+    if (activeTab === 'Swap' && !lookingFor.trim()) {
       setError('Please specify what you are looking for');
       return;
     }
-    if (activeTab === 'marketplace' && !price.trim()) {
+    if (activeTab === 'Marketplace' && !price.trim()) {
       setError('Price is required');
       return;
     }
@@ -174,7 +175,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
     }
 
     // Check if phone verification is required for marketplace items
-    if (activeTab === 'marketplace' && user && !user.phone_verified_at) {
+    if (activeTab === 'Marketplace' && user && !user.phone_verified_at) {
       setShowPhoneVerification(true);
       return;
     }
@@ -200,14 +201,15 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
         description: description.trim() || undefined,
         category_id: categoryId, // Backend now expects category_id
         condition: conditionValue,
-        type: activeTab === 'exchange' ? 'barter' : 'marketplace',
+        type: activeTab === 'Swap' ? 'barter' : activeTab === 'Marketplace' ? 'marketplace' : 'services',
       };
 
-      if (activeTab === 'exchange') {
+      if (activeTab === 'Swap') {
         payload.looking_for = lookingFor.trim();
-      } else {
+      } else if (activeTab === 'Marketplace') {
         payload.price = parseFloat(price.replace(/,/g, ''));
       }
+      // Services items might not need price or looking_for, depending on backend requirements
 
       // TODO: Implement image upload endpoint
       // For now, photos are stored locally but not sent to backend
@@ -316,7 +318,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
         <div>
            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Upload Item</h2>
            <p className="text-gray-500 text-sm">
-             {activeTab === 'exchange' ? 'What would you like to trade?' : 'What would you like to sell?'}
+             {activeTab === 'Swap' ? 'What would you like to trade?' : activeTab === 'Marketplace' ? 'What would you like to sell?' : 'What service would you like to offer?'}
            </p>
         </div>
 

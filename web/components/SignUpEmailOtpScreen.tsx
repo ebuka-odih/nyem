@@ -21,7 +21,9 @@ export const SignUpEmailOtpScreen: React.FC<SignUpEmailOtpScreenProps> = ({
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { verifyOtp, sendEmailOtp } = useAuth();
 
   const handleChange = (element: HTMLInputElement, index: number) => {
@@ -40,6 +42,30 @@ export const SignUpEmailOtpScreen: React.FC<SignUpEmailOtpScreenProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text');
+    
+    // Extract only numeric characters from pasted text
+    const numericCode = pastedData.replace(/\D/g, '').slice(0, 6);
+    
+    if (numericCode.length > 0) {
+      const newOtp = [...otp];
+      
+      // Fill OTP inputs with pasted code
+      for (let i = 0; i < 6; i++) {
+        newOtp[i] = numericCode[i] || '';
+      }
+      
+      setOtp(newOtp);
+      
+      // Focus the next empty input or the last input if all are filled
+      const nextEmptyIndex = newOtp.findIndex((digit) => !digit);
+      const focusIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : 5;
+      inputRefs.current[focusIndex]?.focus();
     }
   };
 
@@ -75,13 +101,20 @@ export const SignUpEmailOtpScreen: React.FC<SignUpEmailOtpScreenProps> = ({
 
   const handleResend = async () => {
     setError(null);
+    setSuccessMessage(null);
+    setResendLoading(true);
     try {
       await sendEmailOtp(email);
+      setSuccessMessage('A new OTP code has been sent to your email.');
       // Clear OTP inputs
       setOtp(new Array(6).fill(""));
       inputRefs.current[0]?.focus();
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
       setError(err.message || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -122,6 +155,13 @@ export const SignUpEmailOtpScreen: React.FC<SignUpEmailOtpScreenProps> = ({
                     </div>
                 )}
 
+                {/* Success Message */}
+                {successMessage && (
+                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm mb-4">
+                        {successMessage}
+                    </div>
+                )}
+
                 {/* OTP Inputs */}
                 <div className="flex justify-between gap-1 md:gap-2 mb-10 px-1">
                     {otp.map((data, index) => (
@@ -133,6 +173,7 @@ export const SignUpEmailOtpScreen: React.FC<SignUpEmailOtpScreenProps> = ({
                             value={data}
                             onChange={(e) => handleChange(e.target, index)}
                             onKeyDown={(e) => handleKeyDown(e, index)}
+                            onPaste={index === 0 ? handlePaste : undefined}
                             className="flex-1 min-w-0 h-12 md:h-14 max-w-[50px] border border-gray-300 rounded-lg text-center text-xl md:text-2xl font-bold text-gray-800 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none transition-all bg-gray-50 p-0"
                             inputMode="numeric"
                         />
@@ -155,9 +196,10 @@ export const SignUpEmailOtpScreen: React.FC<SignUpEmailOtpScreenProps> = ({
                     <button 
                         type="button" 
                         onClick={handleResend}
-                        className="text-brand font-bold hover:text-brand-dark transition-colors"
+                        disabled={resendLoading || loading}
+                        className="text-brand font-bold hover:text-brand-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Resend OTP
+                        {resendLoading ? 'Sending...' : 'Resend OTP'}
                     </button>
                 </div>
             </form>
