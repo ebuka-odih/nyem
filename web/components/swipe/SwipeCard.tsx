@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, MapPin, Share2, Heart, Sparkles, CheckCircle2, ArrowRight, Tag, ShoppingBag, Repeat } from 'lucide-react';
+import { Info, MapPin, Share2, Heart, CheckCircle2, ArrowRight, ShoppingBag, Repeat } from 'lucide-react';
 import { SwipeItem } from '../../types';
 
 interface SwipeCardProps {
@@ -22,7 +22,6 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
     const cleanLocation = location.trim().replace(/,$/, '');
 
     if (distance) {
-      // Format with distance: "Wuse, Abuja [icon] 20km Away" or "Abuja [icon] 20km Away"
       return (
         <>
           <span>{cleanLocation}</span>
@@ -31,7 +30,6 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
         </>
       );
     } else {
-      // Just location: "Wuse, Abuja" or "Abuja"
       return <span>{cleanLocation}</span>;
     }
   };
@@ -48,7 +46,6 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
         });
       } else {
         await navigator.clipboard.writeText(shareUrl);
-        // Could add a toast notification here
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
@@ -72,7 +69,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
   return (
     <div className="w-full h-full flex flex-col rounded-[32px] overflow-hidden bg-white shadow-2xl shadow-black/10 border border-white/50">
 
-      {/* Image Section - Responsive height: smaller on mobile, larger on desktop */}
+      {/* Image Section */}
       <div className="relative h-[55%] sm:h-[58%] shrink-0 overflow-hidden">
         {/* Shimmer loading state */}
         {!imageLoaded && (
@@ -86,34 +83,38 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
           onLoad={() => setImageLoaded(true)}
         />
 
-        {/* Elegant gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+        {/* Gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
 
-        {/* Subtle top gradient for badges */}
-        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent" />
+        {/* Top gradient for badges */}
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/30 to-transparent" />
 
         {/* Top Action Bar */}
         <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
           {/* Price/Condition Badge */}
           {isMarketplace ? (
-            <div className="flex flex-col gap-1.5">
-              <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-gray-900 text-sm font-black px-3 py-1.5 rounded-xl shadow-lg">
-                <span className="text-[#990033]">{item.price}</span>
+            <div className="flex items-center gap-2">
+              {/* Price badge */}
+              <span className="inline-flex items-center bg-white/95 backdrop-blur-md text-[#990033] text-sm font-black px-3 py-1.5 rounded-xl shadow-lg">
+                {item.price}
               </span>
-              <span className="inline-flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+              {/* For Sale tag */}
+              <span className="inline-flex items-center gap-1 bg-[#990033]/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
                 <ShoppingBag size={9} />
-                For Sale
+                Sale
               </span>
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              {/* Condition badge */}
               <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-gray-800 text-xs font-bold px-2.5 py-1 rounded-lg shadow-lg uppercase tracking-wide">
-                <CheckCircle2 size={11} className="text-emerald-500" />
+                <CheckCircle2 size={10} className="text-emerald-500" />
                 {item.condition}
               </span>
-              <span className="inline-flex items-center gap-1 bg-amber-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+              {/* For Swap tag */}
+              <span className="inline-flex items-center gap-1 bg-amber-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
                 <Repeat size={9} />
-                For Swap
+                Swap
               </span>
             </div>
           )}
@@ -124,7 +125,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
               onClick={handleLike}
               className={`w-9 h-9 rounded-xl backdrop-blur-md flex items-center justify-center border transition-all duration-300 ${isLiked
                 ? 'bg-rose-500 border-rose-400 scale-110'
-                : 'bg-white/20 border-white/40 hover:bg-white/30'
+                : 'bg-white/20 border-white/30 hover:bg-white/30'
                 }`}
             >
               <Heart
@@ -134,86 +135,83 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
             </button>
             <button
               onClick={handleShare}
-              className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:bg-white/30 transition-all"
+              className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 hover:bg-white/30 transition-all"
             >
               <Share2 size={16} className="text-white" />
             </button>
           </div>
         </div>
 
-        {/* Title & Category Section - Bottom of image */}
+        {/* Title Section - Bottom of image */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
-          {/* Category Badge */}
-          {item.category && (
-            <div className="mb-2">
-              <span className="inline-flex items-center gap-1 bg-white/15 backdrop-blur-sm text-white/90 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">
-                <Tag size={10} className="opacity-80" />
-                {item.category}
-              </span>
-            </div>
-          )}
-          <h2 className="text-[22px] font-black text-white leading-tight tracking-tight line-clamp-2 drop-shadow-2xl">
+          <h2 className="text-[22px] font-black text-white leading-tight tracking-tight line-clamp-2 drop-shadow-2xl mb-1">
             {item.title}
           </h2>
+          {/* Category - subtle, below title */}
+          {item.category && (
+            <span className="text-white/60 text-[11px] font-medium">
+              {item.category}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Content Section - Optimized layout */}
+      {/* Content Section */}
       <div className="flex-1 px-4 pt-3 pb-3 flex flex-col bg-gradient-to-b from-white to-gray-50/50 min-h-0">
 
-        {/* Description - Compact */}
+        {/* Description */}
         {item.description && (
           <p className="text-gray-600 text-[13px] leading-relaxed line-clamp-2 mb-3">
             {item.description}
           </p>
         )}
 
-        {/* Status/Action Banner - Clickable for Marketplace */}
+        {/* Action Banner */}
         {isMarketplace ? (
           <button
             onClick={handleBuyClick}
-            className="w-full bg-gradient-to-r from-[#990033] to-[#cc0044] rounded-xl px-4 py-3 flex items-center justify-between shadow-lg shadow-[#990033]/20 hover:shadow-xl hover:shadow-[#990033]/30 active:scale-[0.98] transition-all group"
+            className="w-full bg-gradient-to-r from-[#990033] to-[#b30039] rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg shadow-[#990033]/15 hover:shadow-xl hover:shadow-[#990033]/25 active:scale-[0.98] transition-all group"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                <ShoppingBag size={16} className="text-white" />
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
+                <ShoppingBag size={14} className="text-white" />
               </div>
               <div className="text-left">
-                <span className="text-white text-sm font-bold block">Ready to Buy</span>
-                <span className="text-white/70 text-[10px]">Tap to express interest</span>
+                <span className="text-white text-sm font-bold block leading-tight">Ready to Buy</span>
+                <span className="text-white/60 text-[10px]">Tap to express interest</span>
               </div>
             </div>
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-              <ArrowRight size={16} className="text-white group-hover:translate-x-0.5 transition-transform" />
+            <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-colors">
+              <ArrowRight size={14} className="text-white group-hover:translate-x-0.5 transition-transform" />
             </div>
           </button>
         ) : (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-4 py-3 border border-amber-100/50">
-            <p className="text-[10px] text-amber-600/80 font-semibold uppercase tracking-wider mb-0.5">Looking for</p>
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-3 py-2.5 border border-amber-100/50">
+            <p className="text-[10px] text-amber-600/70 font-semibold uppercase tracking-wider mb-0.5">Looking for</p>
             <p className="text-gray-900 font-bold text-sm truncate">{item.lookingFor}</p>
           </div>
         )}
 
-        {/* Seller Info - Compact footer */}
-        <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
+        {/* Seller Info */}
+        <div className="flex items-center justify-between mt-auto pt-2.5 border-t border-gray-100">
           <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {/* Avatar with verified badge */}
             <div className="relative shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-md">
+              <div className="w-9 h-9 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-sm">
                 <img
                   src={item.owner.image}
                   alt={item.owner.name}
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-blue-500 rounded-md flex items-center justify-center ring-2 ring-white">
-                <CheckCircle2 size={8} className="text-white" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-md flex items-center justify-center ring-1.5 ring-white">
+                <CheckCircle2 size={7} className="text-white" />
               </div>
             </div>
 
             {/* Seller details */}
             <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-gray-900 text-[15px] truncate">{item.owner.name}</h3>
+              <h3 className="font-bold text-gray-900 text-[14px] truncate leading-tight">{item.owner.name}</h3>
               <div className="flex items-center text-[11px] text-gray-500 truncate">
                 {formatLocation()}
               </div>
@@ -226,9 +224,9 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
               e.stopPropagation();
               onInfoClick && onInfoClick();
             }}
-            className="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors group shrink-0 ml-2"
+            className="w-9 h-9 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors group shrink-0 ml-2"
           >
-            <Info size={18} className="text-gray-500 group-hover:text-gray-700 transition-colors" />
+            <Info size={16} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
           </button>
         </div>
       </div>
