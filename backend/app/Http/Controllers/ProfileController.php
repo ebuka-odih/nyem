@@ -45,6 +45,12 @@ class ProfileController extends Controller
     {
         $user = $request->user()->loadCount('items')->load(['cityLocation', 'areaLocation']);
         
+        // Ensure city string field is populated from relationship for backward compatibility
+        if ($user->cityLocation && !$user->city) {
+            $user->city = $user->cityLocation->name;
+            $user->save();
+        }
+        
         // Check if username can be changed (24hr limit)
         $canChangeUsername = true;
         if ($user->username_updated_at) {
@@ -144,6 +150,17 @@ class ProfileController extends Controller
             // Reload user with relationships to get fresh data
             $user->refresh();
             $user->load(['cityLocation', 'areaLocation']);
+            
+            // Update city string field from relationship for backward compatibility
+            // Always sync city field when city_id is set
+            if (isset($data['city_id']) && $user->cityLocation) {
+                $user->city = $user->cityLocation->name;
+                $user->save();
+            } elseif ($user->cityLocation && !$user->city) {
+                // Also sync if cityLocation exists but city field is empty
+                $user->city = $user->cityLocation->name;
+                $user->save();
+            }
         } catch (\Illuminate\Database\QueryException $e) {
             // Handle database errors (like column size issues)
             if (str_contains($e->getMessage(), 'profile_photo') || str_contains($e->getMessage(), 'too long') || str_contains($e->getMessage(), 'Data too long')) {

@@ -9,7 +9,16 @@ interface WelcomeScreenProps {
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSignUp }) => {
   return (
-    <div className="flex flex-col h-full bg-gradient-to-br from-brand via-brand to-brand-dark relative overflow-hidden">
+    <div 
+      className="flex flex-col h-full w-full min-h-screen relative overflow-hidden"
+      style={{
+        backgroundColor: '#880e4f',
+        backgroundImage: 'linear-gradient(135deg, #880e4f 0%, #751043 50%, #5c0d35 100%)',
+        backgroundSize: '100% 100%',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

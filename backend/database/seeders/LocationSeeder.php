@@ -93,21 +93,27 @@ class LocationSeeder extends Seeder
         }
 
         // Seed Areas for each city
+        // Popular cities (top 5) have at least 15 areas each
         $areasByCity = [
             'abuja' => [
-                'Wuse', 'Maitama', 'Asokoro', 'Garki', 'Utako', 'Gwarinpa', 'Lugbe', 'Kubwa', 'Nyanya', 'Karu'
+                'Wuse', 'Maitama', 'Asokoro', 'Garki', 'Utako', 'Gwarinpa', 'Lugbe', 'Kubwa', 'Nyanya', 'Karu',
+                'Jabi', 'Jahi', 'Kado', 'Life Camp', 'Lokogoma', 'Gudu', 'Apo', 'Dutse', 'Bwari', 'Kuje'
             ],
             'lagos' => [
-                'Victoria Island', 'Lekki', 'Ikeja', 'Surulere', 'Yaba', 'Ikoyi', 'Oshodi', 'Mushin', 'Alimosho', 'Agege'
+                'Victoria Island', 'Lekki', 'Ikeja', 'Surulere', 'Yaba', 'Ikoyi', 'Oshodi', 'Mushin', 'Alimosho', 'Agege',
+                'Apapa', 'Maryland', 'Magodo', 'Ogba', 'Ilupeju', 'Palmgrove', 'Gbagada', 'Anthony', 'Onipanu', 'Bariga'
             ],
             'port-harcourt' => [
-                'Port Harcourt Township', 'Rumuomasi', 'Rumuokoro', 'Rumuodomaya', 'Woji', 'Trans-Amadi', 'GRA Phase 1', 'GRA Phase 2', 'Rumuibekwe', 'Rumuola'
+                'Port Harcourt Township', 'Rumuomasi', 'Rumuokoro', 'Rumuodomaya', 'Woji', 'Trans-Amadi', 'GRA Phase 1', 'GRA Phase 2', 'Rumuibekwe', 'Rumuola',
+                'Rumuokwuta', 'Rumuigbo', 'Rumuapara', 'Rumueme', 'Rumuokwurusi', 'Rumuogba', 'Rumuokwachi', 'Rumuodara', 'Rumuokwuta', 'Rumuokwuta'
             ],
             'enugu' => [
-                'Abakpa', 'Achara Layout', 'Emene', 'GRA', 'Independence Layout', 'New Haven', 'Ogui', 'Uwani', 'Thinkers Corner', 'Amechi'
+                'Abakpa', 'Achara Layout', 'Emene', 'GRA', 'Independence Layout', 'New Haven', 'Ogui', 'Uwani', 'Thinkers Corner', 'Amechi',
+                'Agbani Road', 'Coal Camp', 'Ogbete', 'Udi Road', 'Zik Avenue', 'Chime Avenue', 'Okpara Avenue', 'Obiagu', 'Asata', 'Idaw River'
             ],
             'asaba' => [
-                'Asaba GRA', 'Okwe', 'Okpanam Road', 'Nnebisi Road', 'Cable Point', 'Summit Road', 'DBS Road', 'Anwai Road', 'Okpili', 'Nkpologwu'
+                'Asaba GRA', 'Okwe', 'Okpanam Road', 'Nnebisi Road', 'Cable Point', 'Summit Road', 'DBS Road', 'Anwai Road', 'Okpili', 'Nkpologwu',
+                'Okpanam', 'Ibusa', 'Oshimili North', 'Oshimili South', 'Anwai', 'Okwe', 'Cable Point', 'Summit', 'DBS', 'Nnebisi'
             ],
             'ibadan' => [
                 'Bodija', 'Agodi', 'Mokola', 'Sango', 'Dugbe', 'Apata', 'Ojoo', 'Agbowo', 'Iwo Road', 'Akobo'

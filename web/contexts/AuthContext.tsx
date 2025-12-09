@@ -29,6 +29,16 @@ export interface User {
   items_count?: number; // Number of items user has uploaded
   created_at?: string;
   updated_at?: string;
+  cityLocation?: {
+    id: number;
+    name: string;
+    type: string;
+  };
+  areaLocation?: {
+    id: number;
+    name: string;
+    type: string;
+  };
 }
 
 interface AuthContextType {

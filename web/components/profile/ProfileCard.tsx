@@ -46,12 +46,12 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ user, onEditProfile })
         )}
         
         {/* Location */}
-        {((user as any)?.cityLocation?.name || user?.city) && (
+        {(user?.cityLocation?.name || user?.city || user?.city_id) && (
           <div className="flex items-center justify-center text-gray-600 text-sm font-medium mb-4 px-4 py-1.5 bg-white/60 backdrop-blur-sm rounded-full border border-gray-100 shadow-sm">
             <MapPin size={14} className="mr-1.5 text-brand" />
             <span>
-              {(user as any)?.cityLocation?.name || user?.city}
-              {(user as any)?.areaLocation?.name && `, ${(user as any).areaLocation.name}`}
+              {user?.cityLocation?.name || user?.city || 'Location not set'}
+              {user?.areaLocation?.name && `, ${user.areaLocation.name}`}
             </span>
           </div>
         )}

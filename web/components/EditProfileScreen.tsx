@@ -46,12 +46,18 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ onBack }) 
     const fetchCities = async () => {
       try {
         setLoadingCities(true);
+        setError(null);
         const res = await apiFetch(ENDPOINTS.locationsCities);
+        // Handle both response formats: { data: { cities: [...] } } or { cities: [...] }
         const citiesData = res.data?.cities || res.cities || [];
+        if (citiesData.length === 0) {
+          console.warn('No cities returned from API');
+        }
         setCities(citiesData);
       } catch (err) {
         console.error('Failed to fetch cities:', err);
         setError('Failed to load cities. Please try again.');
+        setCities([]);
       } finally {
         setLoadingCities(false);
       }

@@ -72,28 +72,30 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
   // Debounced username for API check
   const debouncedUsername = useDebounce(username, 500);
 
-  // Fetch locations on mount
+  // Fetch cities on mount
   useEffect(() => {
-    const fetchLocations = async () => {
+    const fetchCities = async () => {
       try {
         setLoadingLocations(true);
-        const response = await apiFetch(ENDPOINTS.locations);
-        const locations = (response.locations || []) as Location[];
-        
-        // Separate cities and areas
-        const cityList = locations.filter(loc => loc.type === 'city');
-        const areaList = locations.filter(loc => loc.type === 'area');
-        
-        setCities(cityList);
-        setAreas(areaList);
-      } catch (err) {
-        console.error('Failed to fetch locations:', err);
+        setError(null);
+        const response = await apiFetch(ENDPOINTS.locationsCities);
+        // Handle both response formats: { data: { cities: [...] } } or { cities: [...] }
+        const citiesData = response.data?.cities || response.cities || [];
+        console.log('[PreUploadProfileSetup] Fetched cities:', citiesData.length);
+        if (citiesData.length === 0) {
+          console.warn('[PreUploadProfileSetup] No cities returned from API');
+        }
+        setCities(citiesData);
+      } catch (err: any) {
+        console.error('[PreUploadProfileSetup] Failed to fetch cities:', err);
+        setError('Failed to load cities. Please try again.');
+        setCities([]);
       } finally {
         setLoadingLocations(false);
       }
     };
     
-    fetchLocations();
+    fetchCities();
   }, []);
 
   // Check username availability when debounced value changes
@@ -155,20 +157,33 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
     checkUsername();
   }, [debouncedUsername, user?.id, user?.username]);
 
-  // Filter areas by selected city
-  const filteredAreas = cityId 
-    ? areas.filter(area => area.parent_id === cityId)
-    : [];
-
-  // Reset area when city changes
+  // Fetch areas when city is selected
   useEffect(() => {
-    if (cityId && areaId) {
-      // Check if current area belongs to new city
-      const areaStillValid = filteredAreas.some(a => a.id === areaId);
-      if (!areaStillValid) {
+    const fetchAreas = async () => {
+      if (!cityId) {
+        setAreas([]);
         setAreaId('');
+        return;
       }
-    }
+
+      try {
+        const response = await apiFetch(ENDPOINTS.locationsAreas(cityId));
+        // Handle both response formats: { data: { areas: [...] } } or { areas: [...] }
+        const areasData = response.data?.areas || response.areas || [];
+        console.log(`[PreUploadProfileSetup] Fetched ${areasData.length} areas for city ${cityId}`);
+        setAreas(areasData);
+        
+        // If user had an area_id but it's not in the new city's areas, clear it
+        if (areaId && !areasData.find((a: Location) => a.id === areaId)) {
+          setAreaId('');
+        }
+      } catch (err: any) {
+        console.error('[PreUploadProfileSetup] Failed to fetch areas:', err);
+        setAreas([]);
+      }
+    };
+
+    fetchAreas();
   }, [cityId]);
 
   // Handle photo selection
@@ -404,7 +419,9 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
                 disabled={loadingLocations}
                 className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer disabled:bg-gray-50 disabled:cursor-not-allowed"
               >
-                <option value="">Select your city</option>
+                <option value="">
+                  {loadingLocations ? 'Loading cities...' : 'Select your city'}
+                </option>
                 {cities.map(city => (
                   <option key={city.id} value={city.id}>
                     {city.name}
@@ -416,46 +433,49 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
                 size={20} 
               />
             </div>
+            {loadingLocations && (
+              <p className="text-gray-400 text-xs mt-1">Loading cities...</p>
+            )}
+            {!loadingLocations && cities.length === 0 && (
+              <p className="text-red-500 text-xs mt-1">No cities available. Please check your connection.</p>
+            )}
           </div>
 
           {/* Area */}
-          <div>
-            <label className="block text-brand font-bold text-sm mb-2">
-              <MapPin size={14} className="inline mr-1" />
-              Area {filteredAreas.length > 0 ? '(Optional)' : ''}
-            </label>
-            <div className="relative">
-              <select
-                value={areaId}
-                onChange={(e) => setAreaId(e.target.value ? Number(e.target.value) : '')}
-                disabled={!cityId || filteredAreas.length === 0}
-                className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer disabled:bg-gray-50 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {!cityId 
-                    ? 'Select a city first' 
-                    : filteredAreas.length === 0 
+          {cityId && (
+            <div>
+              <label className="block text-brand font-bold text-sm mb-2">
+                <MapPin size={14} className="inline mr-1" />
+                Area {areas.length > 0 ? '(Optional)' : ''}
+              </label>
+              <div className="relative">
+                <select
+                  value={areaId}
+                  onChange={(e) => setAreaId(e.target.value ? Number(e.target.value) : '')}
+                  disabled={areas.length === 0}
+                  className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer disabled:bg-gray-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {areas.length === 0 
                       ? 'No areas available for this city'
                       : 'Select your area (optional)'}
-                </option>
-                {filteredAreas.map(area => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
                   </option>
-                ))}
-              </select>
-              <ChevronDown 
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
-                size={20} 
-              />
+                  {areas.map(area => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown 
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
+                  size={20} 
+                />
+              </div>
+              {areas.length === 0 && (
+                <p className="text-gray-400 text-xs mt-1">No areas available for this city</p>
+              )}
             </div>
-            {!cityId && (
-              <p className="text-gray-400 text-xs mt-1">Please select a city first</p>
-            )}
-            {cityId && filteredAreas.length === 0 && (
-              <p className="text-gray-400 text-xs mt-1">No areas available for this city</p>
-            )}
-          </div>
+          )}
 
           {/* Bio */}
           <div>
