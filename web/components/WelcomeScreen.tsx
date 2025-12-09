@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from './Button';
-import { ShoppingBag, Briefcase, RefreshCw, ArrowRight, Sparkles } from 'lucide-react';
+import { ShoppingBag, Briefcase, RefreshCw, ArrowRight } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
@@ -30,7 +30,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
       <div className="flex flex-col flex-1 relative z-10">
         
         {/* Hero Section */}
-        <div className="shrink-0 flex flex-col items-center px-6 pt-2 pb-8">
+        <div className="shrink-0 flex flex-col items-center px-6 pt-14 pb-8">
           
           {/* Logo - using transform to scale and reduce visible padding */}
           <div className="animate-[fadeIn_0.6s_ease-out] mb-6">
@@ -56,61 +56,48 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
         <div className="flex-1 bg-white rounded-t-[2rem] px-6 pt-6 pb-6 shadow-[0_-20px_60px_rgba(0,0,0,0.15)] animate-[slideUp_0.5s_ease-out_0.2s_both] flex flex-col">
 
           {/* Feature Pills */}
-          <div className="flex flex-col gap-2.5 mb-6">
+          <div className="flex flex-col gap-2 mb-5">
             
             {/* Marketplace Feature */}
-            <div 
-              className="group flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand/5 to-transparent border border-brand/10 hover:border-brand/20 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.4s_both]"
-            >
-              <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center shrink-0 group-hover:bg-brand/15 transition-colors">
-                <ShoppingBag size={20} className="text-brand" />
+            <div className="group flex items-center gap-3 p-3 rounded-xl bg-brand/5 border border-brand/8 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.4s_both]">
+              <div className="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <ShoppingBag size={18} className="text-brand" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-sm">Marketplace</h3>
+                <h3 className="font-semibold text-gray-900 text-sm">Marketplace</h3>
                 <p className="text-gray-500 text-xs">Buy & sell from local sellers</p>
               </div>
-              <Sparkles size={12} className="text-brand/40 group-hover:text-brand/60 transition-colors" />
             </div>
 
             {/* Services Feature */}
-            <div 
-              className="group flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand/5 to-transparent border border-brand/10 hover:border-brand/20 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.5s_both]"
-            >
-              <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center shrink-0 group-hover:bg-brand/15 transition-colors">
-                <Briefcase size={20} className="text-brand" />
+            <div className="group flex items-center gap-3 p-3 rounded-xl bg-brand/5 border border-brand/8 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.5s_both]">
+              <div className="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <Briefcase size={18} className="text-brand" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-sm">Services</h3>
+                <h3 className="font-semibold text-gray-900 text-sm">Services</h3>
                 <p className="text-gray-500 text-xs">Hire skilled professionals nearby</p>
               </div>
-              <Sparkles size={12} className="text-brand/40 group-hover:text-brand/60 transition-colors" />
             </div>
 
             {/* Swap Feature */}
-            <div 
-              className="group flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-brand/5 to-transparent border border-brand/10 hover:border-brand/20 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.6s_both]"
-            >
-              <div className="w-10 h-10 rounded-lg bg-brand/10 flex items-center justify-center shrink-0 group-hover:bg-brand/15 transition-colors">
-                <RefreshCw size={20} className="text-brand" />
+            <div className="group flex items-center gap-3 p-3 rounded-xl bg-brand/5 border border-brand/8 transition-all duration-300 animate-[fadeIn_0.4s_ease-out_0.6s_both]">
+              <div className="w-9 h-9 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                <RefreshCw size={18} className="text-brand" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-sm">Swap</h3>
+                <h3 className="font-semibold text-gray-900 text-sm">Swap</h3>
                 <p className="text-gray-500 text-xs">Trade items — no cash needed</p>
               </div>
-              <Sparkles size={12} className="text-brand/40 group-hover:text-brand/60 transition-colors" />
             </div>
-
           </div>
 
-          {/* Spacer to push button down */}
-          <div className="flex-1" />
-
           {/* CTA Button */}
-          <div className="animate-[fadeIn_0.4s_ease-out_0.7s_both]">
+          <div className="mt-3 animate-[fadeIn_0.4s_ease-out_0.7s_both]">
             <Button 
               fullWidth 
               onClick={onGetStarted} 
-              className="py-4 text-base font-bold rounded-2xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-brand/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group"
+              className="py-3.5 text-base font-bold rounded-2xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-brand/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group"
             >
               <span>Get Started</span>
               <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
@@ -118,7 +105,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
           </div>
 
           {/* Legal Footer */}
-          <div className="mt-4 text-center animate-[fadeIn_0.4s_ease-out_0.8s_both]">
+          <div className="mt-6 text-center animate-[fadeIn_0.4s_ease-out_0.8s_both]">
             <p className="text-xs text-gray-400 leading-relaxed">
               By continuing, you agree to our{' '}
               <a href="#" className="text-brand font-semibold hover:underline underline-offset-2">
