@@ -73,7 +73,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             <div className="px-4 pb-3 border-b border-gray-100">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#990033] to-[#cc0044] flex items-center justify-center text-white">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand to-brand-600 flex items-center justify-center text-white">
                     {React.cloneElement(icon as React.ReactElement, { size: 14 })}
                   </div>
                   <div>
@@ -97,7 +97,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder={placeholder}
-                  className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#990033]/20 focus:bg-white border border-transparent focus:border-[#990033]/30 transition-all"
+                  className="w-full pl-9 pr-3 py-2 bg-gray-100 rounded-lg text-xs text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/20 focus:bg-white border border-transparent focus:border-brand/30 transition-all"
                 />
               </div>
             </div>
@@ -128,26 +128,26 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                         onClick={() => handleSelect(option)}
                         className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-colors ${
                           isSelected
-                            ? 'bg-gradient-to-r from-[#990033]/10 to-[#990033]/5 border border-[#990033]/20'
+                            ? 'bg-gradient-to-r from-brand/10 to-brand/5 border border-brand/20'
                             : 'hover:bg-gray-50 border border-transparent'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           <div className={`w-6 h-6 rounded-md flex items-center justify-center ${
-                            isSelected ? 'bg-[#990033]/20' : 'bg-gray-100'
+                            isSelected ? 'bg-brand/20' : 'bg-gray-100'
                           }`}>
                             {type === 'location' ? (
-                              <MapPin size={12} className={isSelected ? 'text-[#990033]' : 'text-gray-400'} />
+                              <MapPin size={12} className={isSelected ? 'text-brand' : 'text-gray-400'} />
                             ) : (
-                              <Filter size={12} className={isSelected ? 'text-[#990033]' : 'text-gray-400'} />
+                              <Filter size={12} className={isSelected ? 'text-brand' : 'text-gray-400'} />
                             )}
                           </div>
-                          <span className={`text-xs font-medium ${isSelected ? 'text-[#990033]' : 'text-gray-700'}`}>
+                          <span className={`text-xs font-medium ${isSelected ? 'text-brand' : 'text-gray-700'}`}>
                             {displayValue}
                           </span>
                         </div>
                         {isSelected ? (
-                          <div className="w-4 h-4 rounded-full bg-[#990033] flex items-center justify-center">
+                          <div className="w-4 h-4 rounded-full bg-brand flex items-center justify-center">
                             <Check size={10} className="text-white" strokeWidth={3} />
                           </div>
                         ) : (

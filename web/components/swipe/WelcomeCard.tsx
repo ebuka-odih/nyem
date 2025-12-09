@@ -7,7 +7,7 @@ interface WelcomeCardProps {
 
 export const WelcomeCard: React.FC<WelcomeCardProps> = ({ onDismiss }) => {
   return (
-    <div className="w-full h-full flex flex-col rounded-[32px] overflow-hidden bg-gradient-to-br from-[#990033] via-[#7a0029] to-[#5c001f] shadow-2xl shadow-black/20 border border-white/10 relative">
+    <div className="w-full h-full flex flex-col rounded-[32px] overflow-hidden bg-gradient-to-br from-brand via-brand-700 to-brand-800 shadow-2xl shadow-black/20 border border-white/10 relative">
       
       {/* Decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

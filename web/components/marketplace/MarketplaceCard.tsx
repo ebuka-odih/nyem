@@ -173,7 +173,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({
                                 {item.title}
                             </h2>
                             <div className="flex items-center gap-3">
-                                <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#990033] to-[#cc0044]">
+                                <span className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-600">
                                     {item.price}
                                 </span>
                                 <span className="text-sm text-gray-400 line-through">
@@ -236,7 +236,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({
                                             {item.seller.location}
                                         </span>
                                         <span>•</span>
-                                        <span className="text-[#990033] font-medium">{item.seller.distance}</span>
+                                        <span className="text-brand font-medium">{item.seller.distance}</span>
                                     </div>
                                 </div>
                             </div>
@@ -252,7 +252,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({
                         {/* Buy Button */}
                         <button
                             onClick={handleBuy}
-                            className="w-full py-3.5 px-6 bg-gradient-to-r from-[#990033] to-[#cc0044] hover:from-[#800029] hover:to-[#b3003c] text-white font-bold rounded-2xl shadow-lg shadow-rose-500/25 flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-xl hover:shadow-rose-500/30 active:scale-[0.98]"
+                            className="w-full py-3.5 px-6 bg-gradient-to-r from-brand to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-bold rounded-2xl shadow-lg shadow-brand/25 flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-xl hover:shadow-brand/30 active:scale-[0.98]"
                         >
                             <ShoppingCart size={18} />
                             Buy Now
@@ -301,7 +301,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({
                     <div className="p-4 space-y-2">
                         <h3 className="font-bold text-gray-900 text-sm line-clamp-1">{item.title}</h3>
                         <div className="flex items-center justify-between">
-                            <span className="text-lg font-black text-[#990033]">{item.price}</span>
+                            <span className="text-lg font-black text-brand">{item.price}</span>
                             <div className="flex items-center gap-1 text-xs text-gray-400">
                                 <MapPin size={10} />
                                 <span>{item.seller.distance}</span>
@@ -337,7 +337,7 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({
             />
             <div className="flex-1 min-w-0">
                 <h4 className="font-semibold text-gray-900 text-sm truncate">{item.title}</h4>
-                <p className="text-lg font-black text-[#990033]">{item.price}</p>
+                <p className="text-lg font-black text-brand">{item.price}</p>
                 <span className="text-xs text-gray-400">{item.seller.location}</span>
             </div>
             <Heart
@@ -364,7 +364,7 @@ export const MarketplaceCardDemo: React.FC = () => {
             {/* Full Variant */}
             <section className="space-y-4">
                 <h2 className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                    <span className="w-3 h-3 rounded-full bg-gradient-to-r from-[#990033] to-[#cc0044]" />
+                    <span className="w-3 h-3 rounded-full bg-gradient-to-r from-brand to-brand-600" />
                     Full Card (Main View)
                 </h2>
                 <div className="flex justify-center">

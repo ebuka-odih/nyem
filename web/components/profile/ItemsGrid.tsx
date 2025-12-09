@@ -137,7 +137,7 @@ export const ItemsGrid: React.FC<ItemsGridProps> = ({
 
               {/* Price/Condition Badge */}
               {item.price && (
-                <div className="absolute top-2 left-2 bg-gradient-to-r from-[#990033] to-[#cc0044] text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
+                <div className="absolute top-2 left-2 bg-gradient-to-r from-brand to-brand-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-md">
                   {item.price}
                 </div>
               )}

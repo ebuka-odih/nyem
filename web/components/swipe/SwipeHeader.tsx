@@ -104,7 +104,7 @@ export const SwipeHeader: React.FC<SwipeHeaderProps> = ({
             className="flex-1 flex items-center justify-between px-2.5 py-2 rounded-lg border border-gray-200 bg-white text-[11px] font-semibold text-gray-700 active:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed hover:border-gray-300 transition-all"
           >
             <div className="flex items-center gap-1.5">
-              <MapPin size={11} className="text-[#990033]" />
+              <MapPin size={11} className="text-brand" />
               <span className="text-gray-700">
                 {truncateText(selectedLocation === 'all' ? 'All Locations' : selectedLocation)}
               </span>

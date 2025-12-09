@@ -101,11 +101,11 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
           {isMarketplace ? (
             <div className="flex items-center gap-2">
               {/* Price badge */}
-              <span className="inline-flex items-center bg-white/95 backdrop-blur-md text-[#990033] text-sm font-black px-3 py-1.5 rounded-xl shadow-lg">
+              <span className="inline-flex items-center bg-white/95 backdrop-blur-md text-brand text-sm font-black px-3 py-1.5 rounded-xl shadow-lg">
                 {item.price}
               </span>
               {/* For Sale tag */}
-              <span className="inline-flex items-center gap-1 bg-[#990033]/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
+              <span className="inline-flex items-center gap-1 bg-brand/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">
                 <ShoppingBag size={9} />
                 Sale
               </span>
@@ -176,7 +176,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
         {isMarketplace ? (
           <button
             onClick={handleBuyClick}
-            className="w-full bg-gradient-to-r from-[#990033] to-[#b30039] rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg shadow-[#990033]/15 hover:shadow-xl hover:shadow-[#990033]/25 active:scale-[0.98] transition-all group"
+            className="w-full bg-gradient-to-r from-brand to-brand-600 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg shadow-brand/15 hover:shadow-xl hover:shadow-brand/25 active:scale-[0.98] transition-all group"
           >
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">

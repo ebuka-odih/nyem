@@ -78,7 +78,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         {loading && (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <Loader2 size={32} className="text-[#990033] animate-spin" />
+              <Loader2 size={32} className="text-brand animate-spin" />
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">Loading items...</h3>
             <p className="text-gray-500 text-sm">Please wait while we fetch the latest listings.</p>

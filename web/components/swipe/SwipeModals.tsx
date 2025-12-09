@@ -38,7 +38,6 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
   const [customMessage, setCustomMessage] = useState('');
   const [selectedQuickMessage, setSelectedQuickMessage] = useState<number | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [messageSent, setMessageSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Generate contextual quick messages based on the item
@@ -71,7 +70,6 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
       setCustomMessage('');
       setSelectedQuickMessage(null);
       setIsSending(false);
-      setMessageSent(false);
       setError(null);
     }
   }, [showMarketplaceModal]);
@@ -112,17 +110,18 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
         },
       });
 
-      setMessageSent(true);
-      
       // Notify parent about the chat
       if (onChatStarted && response.data?.conversation?.id) {
         onChatStarted(response.data.conversation.id);
       }
 
-      // Auto-close after success animation
+      // Close modal first, then show native alert
+      onComplete();
+      
+      // Show native browser alert
       setTimeout(() => {
-        onComplete();
-      }, 1500);
+        alert(`Message sent to ${currentItem.owner.name}! You can continue the conversation in your matches.`);
+      }, 100);
 
     } catch (err: any) {
       console.error('Failed to send message:', err);
@@ -150,68 +149,68 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
 
   return (
     <AnimatePresence>
-      {/* Barter Offer Modal */}
+      {/* Barter Offer Modal - Centered Compact Modal */}
       {showOfferModal && (
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
           exit={{ opacity: 0 }} 
-          className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end justify-center"
+          className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={onCloseOffer}
         >
           <motion.div 
-            initial={{ y: "100%" }} 
-            animate={{ y: 0 }} 
-            exit={{ y: "100%" }} 
-            transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-            className="bg-white w-full rounded-t-3xl overflow-hidden max-h-[85vh] flex flex-col shadow-2xl"
+            initial={{ scale: 0.95, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }} 
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }} 
+            className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center bg-white sticky top-0 z-10">
-              <div>
-                <h3 className="font-extrabold text-xl text-gray-900">Make an Offer</h3>
-                <p className="text-sm text-gray-500">Select an item to exchange</p>
-              </div>
+            {/* Compact Header */}
+            <div className="relative p-4 pb-3 border-b border-gray-100">
+              {/* Close Button */}
               <button 
                 onClick={onCloseOffer} 
-                className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 transition-colors text-gray-600"
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400"
               >
-                <X size={24} />
+                <X size={18} />
               </button>
-            </div>
 
-            {/* Target Item Context */}
+              <h3 className="font-bold text-base text-gray-900 pr-8">Make an Offer</h3>
+              <p className="text-xs text-gray-500">Select an item to exchange</p>
+
+              {/* Target Item - Compact */}
             {currentItem && (
-              <div className="px-5 py-4 bg-gray-50 border-b border-gray-100">
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                  You Want to Exchange For:
-                </div>
-                <div className="flex items-center bg-brand/5 p-3 rounded-xl border-2 border-brand shadow-sm">
-                  <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0">
+                <div className="mt-3 flex items-center gap-2 bg-brand/5 rounded-xl p-2 border border-brand/20">
+                  <div className="w-10 h-10 rounded-lg bg-gray-200 overflow-hidden shrink-0">
                     <img src={currentItem.image} alt={currentItem.title} className="w-full h-full object-cover" />
                   </div>
-                  <div className="ml-3 flex-1 min-w-0">
-                    <h4 className="font-bold text-gray-900 text-sm truncate">{currentItem.title}</h4>
-                    <p className="text-xs text-gray-500 truncate">Owned by {currentItem.owner.name}</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 text-sm truncate">{currentItem.title}</h4>
+                    <p className="text-xs text-gray-500 truncate">by {currentItem.owner.name}</p>
                   </div>
                 </div>
+              )}
               </div>
-            )}
 
-            <div className="overflow-y-auto p-4 space-y-3 pb-8">
+            {/* Items List - Compact */}
+            <div className="p-3 max-h-[50vh] overflow-y-auto space-y-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-1 mb-1">Your Items</p>
               {MOCK_USER_ITEMS.map(item => (
                 <button 
                   key={item.id} 
                   onClick={onComplete} 
-                  className="w-full flex items-center p-3 rounded-2xl border border-gray-100 hover:border-brand hover:bg-brand/5 transition-all group text-left"
+                  className="w-full flex items-center gap-3 p-2 rounded-xl border border-gray-100 hover:border-brand hover:bg-brand/5 transition-all group text-left"
                 >
-                  <div className="w-16 h-16 rounded-xl bg-gray-200 overflow-hidden shrink-0">
+                  <div className="w-12 h-12 rounded-lg bg-gray-200 overflow-hidden shrink-0">
                     <img src={item.image} className="w-full h-full object-cover" alt={item.title} />
                   </div>
-                  <div className="ml-4 flex-1">
-                    <h4 className="font-bold text-gray-900 group-hover:text-brand transition-colors">{item.title}</h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{item.subtitle}</p>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 text-sm group-hover:text-brand transition-colors truncate">{item.title}</h4>
+                    <p className="text-xs text-gray-500">{item.subtitle}</p>
                   </div>
-                  <div className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center group-hover:bg-brand group-hover:border-brand group-hover:text-white transition-all">
-                    <Check size={16} />
+                  <div className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center group-hover:bg-brand group-hover:border-brand group-hover:text-white transition-all shrink-0">
+                    <Check size={14} />
                   </div>
                 </button>
               ))}
@@ -237,29 +236,7 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
             className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Success State */}
-            {messageSent ? (
-              <motion.div 
-                initial={{ scale: 0.8, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="p-6 text-center"
-              >
-                <motion.div 
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", delay: 0.1 }}
-                  className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
-                >
-                  <Check size={32} className="text-green-600" strokeWidth={3} />
-                </motion.div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">Message Sent!</h2>
-                <p className="text-sm text-gray-500">
-                  Your message has been sent to <strong>{currentItem?.owner.name}</strong>
-                </p>
-              </motion.div>
-            ) : (
-              <>
-                {/* Compact Header */}
+            {/* Compact Header */}
                 <div className="relative p-4 pb-3 border-b border-gray-100">
                   {/* Close Button */}
                   <button 
@@ -366,7 +343,7 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
                       rows={2}
                     />
                   </div>
-                </div>
+            </div>
 
                 {/* Action Buttons - Compact */}
                 <div className="p-4 pt-0 space-y-2">
@@ -388,17 +365,15 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
                       </>
                     )}
                   </Button>
-                  <button 
-                    onClick={onComplete} 
+              <button 
+                onClick={onComplete} 
                     disabled={isSending}
                     className="w-full py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
-                  >
+              >
                     Skip & Keep Swiping
                     <ArrowRight size={14} />
-                  </button>
-                </div>
-              </>
-            )}
+              </button>
+            </div>
           </motion.div>
         </motion.div>
       )}

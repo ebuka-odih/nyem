@@ -22,7 +22,7 @@ export const ItemDetails: React.FC<ItemDetailsProps> = ({ item, onImageClick }) 
           {allImages.map((img, i) => (
             <div 
               key={i} 
-              className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-100 cursor-pointer hover:border-[#990033] transition-colors"
+              className="w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-100 cursor-pointer hover:border-brand transition-colors"
               onClick={() => onImageClick?.(i)}
             >
               <img src={img} alt={`Gallery ${i + 1}`} className="w-full h-full object-cover" />

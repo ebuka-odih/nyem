@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryLocationController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\ImageUploadController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MatchController;
@@ -56,6 +57,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/nearby', [LocationController::class, 'nearby']);
         Route::get('/status', [LocationController::class, 'status']);
     });
+
+    // Image upload endpoints
+    Route::post('/images/upload', [ImageUploadController::class, 'upload']);
+    Route::post('/images/upload-multiple', [ImageUploadController::class, 'uploadMultiple']);
+    Route::post('/images/upload-base64', [ImageUploadController::class, 'uploadBase64']);
+    Route::post('/images/upload-multiple-base64', [ImageUploadController::class, 'uploadMultipleBase64']);
 
     Route::post('/items', [ItemController::class, 'store']);
     Route::get('/items/{item}', [ItemController::class, 'show']);

@@ -418,32 +418,44 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
             </div>
           </div>
 
-          {/* Area (conditional) */}
-          {filteredAreas.length > 0 && (
-            <div>
-              <label className="block text-brand font-bold text-sm mb-2">
-                Area
-              </label>
-              <div className="relative">
-                <select
-                  value={areaId}
-                  onChange={(e) => setAreaId(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer"
-                >
-                  <option value="">Select your area (optional)</option>
-                  {filteredAreas.map(area => (
-                    <option key={area.id} value={area.id}>
-                      {area.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown 
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
-                  size={20} 
-                />
-              </div>
+          {/* Area */}
+          <div>
+            <label className="block text-brand font-bold text-sm mb-2">
+              <MapPin size={14} className="inline mr-1" />
+              Area {filteredAreas.length > 0 ? '(Optional)' : ''}
+            </label>
+            <div className="relative">
+              <select
+                value={areaId}
+                onChange={(e) => setAreaId(e.target.value ? Number(e.target.value) : '')}
+                disabled={!cityId || filteredAreas.length === 0}
+                className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all appearance-none cursor-pointer disabled:bg-gray-50 disabled:cursor-not-allowed"
+              >
+                <option value="">
+                  {!cityId 
+                    ? 'Select a city first' 
+                    : filteredAreas.length === 0 
+                      ? 'No areas available for this city'
+                      : 'Select your area (optional)'}
+                </option>
+                {filteredAreas.map(area => (
+                  <option key={area.id} value={area.id}>
+                    {area.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown 
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" 
+                size={20} 
+              />
             </div>
-          )}
+            {!cityId && (
+              <p className="text-gray-400 text-xs mt-1">Please select a city first</p>
+            )}
+            {cityId && filteredAreas.length === 0 && (
+              <p className="text-gray-400 text-xs mt-1">No areas available for this city</p>
+            )}
+          </div>
 
           {/* Bio */}
           <div>

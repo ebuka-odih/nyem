@@ -77,7 +77,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
             {/* Scrollable Content Container */}
             <div className="flex-1 overflow-y-auto no-scrollbar" style={{ paddingBottom: 'calc(90px + env(safe-area-inset-bottom, 0px))' }}>
                 {/* Header with gradient background */}
-                <div className="relative h-48 bg-gradient-to-br from-[#990033] via-[#b30039] to-[#cc0044] shrink-0">
+                <div className="relative h-48 bg-gradient-to-br from-brand via-brand-600 to-brand-700 shrink-0">
                     {/* Decorative circles */}
                     <div className="absolute top-10 right-10 w-32 h-32 rounded-full bg-white/5" />
                     <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-white/5" />
@@ -111,8 +111,8 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                             <span>{userData.location}</span>
                             {userData.distance && userData.distance !== 'Unknown' && (
                                 <>
-                                    <MapPin size={14} className="text-[#990033] ml-1" />
-                                    <span className="text-[#990033] font-medium">{userData.distance} away</span>
+                                    <MapPin size={14} className="text-brand ml-1" />
+                                    <span className="text-brand font-medium">{userData.distance} away</span>
                                 </>
                             )}
                         </div>
@@ -196,7 +196,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                         {/* Items Listed */}
                         <div className="flex flex-col items-center px-4">
                             <div className="flex items-center gap-1 mb-1">
-                                <Package size={16} className="text-[#990033]" />
+                                <Package size={16} className="text-brand" />
                                 <span className="text-lg font-bold text-gray-900">{userData.itemsListed}</span>
                             </div>
                             <span className="text-xs text-gray-500">Items</span>
@@ -217,7 +217,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                     {/* About Section */}
                     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
                         <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <span className="w-1 h-4 bg-[#990033] rounded-full" />
+                            <span className="w-1 h-4 bg-brand rounded-full" />
                             About
                         </h2>
                         <p className="text-gray-600 text-sm leading-relaxed">
@@ -260,7 +260,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                                 <span className="w-1 h-4 bg-purple-500 rounded-full" />
                                 Listings
                             </h2>
-                            <button className="text-xs text-[#990033] font-medium flex items-center gap-1">
+                            <button className="text-xs text-brand font-medium flex items-center gap-1">
                                 View All <ExternalLink size={12} />
                             </button>
                         </div>
@@ -292,7 +292,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                                 <span className="w-1 h-4 bg-amber-400 rounded-full" />
                                 Reviews
                             </h2>
-                            <button className="text-xs text-[#990033] font-medium flex items-center gap-1">
+                            <button className="text-xs text-brand font-medium flex items-center gap-1">
                                 View All <ExternalLink size={12} />
                             </button>
                         </div>
@@ -326,7 +326,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                     <div className="flex gap-3 max-w-md mx-auto">
                         <button
                             onClick={handleChatClick}
-                            className="flex-1 bg-gradient-to-r from-[#990033] to-[#cc0044] text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-[#990033]/25 hover:shadow-xl hover:shadow-[#990033]/30 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+                            className="flex-1 bg-gradient-to-r from-brand to-brand-600 text-white font-semibold py-3.5 rounded-2xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-brand/30 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
                         >
                             <MessageCircle size={18} strokeWidth={2} />
                             {isAuthenticated ? 'Send Message' : 'Login to Chat'}

@@ -283,13 +283,38 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       }
       // Services items might not need price or looking_for, depending on backend requirements
 
-      // TODO: Implement image upload endpoint
-      // For now, photos are stored locally but not sent to backend
-      // The backend expects photo URLs (max 2048 chars), not base64 data URIs
-      // Once image upload is implemented, upload photos first and then include URLs here
-      // if (photos.length > 0) {
-      //   payload.photos = uploadedPhotoUrls;
-      // }
+      // Upload images first if we have photos
+      // For new items, always upload photos. For edits, only upload if photos have changed
+      if (photos.length > 0) {
+        // Check if photos are already URLs (from existing item) or base64 data URIs (new uploads)
+        const needsUpload = photos.some(photo => photo.startsWith('data:image/'));
+        
+        if (needsUpload) {
+          // Upload base64 images
+          try {
+            const uploadResponse = await apiFetch(ENDPOINTS.images.uploadMultipleBase64, {
+              method: 'POST',
+              token,
+              body: {
+                images: photos,
+              },
+            });
+            
+            if (uploadResponse.success && uploadResponse.urls && uploadResponse.urls.length > 0) {
+              payload.photos = uploadResponse.urls;
+            } else {
+              throw new Error('Failed to upload images. Please try again.');
+            }
+          } catch (uploadError: any) {
+            setError(uploadError.message || 'Failed to upload images. Please try again.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Photos are already URLs (from existing item), use them directly
+          payload.photos = photos;
+        }
+      }
 
       // Use PUT for updates, POST for new items
       const endpoint = isEditMode 

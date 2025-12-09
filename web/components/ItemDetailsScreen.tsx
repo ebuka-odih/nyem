@@ -106,7 +106,7 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
                     <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
                     <div className="absolute bottom-12 left-4 right-4 text-white pointer-events-none">
                         {isMarketplace ? (
-                            <div className="inline-block bg-gradient-to-r from-[#990033] to-[#cc0044] text-white text-sm font-bold px-4 py-1.5 rounded-full mb-2 shadow-lg">
+                            <div className="inline-block bg-gradient-to-r from-brand to-brand-600 text-white text-sm font-bold px-4 py-1.5 rounded-full mb-2 shadow-lg">
                                 {item.price}
                             </div>
                         ) : (
@@ -124,7 +124,7 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
                 {/* Owner Info - Enhanced */}
                 <div className="px-6 pb-6">
                     <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
-                        <span className="w-1 h-4 bg-[#990033] rounded-full" />
+                        <span className="w-1 h-4 bg-brand rounded-full" />
                         Listed by
                     </h3>
                     <OwnerInfo owner={item.owner} />
@@ -147,7 +147,7 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
                         {/* Chat Button with Auth Check */}
                         <button
                             onClick={handleChatClick}
-                            className="flex-[1.4] bg-gradient-to-r from-[#990033] to-[#cc0044] text-white font-semibold text-sm py-3 rounded-xl shadow-lg shadow-[#990033]/25 hover:shadow-xl hover:shadow-[#990033]/30 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
+                            className="flex-[1.4] bg-gradient-to-r from-brand to-brand-600 text-white font-semibold text-sm py-3 rounded-xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-brand/30 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
                         >
                             {isAuthenticated ? (
                                 <>

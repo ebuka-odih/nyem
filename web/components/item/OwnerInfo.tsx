@@ -40,8 +40,8 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({
               <span>{owner.location}</span>
               {owner.distance && owner.distance !== 'Unknown' && (
                 <>
-                  <MapPin size={12} className="mx-1 text-[#990033]" />
-                  <span className="text-[#990033] font-medium">{owner.distance} away</span>
+                  <MapPin size={12} className="mx-1 text-brand" />
+                  <span className="text-brand font-medium">{owner.distance} away</span>
                 </>
               )}
             </div>
