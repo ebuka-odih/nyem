@@ -111,9 +111,9 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   const PROMO_CARD_INTERVAL = 5; // Show promo card every N swipes
   
   // Track previous filter values to detect when they change
-  const prevFiltersRef = useRef<{ tab: string; category: string; location: string }>({
+  const prevFiltersRef = useRef<{ tab: string; categoryId: number | null; location: string }>({
     tab: initialTab,
-    category: 'All Categories',
+    categoryId: null,
     location: 'all',
   });
 
@@ -174,6 +174,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showLocationDropdown, setShowLocationDropdown] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [selectedLocation, setSelectedLocation] = useState('all');
 
   // Categories and Locations from API
@@ -196,6 +197,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
 
         // Reset selected category when tab changes
         setSelectedCategory('All Categories');
+        setSelectedCategoryId(null);
 
         // Fetch categories filtered by parent (activeTab)
         const parentCategory = getParentCategoryName(activeTab);
@@ -250,8 +252,8 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         params.push(`type=${encodeURIComponent(itemType)}`);
 
         // Add category filter if not "All Categories"
-        if (selectedCategory && selectedCategory !== 'All Categories') {
-          params.push(`category=${encodeURIComponent(selectedCategory)}`);
+        if (selectedCategoryId) {
+          params.push(`category_id=${selectedCategoryId}`);
         }
 
         // Add city filter
@@ -267,6 +269,9 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           feedUrl += `?${params.join('&')}`;
         }
 
+        console.log('[SwipeScreen] Fetching items with URL:', feedUrl);
+        console.log('[SwipeScreen] Filter state:', { selectedCategory, selectedCategoryId, selectedLocation });
+
         // Fetch items - token is optional (for browsing without login)
         const res = await apiFetch(feedUrl, { token: token || undefined });
 
@@ -275,6 +280,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         console.log(`[SwipeScreen] Fetched ${apiItems.length} items for ${activeTab} tab`, {
           type: itemType,
           category: selectedCategory,
+          categoryId: selectedCategoryId,
           location: selectedLocation,
           items: apiItems.length,
         });
@@ -291,6 +297,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           price: item.price ? (typeof item.price === 'string' ? `₦${item.price}` : `₦${item.price}`) : undefined,
           category: item.category || undefined,
           owner: {
+            id: item.user?.id || item.owner?.id, // Seller's user ID for starting conversations
             name: item.user?.username || item.owner?.name || 'Unknown',
             image: item.user?.profile_photo || item.owner?.image || 'https://i.pravatar.cc/150',
             // Use item.city (where the item is located) instead of user.city (user's current location)
@@ -313,9 +320,13 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           gallery: item.images || item.gallery || [item.image].filter(Boolean),
         }));
 
-        // Use mock data as fallback if API returns no items (for design preview)
+        // Use mock data as fallback ONLY if API returns no items AND no filters are applied
+        // This ensures filtered results show empty state rather than mock data
         let finalItems: SwipeItem[];
-        if (transformedItems.length === 0) {
+        const hasFiltersApplied = selectedCategoryId !== null || selectedLocation !== 'all';
+        
+        if (transformedItems.length === 0 && !hasFiltersApplied) {
+          // No items and no filters - use mock data for design preview
           const mockItems = activeTab === 'Marketplace'
             ? MOCK_MARKETPLACE_ITEMS.map(item => ({
               ...item,
@@ -324,13 +335,14 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
             : MOCK_BARTER_ITEMS;
           finalItems = mockItems as SwipeItem[];
         } else {
+          // Use API results (even if empty when filters are applied)
           finalItems = transformedItems;
         }
         
         setItems(finalItems);
         
         // Check if category/location changed (not just tab)
-        const categoryChanged = prevFiltersRef.current.category !== selectedCategory;
+        const categoryChanged = prevFiltersRef.current.categoryId !== selectedCategoryId;
         const locationChanged = prevFiltersRef.current.location !== selectedLocation;
         
         if (categoryChanged || locationChanged) {
@@ -352,7 +364,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         // Update ref to track current filters
         prevFiltersRef.current = {
           tab: activeTab,
-          category: selectedCategory,
+          categoryId: selectedCategoryId,
           location: selectedLocation,
         };
       } catch (error: any) {
@@ -375,7 +387,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     };
 
     fetchItems();
-  }, [activeTab, selectedCategory, selectedLocation, token]);
+  }, [activeTab, selectedCategoryId, selectedLocation, token]);
 
   const currentItem = items[currentIndex];
 
@@ -546,11 +558,20 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   };
 
   const handleCategorySelect = (category: string) => {
+    console.log('[SwipeScreen] Category selected:', category);
     setSelectedCategory(category);
+    // Find and store the category ID for API filtering
+    if (category === 'All Categories') {
+      setSelectedCategoryId(null);
+    } else {
+      const cat = categories.find(c => c.name === category);
+      setSelectedCategoryId(cat?.id || null);
+    }
     setShowCategoryDropdown(false);
   };
 
   const handleLocationSelect = (location: string) => {
+    console.log('[SwipeScreen] Location selected:', location);
     setSelectedLocation(location);
     setShowLocationDropdown(false);
   };

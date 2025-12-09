@@ -45,6 +45,7 @@ export const ENDPOINTS = {
   },
   conversations: {
     list: '/conversations',
+    start: '/conversations/start',
     messages: (id: string | number) => `/conversations/${id}/messages`,
     matches: (id: string | number) => `/conversations/${id}/matches`,
   },

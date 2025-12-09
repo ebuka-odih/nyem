@@ -17,6 +17,7 @@ export interface FeatureItem {
 }
 
 export interface Owner {
+    id?: string;  // Seller's user ID for starting conversations
     name: string;
     image: string;
     location: string;

@@ -2,12 +2,150 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ConversationCreated;
+use App\Events\MessageSent;
 use App\Models\UserConversation;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ConversationController extends Controller
 {
+    /**
+     * Start a new conversation with a user and optionally send a first message.
+     * If a conversation already exists between the users, returns that conversation.
+     */
+    public function start(Request $request)
+    {
+        $data = $request->validate([
+            'recipient_id' => 'required|uuid|exists:users,id',
+            'message_text' => 'nullable|string|max:1000',
+            'item_id' => 'nullable|uuid|exists:items,id', // Optional: the item context
+        ]);
+
+        $user = $request->user();
+        $recipientId = $data['recipient_id'];
+
+        // Prevent self-conversation
+        if ($user->id === $recipientId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot start a conversation with yourself',
+            ], 422);
+        }
+
+        // Check if blocked
+        if ($this->isBlockedBetween($user, $recipientId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to start conversation with this user',
+            ], 403);
+        }
+
+        // Get or create conversation (user IDs must be sorted for consistency)
+        $userIds = [$user->id, $recipientId];
+        sort($userIds);
+
+        $conversationCreated = false;
+        $message = null;
+
+        $result = DB::transaction(function () use ($userIds, $user, $recipientId, $data, &$conversationCreated) {
+            // Get or create conversation
+            $conversation = UserConversation::firstOrCreate(
+                [
+                    'user1_id' => $userIds[0],
+                    'user2_id' => $userIds[1],
+                ]
+            );
+
+            $conversationCreated = $conversation->wasRecentlyCreated;
+
+            // Send first message if provided
+            $message = null;
+            if (!empty($data['message_text'])) {
+                $messageText = trim($data['message_text']);
+                
+                // Ensure proper UTF-8 encoding
+                $messageText = mb_convert_encoding($messageText, 'UTF-8', 'UTF-8');
+
+                $message = Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_id' => $user->id,
+                    'receiver_id' => $recipientId,
+                    'message_text' => $messageText,
+                ]);
+
+                // Update conversation's updated_at timestamp
+                $conversation->touch();
+            }
+
+            return [
+                'conversation' => $conversation,
+                'message' => $message,
+            ];
+        });
+
+        $conversation = $result['conversation'];
+        $message = $result['message'];
+
+        // Get other user details
+        $otherUser = User::find($recipientId);
+
+        // Broadcast events
+        if ($conversationCreated) {
+            broadcast(new ConversationCreated($conversation));
+
+            // CUSTOM WEBSOCKET BROADCAST - Conversation Created
+            try {
+                $convEvent = new ConversationCreated($conversation);
+                Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
+                    'type' => 'conversation.created',
+                    'receivers' => [$conversation->user1_id, $conversation->user2_id],
+                    'data' => $convEvent->broadcastWith()
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Custom WebSocket broadcast (conversation) failed: ' . $e->getMessage());
+            }
+        }
+
+        if ($message) {
+            broadcast(new MessageSent($message));
+
+            // CUSTOM WEBSOCKET BROADCAST - Message Sent
+            try {
+                Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
+                    'type' => 'message.sent',
+                    'receivers' => [$recipientId, $user->id],
+                    'data' => [
+                        'message' => $message->load(['sender', 'receiver']),
+                        'conversation_id' => $conversation->id
+                    ]
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Custom WebSocket broadcast (message) failed: ' . $e->getMessage());
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $conversationCreated ? 'Conversation started successfully' : 'Conversation found',
+            'data' => [
+                'conversation' => [
+                    'id' => $conversation->id,
+                    'conversation_id' => $conversation->id,
+                    'other_user' => $otherUser,
+                    'created_at' => $conversation->created_at,
+                    'updated_at' => $conversation->updated_at,
+                ],
+                'first_message' => $message ? $message->load(['sender', 'receiver']) : null,
+                'conversation_created' => $conversationCreated,
+            ],
+        ], $conversationCreated ? 201 : 200);
+    }
+
     /**
      * List all conversations for authenticated user
      */

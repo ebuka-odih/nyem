@@ -74,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/matches/{match}', [MatchController::class, 'show']);
 
     Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::post('/conversations/start', [ConversationController::class, 'start']);
     Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::get('/conversations/{conversation}/matches', [ConversationController::class, 'matches']);
 
