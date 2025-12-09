@@ -103,7 +103,10 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             </div>
             
             {/* Options List */}
-            <div className="flex-1 overflow-y-auto px-2 py-2">
+            <div 
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 py-2"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+            >
               {filteredOptions.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-3">
@@ -113,20 +116,17 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                   <p className="text-gray-400 text-[10px] mt-0.5">Try a different search term</p>
                 </div>
               ) : (
-                <div className="space-y-0.5">
-                  {filteredOptions.map((option, index) => {
+                <div className="space-y-0.5 pb-6">
+                  {filteredOptions.map((option) => {
                     const isSelected = selectedValue === option || 
                       (type === 'location' && option === 'all' && selectedValue === 'all');
                     const displayValue = type === 'location' && option === 'all' ? 'All Locations' : option;
                     
                     return (
-                      <motion.button
+                      <button
                         key={option}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.015 }}
                         onClick={() => handleSelect(option)}
-                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-all ${
+                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-lg transition-colors ${
                           isSelected
                             ? 'bg-gradient-to-r from-[#990033]/10 to-[#990033]/5 border border-[#990033]/20'
                             : 'hover:bg-gray-50 border border-transparent'
@@ -153,15 +153,12 @@ export const FilterModal: React.FC<FilterModalProps> = ({
                         ) : (
                           <ChevronRight size={14} className="text-gray-300" />
                         )}
-                      </motion.button>
+                      </button>
                     );
                   })}
                 </div>
               )}
             </div>
-            
-            {/* Bottom safe area */}
-            <div className="h-4 bg-white" />
           </motion.div>
         </>
       )}
