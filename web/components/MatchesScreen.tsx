@@ -31,7 +31,7 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
-    const fetchMatches = async () => {
+    const fetchConversations = async () => {
       if (!token) {
         setLoading(false);
         return;
@@ -39,22 +39,22 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
 
       setLoading(true);
       try {
-        // Fetch matches
-        const matchesRes = await apiFetch(ENDPOINTS.matches.list, { token });
-        const matchesData = matchesRes.data || matchesRes.matches || [];
+        // Fetch conversations (chat threads) instead of matches
+        const conversationsRes = await apiFetch(ENDPOINTS.conversations.list, { token });
+        const conversationsData = conversationsRes.data || conversationsRes.conversations || [];
 
-        // Transform API matches to Match format
-        const transformedMatches: Match[] = matchesData.map((match: any) => {
-          const otherUser = match.user1 || match.user2 || match.other_user || {};
-          const lastMessage = match.last_message || {};
+        // Transform API conversations to Match format for display
+        const transformedMatches: Match[] = conversationsData.map((conversation: any) => {
+          const otherUser = conversation.other_user || {};
+          const lastMessage = conversation.last_message || {};
           
           return {
-            id: match.id,
+            id: conversation.id || conversation.conversation_id,
             name: otherUser.username || 'Unknown',
-            message: lastMessage.content || 'Start a conversation',
+            message: lastMessage.message_text || lastMessage.content || 'Start a conversation',
             avatar: otherUser.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.username || 'User')}`,
-            time: match.updated_at ? formatTime(match.updated_at) : 'Just now',
-            unread: match.unread_count > 0,
+            time: conversation.updated_at ? formatTime(conversation.updated_at) : 'Just now',
+            unread: conversation.unread_count > 0,
           };
         });
 
@@ -62,20 +62,20 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
 
         // Fetch pending requests count
         try {
-          const pendingRes = await apiFetch(ENDPOINTS.swipes.pendingRequests, { token });
-          const pendingData = pendingRes.data || pendingRes.requests || [];
+          const pendingRes = await apiFetch(ENDPOINTS.tradeOffers.pending, { token });
+          const pendingData = pendingRes.data || pendingRes.trade_offers || [];
           setPendingCount(pendingData.length);
         } catch (error) {
           console.error('Failed to fetch pending requests:', error);
         }
       } catch (error) {
-        console.error('Failed to fetch matches:', error);
+        console.error('Failed to fetch conversations:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMatches();
+    fetchConversations();
   }, [token]);
 
   const formatTime = (dateString: string): string => {
