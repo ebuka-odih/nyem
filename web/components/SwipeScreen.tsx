@@ -105,8 +105,8 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     return dismissed !== 'true';
   });
   
-  // Track swipe count for promo card (Marketplace only, every 5 swipes)
-  const [marketplaceSwipeCount, setMarketplaceSwipeCount] = useState(0);
+  // Track swipe count for promo card (Marketplace and Swap tabs, every 5 swipes)
+  const [swipeCount, setSwipeCount] = useState(0);
   const [showPromoCard, setShowPromoCard] = useState(false);
   const PROMO_CARD_INTERVAL = 5; // Show promo card every N swipes
   
@@ -434,10 +434,10 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     setShowOfferModal(false);
     setShowMarketplaceModal(false);
     
-    // Track swipe count for Marketplace tab (for promo card)
-    if (activeTab === 'Marketplace') {
-      const newCount = marketplaceSwipeCount + 1;
-      setMarketplaceSwipeCount(newCount);
+    // Track swipe count for Marketplace and Swap tabs (for promo card)
+    if (activeTab === 'Marketplace' || activeTab === 'Swap') {
+      const newCount = swipeCount + 1;
+      setSwipeCount(newCount);
       // Show promo card every PROMO_CARD_INTERVAL swipes
       if (newCount > 0 && newCount % PROMO_CARD_INTERVAL === 0) {
         setShowPromoCard(true);
@@ -591,10 +591,10 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         showPromoCard={showPromoCard}
         onLike={handleLike}
         onSwipeLeft={async () => {
-          // Track swipe count for Marketplace tab (for promo card)
-          if (activeTab === 'Marketplace') {
-            const newCount = marketplaceSwipeCount + 1;
-            setMarketplaceSwipeCount(newCount);
+          // Track swipe count for Marketplace and Swap tabs (for promo card)
+          if (activeTab === 'Marketplace' || activeTab === 'Swap') {
+            const newCount = swipeCount + 1;
+            setSwipeCount(newCount);
             // Show promo card every PROMO_CARD_INTERVAL swipes
             if (newCount > 0 && newCount % PROMO_CARD_INTERVAL === 0) {
               setShowPromoCard(true);

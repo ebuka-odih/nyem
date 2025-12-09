@@ -81,8 +81,8 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
   useEffect(() => {
     if (isAuthenticated && user) {
       // Check if user needs to complete profile before uploading
-      // Required: username and city. Profile photo is recommended but optional.
-      const needsProfileSetup = !user.username || !user.city_id;
+      // Required: display name, username, and city. Profile photo is recommended but optional.
+      const needsProfileSetup = !user.name || !user.username || !user.city_id;
       setShowPreUploadProfile(needsProfileSetup);
     } else if (!isAuthenticated) {
       // If not authenticated, show login prompt (handled by parent)

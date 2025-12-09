@@ -18,6 +18,7 @@ export const ENDPOINTS = {
     me: '/profile/me',
     update: '/profile/update',
     updatePassword: '/profile/update-password',
+    checkUsername: '/profile/check-username',
   },
   items: {
     feed: '/items/feed',

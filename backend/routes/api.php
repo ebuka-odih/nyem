@@ -25,6 +25,9 @@ Route::get('/locations/cities', [CategoryLocationController::class, 'cities']);
 Route::get('/locations/cities/{cityId}/areas', [CategoryLocationController::class, 'areas']);
 Route::get('/locations/areas', [CategoryLocationController::class, 'areas']); // Alternative: ?city_id=123
 
+// Public endpoint for username availability check
+Route::post('/profile/check-username', [ProfileController::class, 'checkUsername']);
+
 // Public feed endpoint - works with or without authentication
 Route::get('/items/feed', [ItemController::class, 'feed']);
 

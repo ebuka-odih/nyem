@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Location;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
@@ -10,6 +11,36 @@ use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
+    /**
+     * Check if a username is available (unique)
+     * Public endpoint for real-time validation
+     */
+    public function checkUsername(Request $request)
+    {
+        $data = $request->validate([
+            'username' => 'required|string|min:3|max:255',
+            'exclude_user_id' => 'sometimes|string', // UUID of user to exclude (for editing own profile)
+        ]);
+
+        $username = strtolower(trim($data['username']));
+        
+        // Build query to check username
+        $query = User::where('username', $username);
+        
+        // Exclude current user if updating their own profile
+        if (!empty($data['exclude_user_id'])) {
+            $query->where('id', '!=', $data['exclude_user_id']);
+        }
+        
+        $exists = $query->exists();
+        
+        return response()->json([
+            'available' => !$exists,
+            'username' => $username,
+            'message' => $exists ? 'This username is already taken' : 'Username is available',
+        ]);
+    }
+
     public function me(Request $request)
     {
         $user = $request->user()->loadCount('items')->load(['cityLocation', 'areaLocation']);

@@ -1,19 +1,122 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
-import { ArrowLeft, Camera, User } from 'lucide-react';
+import { ArrowLeft, Camera, User, MapPin, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { apiFetch } from '../utils/api';
+import { ENDPOINTS } from '../constants/endpoints';
 
 interface SetupProfileScreenProps {
   onComplete: () => void;
   onBack: () => void;
 }
 
+interface City {
+  id: number;
+  name: string;
+  slug: string;
+  sort_order?: number;
+}
+
+interface Area {
+  id: number;
+  name: string;
+  slug: string;
+  parent_id: number;
+  sort_order?: number;
+}
+
 export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComplete, onBack }) => {
   const { updateProfile, user } = useAuth();
+  const [displayname, setDisplayname] = useState((user as any)?.name || '');
   const [username, setUsername] = useState(user?.username || '');
-  const [location, setLocation] = useState(user?.city || '');
+  const [cityId, setCityId] = useState<number | ''>(user?.city_id || '');
+  const [areaId, setAreaId] = useState<number | ''>(user?.area_id || '');
+  const [bio, setBio] = useState(user?.bio || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Location data
+  const [cities, setCities] = useState<City[]>([]);
+  const [areas, setAreas] = useState<Area[]>([]);
+  const [loadingCities, setLoadingCities] = useState(true);
+  const [loadingAreas, setLoadingAreas] = useState(false);
+
+  // Fetch cities on mount
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        setLoadingCities(true);
+        const res = await apiFetch(ENDPOINTS.locationsCities);
+        const citiesData = res.data?.cities || res.cities || [];
+        setCities(citiesData);
+      } catch (err) {
+        console.error('Failed to fetch cities:', err);
+        setError('Failed to load cities. Please try again.');
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+
+    fetchCities();
+  }, []);
+
+  // Fetch areas when city is selected
+  useEffect(() => {
+    const fetchAreas = async () => {
+      if (!cityId) {
+        setAreas([]);
+        setAreaId('');
+        return;
+      }
+
+      try {
+        setLoadingAreas(true);
+        const res = await apiFetch(ENDPOINTS.locationsAreas(cityId));
+        const areasData = res.data?.areas || res.areas || [];
+        setAreas(areasData);
+        
+        // If user had an area_id but it's not in the new city's areas, clear it
+        if (areaId && !areasData.find((a: Area) => a.id === areaId)) {
+          setAreaId('');
+        }
+      } catch (err) {
+        console.error('Failed to fetch areas:', err);
+        setAreas([]);
+      } finally {
+        setLoadingAreas(false);
+      }
+    };
+
+    fetchAreas();
+  }, [cityId]);
+
+  // Initialize form when user data loads
+  useEffect(() => {
+    if (user) {
+      setDisplayname((user as any)?.name || '');
+      setUsername(user.username || '');
+      setCityId(user.city_id || '');
+      setAreaId(user.area_id || '');
+      setBio(user.bio || '');
+      
+      // If user has city_id but areas aren't loaded yet, fetch them
+      if (user.city_id && areas.length === 0) {
+        const fetchAreas = async () => {
+          try {
+            setLoadingAreas(true);
+            const res = await apiFetch(ENDPOINTS.locationsAreas(user.city_id!));
+            const areasData = res.data?.areas || res.areas || [];
+            setAreas(areasData);
+          } catch (err) {
+            console.error('Failed to fetch areas:', err);
+          } finally {
+            setLoadingAreas(false);
+          }
+        };
+        fetchAreas();
+      }
+    }
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,12 +127,30 @@ export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComple
       return;
     }
 
+    if (!cityId) {
+      setError('City is required');
+      return;
+    }
+
     setLoading(true);
     try {
-      await updateProfile({
+      const updateData: any = {
         username: username.trim(),
-        city: location || undefined,
-      });
+        city_id: cityId,
+        bio: bio || undefined,
+      };
+
+      // Add name (displayname) if provided
+      if (displayname.trim()) {
+        updateData.name = displayname.trim();
+      }
+
+      // Add area_id if selected
+      if (areaId) {
+        updateData.area_id = areaId;
+      }
+
+      await updateProfile(updateData);
       onComplete();
     } catch (err: any) {
       setError(err.message || 'Failed to update profile. Please try again.');
@@ -81,9 +202,22 @@ export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComple
                     </div>
                 </div>
 
+                {/* Display Name Input */}
+                <div className="flex flex-col space-y-2 mb-6">
+                    <label className="text-brand font-bold text-sm">Display Name</label>
+                    <input 
+                        type="text" 
+                        value={displayname}
+                        onChange={(e) => setDisplayname(e.target.value)}
+                        placeholder="Your display name" 
+                        className="border-b border-gray-200 pb-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-brand font-medium text-lg w-full bg-transparent transition-colors rounded-none"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">This is how your name appears to others</p>
+                </div>
+
                 {/* Username Input */}
                 <div className="flex flex-col space-y-2 mb-6">
-                    <label className="text-brand font-bold text-sm">Username</label>
+                    <label className="text-brand font-bold text-sm">Username *</label>
                     <input 
                         type="text" 
                         value={username}
@@ -93,25 +227,81 @@ export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComple
                     />
                 </div>
 
-                {/* Location Input */}
-                 <div className="flex flex-col space-y-2 mb-10">
-                    <label className="text-brand font-bold text-sm">Location</label>
+                {/* City Input */}
+                <div className="flex flex-col space-y-2 mb-6">
+                    <label className="text-brand font-bold text-sm flex items-center gap-2">
+                        <MapPin size={14} />
+                        City *
+                    </label>
                     <div className="relative">
                         <select 
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            className="appearance-none border-b border-gray-200 pb-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-brand font-medium text-lg w-full bg-transparent transition-colors rounded-none pr-8 cursor-pointer"
+                            value={cityId}
+                            onChange={(e) => setCityId(e.target.value ? parseInt(e.target.value) : '')}
+                            disabled={loadingCities}
+                            className="appearance-none border-b border-gray-200 pb-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-brand font-medium text-lg w-full bg-transparent transition-colors rounded-none pr-8 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <option value="" disabled>Select your city</option>
-                            <option value="lagos">Lagos, Nigeria</option>
-                            <option value="abuja">Abuja, Nigeria</option>
-                            <option value="london">London, UK</option>
-                            <option value="new_york">New York, USA</option>
-                            <option value="toronto">Toronto, Canada</option>
+                            <option value="">Select your city</option>
+                            {cities.map((city) => (
+                                <option key={city.id} value={city.id}>
+                                    {city.name}
+                                </option>
+                            ))}
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center text-gray-400">
-                            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            <ChevronDown size={18} />
                         </div>
+                    </div>
+                    {loadingCities && (
+                        <p className="text-xs text-gray-400 mt-1">Loading cities...</p>
+                    )}
+                </div>
+
+                {/* Area Input */}
+                {cityId && (
+                    <div className="flex flex-col space-y-2 mb-6">
+                        <label className="text-brand font-bold text-sm flex items-center gap-2">
+                            <MapPin size={14} />
+                            Area {areas.length > 0 ? '(Optional)' : ''}
+                        </label>
+                        <div className="relative">
+                            <select 
+                                value={areaId}
+                                onChange={(e) => setAreaId(e.target.value ? parseInt(e.target.value) : '')}
+                                disabled={loadingAreas || areas.length === 0}
+                                className="appearance-none border-b border-gray-200 pb-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-brand font-medium text-lg w-full bg-transparent transition-colors rounded-none pr-8 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <option value="">Select your area (optional)</option>
+                                {areas.map((area) => (
+                                    <option key={area.id} value={area.id}>
+                                        {area.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center text-gray-400">
+                                <ChevronDown size={18} />
+                            </div>
+                        </div>
+                        {loadingAreas && (
+                            <p className="text-xs text-gray-400 mt-1">Loading areas...</p>
+                        )}
+                        {!loadingAreas && areas.length === 0 && cityId && (
+                            <p className="text-xs text-gray-400 mt-1">No areas available for this city</p>
+                        )}
+                    </div>
+                )}
+
+                {/* Bio Input */}
+                <div className="flex flex-col space-y-2 mb-10">
+                    <label className="text-brand font-bold text-sm">Short Bio</label>
+                    <textarea 
+                        value={bio}
+                        onChange={(e) => setBio(e.target.value)}
+                        placeholder="Tell others a little about yourself... (optional)" 
+                        maxLength={500}
+                        className="border-b border-gray-200 pb-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-brand font-medium text-lg w-full bg-transparent transition-colors rounded-none resize-none min-h-[60px]"
+                    />
+                    <div className="flex justify-end">
+                        <p className="text-xs text-gray-400">{bio.length}/500</p>
                     </div>
                 </div>
                 

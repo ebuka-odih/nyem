@@ -1,13 +1,13 @@
 /**
  * PreUploadProfileSetup Component
  * Shows a quick profile setup screen before users can upload their first items
- * Collects: name (auto-filled), profile avatar, city, area, bio (optional)
+ * Collects: display name, username (with uniqueness check), city, area, bio (optional)
  */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { apiFetch } from '../../utils/api';
 import { ENDPOINTS } from '../../constants/endpoints';
-import { Camera, MapPin, ChevronDown, User, X } from 'lucide-react';
+import { Camera, MapPin, ChevronDown, User, X, Check, AlertCircle, Loader2, Lightbulb } from 'lucide-react';
 
 interface Location {
   id: number;
@@ -21,6 +21,23 @@ interface PreUploadProfileSetupProps {
   onSkip?: () => void;
 }
 
+// Debounce hook for username check
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({ 
   onComplete,
   onSkip 
@@ -28,11 +45,17 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
   const { user, updateProfile, refreshUser } = useAuth();
   
   // Form state - auto-fill from existing user data
+  const [displayName, setDisplayName] = useState(user?.name || '');
   const [username, setUsername] = useState(user?.username || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(user?.profile_photo || null);
   const [cityId, setCityId] = useState<number | ''>(user?.city_id || '');
   const [areaId, setAreaId] = useState<number | ''>(user?.area_id || '');
+  
+  // Username validation state
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
   
   // Loading and error states
   const [loading, setLoading] = useState(false);
@@ -45,6 +68,9 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
   
   // File input ref
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Debounced username for API check
+  const debouncedUsername = useDebounce(username, 500);
 
   // Fetch locations on mount
   useEffect(() => {
@@ -69,6 +95,65 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
     
     fetchLocations();
   }, []);
+
+  // Check username availability when debounced value changes
+  useEffect(() => {
+    const checkUsername = async () => {
+      // Don't check if username is empty or too short
+      if (!debouncedUsername || debouncedUsername.length < 3) {
+        setUsernameAvailable(null);
+        setUsernameError(null);
+        return;
+      }
+      
+      // Don't check if it's the same as the current user's username
+      if (debouncedUsername === user?.username) {
+        setUsernameAvailable(true);
+        setUsernameError(null);
+        return;
+      }
+      
+      // Validate username format (alphanumeric, underscores, no spaces)
+      const usernameRegex = /^[a-zA-Z0-9_]+$/;
+      if (!usernameRegex.test(debouncedUsername)) {
+        setUsernameAvailable(false);
+        setUsernameError('Username can only contain letters, numbers, and underscores');
+        return;
+      }
+      
+      setCheckingUsername(true);
+      setUsernameError(null);
+      
+      try {
+        const response = await apiFetch(ENDPOINTS.profile.checkUsername, {
+          method: 'POST',
+          body: { 
+            username: debouncedUsername,
+            exclude_user_id: user?.id,
+          },
+        });
+        
+        setUsernameAvailable(response.available);
+        if (!response.available) {
+          setUsernameError(response.message || 'This username is already taken');
+        }
+      } catch (err: any) {
+        console.error('Failed to check username:', err);
+        // If endpoint not found (not deployed yet), assume available and verify on submit
+        if (err.message?.includes('404') || err.message?.includes('not found')) {
+          setUsernameAvailable(true); // Assume available, backend will validate on submit
+          setUsernameError(null);
+        } else {
+          setUsernameError('Failed to check username availability');
+          setUsernameAvailable(null);
+        }
+      } finally {
+        setCheckingUsername(false);
+      }
+    };
+    
+    checkUsername();
+  }, [debouncedUsername, user?.id, user?.username]);
 
   // Filter areas by selected city
   const filteredAreas = cityId 
@@ -118,8 +203,23 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
     setError(null);
 
     // Validation
+    if (!displayName.trim()) {
+      setError('Display name is required');
+      return;
+    }
+    
     if (!username.trim()) {
       setError('Username is required');
+      return;
+    }
+    
+    if (username.length < 3) {
+      setError('Username must be at least 3 characters');
+      return;
+    }
+    
+    if (usernameAvailable === false) {
+      setError('Please choose a different username');
       return;
     }
     
@@ -132,7 +232,8 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
     try {
       // Build update payload
       const payload: any = {
-        username: username.trim(),
+        name: displayName.trim(),
+        username: username.trim().toLowerCase(),
         city_id: cityId,
       };
       
@@ -159,11 +260,25 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
     }
   };
 
+  // Render username status indicator
+  const renderUsernameStatus = () => {
+    if (checkingUsername) {
+      return <Loader2 size={18} className="animate-spin text-gray-400" />;
+    }
+    if (usernameAvailable === true) {
+      return <Check size={18} className="text-green-500" />;
+    }
+    if (usernameAvailable === false) {
+      return <AlertCircle size={18} className="text-red-500" />;
+    }
+    return null;
+  };
+
   return (
     <div className="flex flex-col min-h-full bg-white">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-        <h1 className="text-xl font-bold text-gray-900">Quick Profile Setup</h1>
+        <h1 className="text-xl font-bold text-gray-900">Set Up Your Profile</h1>
         {onSkip && (
           <button
             onClick={onSkip}
@@ -220,18 +335,60 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
             <p className="text-gray-400 text-xs mt-2">Tap to add photo</p>
           </div>
 
+          {/* Display Name */}
+          <div>
+            <label className="block text-brand font-bold text-sm mb-2">
+              Display Name *
+            </label>
+            <input
+              type="text"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Enter your name or business name"
+              className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
+            />
+            {/* Tip */}
+            <div className="flex items-start gap-2 mt-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <Lightbulb size={16} className="text-amber-500 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-amber-700">
+                <span className="font-medium">Tip:</span> Use your business name if you're selling as a business, or your personal name if selling individually.
+              </p>
+            </div>
+          </div>
+
           {/* Username */}
           <div>
             <label className="block text-brand font-bold text-sm mb-2">
               Username *
             </label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              className="w-full h-12 px-4 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/\s/g, ''))}
+                placeholder="Choose a unique username"
+                className={`w-full h-12 px-4 pr-12 rounded-xl border bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 transition-all ${
+                  usernameAvailable === false 
+                    ? 'border-red-300 focus:border-red-400 focus:ring-red-200' 
+                    : usernameAvailable === true 
+                      ? 'border-green-300 focus:border-green-400 focus:ring-green-200'
+                      : 'border-gray-200 focus:border-brand focus:ring-brand'
+                }`}
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                {renderUsernameStatus()}
+              </div>
+            </div>
+            {/* Username feedback */}
+            {usernameError && (
+              <p className="text-red-500 text-xs mt-1">{usernameError}</p>
+            )}
+            {usernameAvailable === true && username.length >= 3 && (
+              <p className="text-green-500 text-xs mt-1">Username is available!</p>
+            )}
+            {username && username.length < 3 && (
+              <p className="text-gray-400 text-xs mt-1">Username must be at least 3 characters</p>
+            )}
           </div>
 
           {/* City */}
@@ -291,12 +448,12 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
           {/* Bio */}
           <div>
             <label className="block text-brand font-bold text-sm mb-2">
-              Short Bio
+              About Your Business
             </label>
             <textarea
               value={bio}
               onChange={(e) => setBio(e.target.value)}
-              placeholder="Tell others a little about yourself... (optional)"
+              placeholder="Tell others about what you sell or your business... (optional)"
               maxLength={500}
               className="w-full h-24 px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand transition-all resize-none"
             />
@@ -308,7 +465,7 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || checkingUsername || usernameAvailable === false}
             className="w-full h-14 bg-brand text-white font-bold text-lg rounded-xl shadow-lg hover:bg-brand/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-8"
           >
             {loading ? (
@@ -317,10 +474,10 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Saving...
+                Updating...
               </span>
             ) : (
-              'Continue to Upload'
+              'Update Profile'
             )}
           </button>
         </form>
@@ -328,4 +485,3 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
     </div>
   );
 };
-
