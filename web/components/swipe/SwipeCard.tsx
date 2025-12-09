@@ -4,14 +4,17 @@ import { SwipeItem } from '../../types';
 
 interface SwipeCardProps {
   item: SwipeItem;
+  isLiked?: boolean;
+  onLike?: () => void;
   onInfoClick?: () => void;
   onBuyClick?: () => void;
 }
 
-export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyClick }) => {
+export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp = false, onLike, onInfoClick, onBuyClick }) => {
   const isMarketplace = item.type === 'marketplace';
-  const [isLiked, setIsLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  // Use prop if provided, otherwise fall back to local state (for backward compatibility)
+  const isLiked = onLike ? isLikedProp : false;
 
   // Format location display: "Wuse, Abuja [icon] 20km Away" or just "Abuja"
   const formatLocation = () => {
@@ -54,9 +57,12 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyCl
     }
   };
 
-  const handleLike = (e: React.MouseEvent) => {
+  const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsLiked(!isLiked);
+    if (onLike) {
+      // Call the parent's like handler (which will call the API)
+      onLike();
+    }
   };
 
   const handleBuyClick = (e: React.MouseEvent) => {

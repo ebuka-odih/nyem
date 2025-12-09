@@ -9,52 +9,104 @@ import { ProfileCard } from './profile/ProfileCard';
 import { ProfileTabs } from './profile/ProfileTabs';
 import { ItemsGrid } from './profile/ItemsGrid';
 import { SettingsList } from './profile/SettingsList';
+import { SwipeItem } from '../types';
 
 interface ProfileScreenProps {
   onEditProfile: () => void;
   onLoginRequest?: (method: 'google' | 'email') => void;
   onSignUpRequest?: () => void;
+  onItemClick?: (item: SwipeItem) => void;
+  onItemEdit?: (item: any) => void;
+  onAddItem?: () => void;
 }
 
 interface UserItem {
   id: number;
   title: string;
   image: string;
+  description?: string;
+  condition?: string;
+  category_id?: number;
+  type?: string;
+  price?: string;
+  looking_for?: string;
+  images?: string[];
+  gallery?: string[];
 }
 
-export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile, onLoginRequest, onSignUpRequest }) => {
+export const ProfileScreen: React.FC<ProfileScreenProps> = ({ 
+  onEditProfile, 
+  onLoginRequest, 
+  onSignUpRequest,
+  onItemClick,
+  onItemEdit,
+  onAddItem
+}) => {
   const { user, logout, token, refreshUser, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'items' | 'settings'>('items');
   const [userItems, setUserItems] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user items
+  // Fetch user items from profile endpoint
   useEffect(() => {
     const fetchUserItems = async () => {
-      if (!token) return;
+      if (!token || !isAuthenticated) {
+        setLoading(false);
+        return;
+      }
 
       try {
-        // Fetch items feed and filter for user's items
-        const res = await apiFetch(ENDPOINTS.items.feed, { token });
-        const items = res.data || res.items || [];
+        // Fetch user profile which includes items
+        const res = await apiFetch(ENDPOINTS.profile.me, { token });
+        const userData = res.user || {};
+        const items = (userData.items || []).filter((item: any) => item.status === 'active');
         
-        // Filter items by current user (if backend doesn't provide user-specific endpoint)
-        // For now, we'll show all items - you may want to add a user-specific endpoint
-        const formattedItems = items.slice(0, 4).map((item: any) => ({
+        // Format items for display
+        const formattedItems: UserItem[] = items.map((item: any) => ({
           id: item.id,
-          title: item.title || item.name || 'Untitled Item',
+          title: item.title || 'Untitled Item',
+          description: item.description,
+          condition: item.condition,
+          category_id: item.category_id,
+          type: item.type,
+          price: item.price ? `$${parseFloat(item.price).toFixed(2)}` : undefined,
+          looking_for: item.looking_for,
           image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f3f4f6" width="300" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
+          images: item.images || [],
+          gallery: item.images || [],
         }));
         setUserItems(formattedItems);
       } catch (error) {
         console.error('Failed to fetch user items:', error);
+        setUserItems([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchUserItems();
-  }, [token]);
+  }, [token, isAuthenticated]); // Re-fetch when auth state changes
+
+  // Also refresh items when user data changes (e.g., after editing items)
+  useEffect(() => {
+    if (user && token && isAuthenticated) {
+      const items = ((user as any).items || []).filter((item: any) => item.status === 'active');
+      const formattedItems: UserItem[] = items.map((item: any) => ({
+        id: item.id,
+        title: item.title || 'Untitled Item',
+        description: item.description,
+        condition: item.condition,
+        category_id: item.category_id,
+        type: item.type,
+        price: item.price ? `$${parseFloat(item.price).toFixed(2)}` : undefined,
+        looking_for: item.looking_for,
+        image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f3f4f6" width="300" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
+        images: item.images || [],
+        gallery: item.images || [],
+      }));
+      setUserItems(formattedItems);
+    }
+  }, [user, token, isAuthenticated]);
 
   const handleLogout = async () => {
     if (window.confirm('Are you sure you want to logout?')) {
@@ -99,7 +151,13 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ onEditProfile, onL
         {/* Tab Content */}
         <div className="px-6 pb-6">
           {activeTab === 'items' ? (
-            <ItemsGrid items={userItems} loading={loading} />
+            <ItemsGrid 
+              items={userItems} 
+              loading={loading}
+              onItemClick={onItemClick}
+              onItemEdit={onItemEdit}
+              onAddItem={onAddItem}
+            />
           ) : (
             <SettingsList onLogout={handleLogout} />
           )}

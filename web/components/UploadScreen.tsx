@@ -9,6 +9,10 @@ import { UploadTabs } from './upload/UploadTabs';
 import { PhotoUpload } from './upload/PhotoUpload';
 import { UploadForm } from './upload/UploadForm';
 import { PhoneVerificationModal } from './PhoneVerificationModal';
+import { PreUploadProfileSetup } from './upload/PreUploadProfileSetup';
+
+// Number of items users can upload before phone verification is required
+const FREE_UPLOAD_LIMIT = 2;
 
 interface Category {
   id: number;
@@ -16,22 +20,51 @@ interface Category {
   order: number;
 }
 
+interface EditItem {
+  id: number;
+  title: string;
+  description?: string;
+  condition?: string;
+  category_id?: number;
+  type?: string;
+  price?: string;
+  looking_for?: string;
+  images?: string[];
+  gallery?: string[];
+}
+
 interface UploadScreenProps {
   onLoginRequest?: (method: 'google' | 'email') => void;
   onSignUpRequest?: () => void;
+  editItem?: EditItem | null;
+  onEditComplete?: () => void;
 }
 
-export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSignUpRequest }) => {
+export const UploadScreen: React.FC<UploadScreenProps> = ({ 
+  onLoginRequest, 
+  onSignUpRequest,
+  editItem = null,
+  onEditComplete
+}) => {
   const { token, user, isAuthenticated, refreshUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
+  const isEditMode = !!editItem;
+  
+  // Determine initial tab based on edit item type or default to Marketplace
+  const getInitialTab = (): 'Marketplace' | 'Services' | 'Swap' => {
+    if (editItem?.type === 'barter') return 'Swap';
+    if (editItem?.type === 'services') return 'Services';
+    return 'Marketplace';
+  };
+  
+  const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>(getInitialTab());
   const [showPreUploadProfile, setShowPreUploadProfile] = useState(false);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('');
-  const [condition, setCondition] = useState('');
-  const [lookingFor, setLookingFor] = useState('');
-  const [price, setPrice] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [title, setTitle] = useState(editItem?.title || '');
+  const [description, setDescription] = useState(editItem?.description || '');
+  const [category, setCategory] = useState(editItem?.category_id?.toString() || '');
+  const [condition, setCondition] = useState(editItem?.condition || '');
+  const [lookingFor, setLookingFor] = useState(editItem?.looking_for || '');
+  const [price, setPrice] = useState(editItem?.price ? editItem.price.replace('$', '').replace(',', '') : '');
+  const [photos, setPhotos] = useState<string[]>(editItem?.images || editItem?.gallery || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -48,14 +81,19 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
   useEffect(() => {
     if (isAuthenticated && user) {
       // Check if user needs to complete profile before uploading
-      // According to flow: profile_photo, username_auto, city_auto, short_bio_optional
-      const needsProfileSetup = !user.profile_photo || !user.username || !user.city;
+      // Required: username and city. Profile photo is recommended but optional.
+      const needsProfileSetup = !user.username || !user.city_id;
       setShowPreUploadProfile(needsProfileSetup);
     } else if (!isAuthenticated) {
       // If not authenticated, show login prompt (handled by parent)
       setShowPreUploadProfile(false);
     }
   }, [isAuthenticated, user]);
+
+  // Calculate items count and verification requirements
+  const itemsCount = user?.items_count ?? 0;
+  const needsPhoneVerification = !user?.phone_verified_at && itemsCount >= FREE_UPLOAD_LIMIT;
+  const remainingFreeUploads = Math.max(0, FREE_UPLOAD_LIMIT - itemsCount);
 
   // Map activeTab to parent category name for filtering
   const getParentCategoryName = (tab: 'Marketplace' | 'Services' | 'Swap'): string => {
@@ -144,6 +182,36 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
     setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Reset form when editItem changes
+  useEffect(() => {
+    if (editItem) {
+      setTitle(editItem.title || '');
+      setDescription(editItem.description || '');
+      setCategory(editItem.category_id?.toString() || '');
+      setCondition(editItem.condition || '');
+      setLookingFor(editItem.looking_for || '');
+      setPrice(editItem.price ? editItem.price.replace('$', '').replace(',', '') : '');
+      setPhotos(editItem.images || editItem.gallery || []);
+      // Set active tab based on item type
+      if (editItem.type === 'barter') {
+        setActiveTab('Swap');
+      } else if (editItem.type === 'services') {
+        setActiveTab('Services');
+      } else {
+        setActiveTab('Marketplace');
+      }
+    } else {
+      // Reset form for new item
+      setTitle('');
+      setDescription('');
+      setCategory('');
+      setCondition('');
+      setLookingFor('');
+      setPrice('');
+      setPhotos([]);
+    }
+  }, [editItem]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -175,9 +243,10 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       return;
     }
 
-    // Check if phone verification is required for ALL uploads
-    // Users must verify their phone to upload any items (Marketplace, Services, or Swap)
-    if (user && !user.phone_verified_at) {
+    // Check if phone verification is required (only for new items, not edits)
+    // Users can upload up to FREE_UPLOAD_LIMIT items without verification
+    // After that, phone verification is required to upload more items
+    if (!isEditMode && user && !user.phone_verified_at && itemsCount >= FREE_UPLOAD_LIMIT) {
       setPendingSubmit(true); // Mark that we have a pending submission
       setShowPhoneVerification(true);
       return;
@@ -222,32 +291,52 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       //   payload.photos = uploadedPhotoUrls;
       // }
 
-      await apiFetch(ENDPOINTS.items.create, {
-        method: 'POST',
+      // Use PUT for updates, POST for new items
+      const endpoint = isEditMode 
+        ? ENDPOINTS.items.update(editItem!.id)
+        : ENDPOINTS.items.create;
+      
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      await apiFetch(endpoint, {
+        method,
         token,
         body: payload,
       });
 
       setSuccess(true);
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setCategory('');
-      setCondition('');
-      setLookingFor('');
-      setPrice('');
-      setPhotos([]);
+      
+      // Refresh user to update items_count after successful upload
+      await refreshUser();
+      
+      // Reset form only if not in edit mode
+      if (!isEditMode) {
+        setTitle('');
+        setDescription('');
+        setCategory('');
+        setCondition('');
+        setLookingFor('');
+        setPrice('');
+        setPhotos([]);
+      }
 
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
+      // Call onEditComplete callback if provided
+      if (isEditMode && onEditComplete) {
+        setTimeout(() => {
+          onEditComplete();
+        }, 1500);
+      } else {
+        setTimeout(() => {
+          setSuccess(false);
+        }, 3000);
+      }
     } catch (err: any) {
       // Check if error is due to phone verification requirement
       if (err.message?.includes('phone verification') || err.message?.includes('requires_phone_verification')) {
         setShowPhoneVerification(true);
         setError(null);
       } else {
-        setError(err.message || 'Failed to post item. Please try again.');
+        setError(err.message || (isEditMode ? 'Failed to update item. Please try again.' : 'Failed to post item. Please try again.'));
       }
       console.error('Upload error:', err);
     } finally {
@@ -273,11 +362,22 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
     );
   }
 
+  // Show profile setup for first-time uploaders (new users without complete profile)
+  if (showPreUploadProfile && !isEditMode) {
+    return (
+      <div className="flex flex-col h-full bg-white relative">
+        <PreUploadProfileSetup
+          onComplete={() => setShowPreUploadProfile(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-white relative">
       {/* Header */}
       <AppHeader 
-        title="Upload"
+        title={isEditMode ? "Edit Item" : "Upload"}
         className="pb-4"
       />
         
@@ -305,27 +405,47 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
         
-        {/* Phone Verification Required Banner */}
+        {/* Verification Banner - Show different messages based on item count */}
         {user && !user.phone_verified_at && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className={`rounded-xl p-4 ${needsPhoneVerification ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'}`}>
             <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${needsPhoneVerification ? 'bg-amber-100' : 'bg-blue-100'}`}>
+                <svg className={`w-5 h-5 ${needsPhoneVerification ? 'text-amber-600' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                 </svg>
               </div>
               <div className="flex-1">
-                <h3 className="text-amber-800 font-semibold text-sm">Phone Verification Required</h3>
-                <p className="text-amber-700 text-xs mt-1 leading-relaxed">
-                  Verify your phone number to start uploading items. This helps keep our community safe and trustworthy.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowPhoneVerification(true)}
-                  className="mt-3 text-amber-700 font-bold text-sm hover:text-amber-800 underline underline-offset-2"
-                >
-                  Verify Now →
-                </button>
+                {needsPhoneVerification ? (
+                  <>
+                    <h3 className="text-amber-800 font-semibold text-sm">Verify to Upload More Items</h3>
+                    <p className="text-amber-700 text-xs mt-1 leading-relaxed">
+                      You've reached the limit of {FREE_UPLOAD_LIMIT} free uploads. Verify your phone number to continue uploading items and build trust in our community.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowPhoneVerification(true)}
+                      className="mt-3 text-amber-700 font-bold text-sm hover:text-amber-800 underline underline-offset-2"
+                    >
+                      Verify Now →
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-blue-800 font-semibold text-sm">
+                      {remainingFreeUploads} Free Upload{remainingFreeUploads !== 1 ? 's' : ''} Remaining
+                    </h3>
+                    <p className="text-blue-700 text-xs mt-1 leading-relaxed">
+                      You can upload {remainingFreeUploads} more item{remainingFreeUploads !== 1 ? 's' : ''} before verifying your phone. Verify now to unlock unlimited uploads!
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowPhoneVerification(true)}
+                      className="mt-3 text-blue-700 font-bold text-sm hover:text-blue-800 underline underline-offset-2"
+                    >
+                      Verify Early →
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -334,7 +454,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
         {/* Success/Error Messages */}
         {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                Item posted successfully!
+                {isEditMode ? 'Item updated successfully!' : 'Item posted successfully!'}
             </div>
         )}
         {error && (
@@ -345,9 +465,17 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
 
         {/* Title Section */}
         <div>
-           <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Upload Item</h2>
+           <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
+             {isEditMode ? 'Edit Item' : 'Upload Item'}
+           </h2>
            <p className="text-gray-500 text-sm">
-             {activeTab === 'Swap' ? 'What would you like to trade?' : activeTab === 'Marketplace' ? 'What would you like to sell?' : 'What service would you like to offer?'}
+             {isEditMode 
+               ? 'Update your item details below'
+               : activeTab === 'Swap' 
+                 ? 'What would you like to trade?' 
+                 : activeTab === 'Marketplace' 
+                   ? 'What would you like to sell?' 
+                   : 'What service would you like to offer?'}
            </p>
         </div>
 
@@ -403,6 +531,10 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
             }, 500);
           }
         }}
+        message={needsPhoneVerification 
+          ? `You've used your ${FREE_UPLOAD_LIMIT} free uploads! Verify your phone number to continue uploading items and build trust with buyers in our community.`
+          : undefined
+        }
       />
     </div>
   );

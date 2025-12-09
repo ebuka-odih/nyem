@@ -146,7 +146,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
           className="bg-brand hover:bg-brand-light text-white rounded-xl py-4 shadow-lg text-lg"
           disabled={loading}
         >
-          {loading ? 'Posting...' : 'Post Item'}
+          {loading ? 'Saving...' : 'Save Item'}
         </Button>
       </div>
     </form>

@@ -16,13 +16,17 @@ import { getCurrentLocation, updateLocationOnBackend, requestLocationPermission 
 export interface User {
   id: number;
   username: string;
+  name?: string;
   phone?: string;
   email?: string;
   email_verified_at?: string;
   phone_verified_at?: string;
   city?: string;
+  city_id?: number;
+  area_id?: number;
   bio?: string;
   profile_photo?: string;
+  items_count?: number; // Number of items user has uploaded
   created_at?: string;
   updated_at?: string;
 }
@@ -57,7 +61,10 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
   updateProfile: (data: {
     username?: string;
+    name?: string;
     city?: string;
+    city_id?: number;
+    area_id?: number;
     bio?: string;
     profile_photo?: string;
     password?: string;
@@ -381,7 +388,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = async (data: {
     username?: string;
+    name?: string;
     city?: string;
+    city_id?: number;
+    area_id?: number;
     bio?: string;
     profile_photo?: string;
     password?: string;

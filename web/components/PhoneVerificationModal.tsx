@@ -7,12 +7,15 @@ interface PhoneVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onVerified: () => void;
+  /** Custom message to show in the modal. Defaults to generic verification message. */
+  message?: string;
 }
 
 export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
   isOpen,
   onClose,
   onVerified,
+  message,
 }) => {
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
@@ -154,7 +157,7 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
               <p className="text-gray-600 text-sm mb-4">
-                To upload items and connect with buyers, we need to verify your phone number. This helps keep our community safe and trustworthy.
+                {message || 'To upload items and connect with buyers, we need to verify your phone number. This helps keep our community safe and trustworthy.'}
               </p>
 
               {error && (

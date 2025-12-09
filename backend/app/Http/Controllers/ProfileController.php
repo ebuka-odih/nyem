@@ -12,7 +12,7 @@ class ProfileController extends Controller
 {
     public function me(Request $request)
     {
-        $user = $request->user()->load(['items', 'cityLocation', 'areaLocation']);
+        $user = $request->user()->loadCount('items')->load(['cityLocation', 'areaLocation']);
         
         // Check if username can be changed (24hr limit)
         $canChangeUsername = true;
@@ -34,6 +34,7 @@ class ProfileController extends Controller
         
         $data = $request->validate([
             'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
+            'name' => 'sometimes|nullable|string|max:255',
             'bio' => 'sometimes|nullable|string|max:500',
             'profile_photo' => 'sometimes|nullable|string|max:65535', // TEXT field can hold up to 65,535 characters
             'city' => 'sometimes|string|max:255', // Keep for backward compatibility

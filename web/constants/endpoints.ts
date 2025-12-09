@@ -28,6 +28,8 @@ export const ENDPOINTS = {
   },
   categories: '/categories',
   locations: '/locations',
+  locationsCities: '/locations/cities',
+  locationsAreas: (cityId?: string | number) => cityId ? `/locations/cities/${cityId}/areas` : '/locations/areas',
   swipes: {
     create: '/swipes',
     pendingRequests: '/swipes/pending-requests',

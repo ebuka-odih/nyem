@@ -21,7 +21,7 @@ import { useNavigationHistory } from './hooks/useNavigationHistory';
 import { useSwipeToGoBack } from './hooks/useSwipeToGoBack';
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, loading, loginWithGoogle } = useAuth();
+  const { isAuthenticated, loading, loginWithGoogle, refreshUser } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('welcome');
   const [activeTab, setActiveTab] = useState<TabState>('discover');
   const [swipeTab, setSwipeTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
@@ -29,6 +29,7 @@ const AppContent: React.FC = () => {
   const [signupName, setSignupName] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [selectedItem, setSelectedItem] = useState<SwipeItem | null>(null);
+  const [editItem, setEditItem] = useState<any | null>(null);
   // Password reset flow state
   const [resetPasswordEmail, setResetPasswordEmail] = useState('');
   // Store current index per tab to preserve position when navigating back
@@ -158,6 +159,13 @@ const AppContent: React.FC = () => {
     }));
   }, [swipeTab]);
 
+  // Clear editItem when navigating away from upload tab
+  useEffect(() => {
+    if (activeTab !== 'upload' && editItem) {
+      setEditItem(null);
+    }
+  }, [activeTab, editItem]);
+
   const renderMainContent = () => {
     switch (activeTab) {
       case 'discover':
@@ -172,7 +180,20 @@ const AppContent: React.FC = () => {
           onIndexChange={handleIndexChange}
         />;
       case 'upload':
-        return <UploadScreen onLoginRequest={handleLoginRequest} onSignUpRequest={handleSignUpRequest} />;
+        return (
+          <UploadScreen 
+            onLoginRequest={handleLoginRequest} 
+            onSignUpRequest={handleSignUpRequest}
+            editItem={editItem}
+            onEditComplete={async () => {
+              setEditItem(null);
+              // Refresh user data to update items list
+              await refreshUser();
+              // Navigate back to profile tab to see updated items
+              setActiveTab('profile');
+            }}
+          />
+        );
       case 'matches':
         return <MatchesScreen
           onNavigateToRequests={() => navigateTo('match_requests')}
@@ -181,11 +202,25 @@ const AppContent: React.FC = () => {
           onSignUpRequest={handleSignUpRequest}
         />;
       case 'profile':
-        return <ProfileScreen
-          onEditProfile={() => navigateTo('edit_profile')}
-          onLoginRequest={handleLoginRequest}
-          onSignUpRequest={handleSignUpRequest}
-        />;
+        return (
+          <ProfileScreen
+            onEditProfile={() => navigateTo('edit_profile')}
+            onLoginRequest={handleLoginRequest}
+            onSignUpRequest={handleSignUpRequest}
+            onItemClick={(item) => {
+              setSelectedItem(item);
+              navigateTo('item_details');
+            }}
+            onItemEdit={(item) => {
+              setEditItem(item);
+              setActiveTab('upload');
+            }}
+            onAddItem={() => {
+              setEditItem(null);
+              setActiveTab('upload');
+            }}
+          />
+        );
       default:
         return <SwipeScreen
           onBack={() => navigateTo('welcome')}

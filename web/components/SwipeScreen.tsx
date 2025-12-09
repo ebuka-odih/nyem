@@ -80,12 +80,35 @@ interface SwipeScreenProps {
   onIndexChange?: (index: number) => void;
 }
 
+// Local storage key for welcome card dismissed state
+const WELCOME_CARD_DISMISSED_KEY = 'nyem_welcome_card_dismissed';
+
 export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, onSignUpRequest, initialTab = 'Marketplace', onTabChange, initialIndex = 0, onIndexChange }) => {
   const { token, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>(initialTab);
   const [items, setItems] = useState<SwipeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [loading, setLoading] = useState(true);
+  
+  // Track index per tab so switching tabs preserves position
+  const tabIndicesRef = useRef<{ [key: string]: number }>({
+    'Marketplace': initialTab === 'Marketplace' ? initialIndex : 0,
+    'Services': initialTab === 'Services' ? initialIndex : 0,
+    'Swap': initialTab === 'Swap' ? initialIndex : 0,
+  });
+  // Track liked items (item IDs that have been liked)
+  const [likedItems, setLikedItems] = useState<Set<number>>(new Set());
+  // Show welcome card only once per user (stored in localStorage)
+  const [showWelcomeCard, setShowWelcomeCard] = useState(() => {
+    // Check if welcome card has been dismissed before
+    const dismissed = localStorage.getItem(WELCOME_CARD_DISMISSED_KEY);
+    return dismissed !== 'true';
+  });
+  
+  // Track swipe count for promo card (Marketplace only, every 5 swipes)
+  const [marketplaceSwipeCount, setMarketplaceSwipeCount] = useState(0);
+  const [showPromoCard, setShowPromoCard] = useState(false);
+  const PROMO_CARD_INTERVAL = 5; // Show promo card every N swipes
   
   // Track previous filter values to detect when they change
   const prevFiltersRef = useRef<{ tab: string; category: string; location: string }>({
@@ -125,12 +148,17 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
 
   // Handle tab change and notify parent
   const handleTabChange = (tab: 'Marketplace' | 'Services' | 'Swap') => {
+    // Save current index for the current tab before switching
+    tabIndicesRef.current[activeTab] = currentIndex;
+    
     setActiveTab(tab);
     setLoading(true); // Show loading immediately when tab changes
-    // Reset to first item when tab changes (user explicitly changed tab)
-    setCurrentIndex(0);
+    
+    // Restore the saved index for the new tab (or start at 0)
+    const savedIndex = tabIndicesRef.current[tab] || 0;
+    setCurrentIndex(savedIndex);
     if (onIndexChange) {
-      onIndexChange(0);
+      onIndexChange(savedIndex);
     }
     if (onTabChange) {
       onTabChange(tab);
@@ -301,35 +329,32 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         
         setItems(finalItems);
         
-        // Only reset index if filters actually changed (not when just navigating back)
-        const filtersChanged = 
-          prevFiltersRef.current.tab !== activeTab ||
-          prevFiltersRef.current.category !== selectedCategory ||
-          prevFiltersRef.current.location !== selectedLocation;
+        // Check if category/location changed (not just tab)
+        const categoryChanged = prevFiltersRef.current.category !== selectedCategory;
+        const locationChanged = prevFiltersRef.current.location !== selectedLocation;
         
-        if (filtersChanged) {
-          // Filters changed - reset to first item
+        if (categoryChanged || locationChanged) {
+          // Category or location filter changed - reset to first item
           setCurrentIndex(0);
+          tabIndicesRef.current[activeTab] = 0;
           if (onIndexChange) {
             onIndexChange(0);
           }
-          // Update ref to track current filters
-          prevFiltersRef.current = {
-            tab: activeTab,
-            category: selectedCategory,
-            location: selectedLocation,
-          };
         } else {
-          // Filters didn't change - restore preserved index, but clamp to valid range
+          // Tab change or initial load - clamp currentIndex to valid range
           const maxIndex = Math.max(0, finalItems.length - 1);
-          const validIndex = Math.min(Math.max(0, initialIndex), maxIndex);
+          const validIndex = Math.min(Math.max(0, currentIndex), maxIndex);
           if (validIndex !== currentIndex) {
             setCurrentIndex(validIndex);
-            if (onIndexChange) {
-              onIndexChange(validIndex);
-            }
           }
         }
+        
+        // Update ref to track current filters
+        prevFiltersRef.current = {
+          tab: activeTab,
+          category: selectedCategory,
+          location: selectedLocation,
+        };
       } catch (error: any) {
         // Handle 401 - token is invalid, but don't clear auth state if no token was provided
         if (error.message && (error.message.includes('Unauthenticated') || error.message.includes('Unauthorized'))) {
@@ -408,6 +433,18 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   const completeRightSwipe = () => {
     setShowOfferModal(false);
     setShowMarketplaceModal(false);
+    
+    // Track swipe count for Marketplace tab (for promo card)
+    if (activeTab === 'Marketplace') {
+      const newCount = marketplaceSwipeCount + 1;
+      setMarketplaceSwipeCount(newCount);
+      // Show promo card every PROMO_CARD_INTERVAL swipes
+      if (newCount > 0 && newCount % PROMO_CARD_INTERVAL === 0) {
+        setShowPromoCard(true);
+        return; // Don't advance index yet, promo card will be shown
+      }
+    }
+    
     setCurrentIndex(prev => {
       const newIndex = prev + 1;
       if (onIndexChange) {
@@ -415,6 +452,89 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
       }
       return newIndex;
     });
+  };
+
+  /**
+   * Handle like button click on swipe card
+   * Creates a right swipe (like) or left swipe (unlike) via API
+   */
+  const handleLike = async (itemId: number, isCurrentlyLiked: boolean) => {
+    // Check if user is authenticated
+    if (!isAuthenticated || !token) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    // Find the current item to check its type
+    const currentItem = items.find(item => item.id === itemId);
+    if (!currentItem) {
+      console.error('Item not found:', itemId);
+      return;
+    }
+
+    try {
+      // Determine direction: if currently liked, unlike (left), otherwise like (right)
+      const direction = isCurrentlyLiked ? 'left' : 'right';
+
+      // For barter items, right swipe requires an offered_item_id
+      // For now, we'll allow likes on marketplace items without offering
+      // Barter items will show an error if user tries to like without offering
+      const payload: any = {
+        target_item_id: itemId,
+        direction: direction,
+      };
+
+      // Only include offered_item_id for barter items on right swipe
+      // For marketplace items or left swipes, it's optional/not needed
+      if (direction === 'right' && currentItem.type === 'barter') {
+        // For barter items, we can't like without offering an item
+        // This will trigger the modal flow instead
+        // For now, we'll just show a message or handle it differently
+        // You might want to show a modal asking user to select an item to offer
+        console.warn('Barter items require an offered item to like');
+        // For now, we'll still try to create the swipe, and the backend will return an error
+        // which we'll handle gracefully
+      }
+
+      // Call the swipe API
+      const response = await apiFetch(ENDPOINTS.swipes.create, {
+        method: 'POST',
+        token,
+        body: payload,
+      });
+
+      // Update liked items state only if successful
+      setLikedItems(prev => {
+        const newSet = new Set(prev);
+        if (direction === 'right') {
+          newSet.add(itemId);
+        } else {
+          newSet.delete(itemId);
+        }
+        return newSet;
+      });
+
+      // If a match was created, we could show a notification here
+      if (response.match_created) {
+        console.log('Match created!', response.match_id);
+        // You could show a toast notification here
+      }
+    } catch (error: any) {
+      console.error('Failed to like/unlike item:', error);
+      
+      // Handle specific error cases
+      if (error.message?.includes('offered_item_id is required')) {
+        // For barter items, show a more helpful message
+        alert('To like a swap item, you need to offer an item in return. Please use the swipe right button to make an offer.');
+      } else if (error.message?.includes('Cannot swipe on your own item')) {
+        alert('You cannot like your own items.');
+      } else if (error.message?.includes('User blocked')) {
+        alert('This action is not available.');
+      } else {
+        // Generic error message
+        alert(error.message || 'Failed to update like status. Please try again.');
+      }
+    }
   };
 
 
@@ -466,7 +586,21 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         currentIndex={currentIndex}
         activeTab={activeTab}
         loading={loading}
+        likedItems={likedItems}
+        showWelcomeCard={showWelcomeCard}
+        showPromoCard={showPromoCard}
+        onLike={handleLike}
         onSwipeLeft={async () => {
+          // Track swipe count for Marketplace tab (for promo card)
+          if (activeTab === 'Marketplace') {
+            const newCount = marketplaceSwipeCount + 1;
+            setMarketplaceSwipeCount(newCount);
+            // Show promo card every PROMO_CARD_INTERVAL swipes
+            if (newCount > 0 && newCount % PROMO_CARD_INTERVAL === 0) {
+              setShowPromoCard(true);
+              return; // Don't advance index yet, promo card will be shown
+            }
+          }
           setCurrentIndex(prev => {
             const newIndex = prev + 1;
             if (onIndexChange) {
@@ -478,6 +612,22 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         onSwipeRight={handleRightSwipe}
         onItemClick={(item) => onItemClick(item, activeTab, currentIndex)}
         onReset={resetStack}
+        onWelcomeCardDismiss={() => {
+          // Mark welcome card as dismissed and save to localStorage
+          setShowWelcomeCard(false);
+          localStorage.setItem(WELCOME_CARD_DISMISSED_KEY, 'true');
+        }}
+        onPromoCardDismiss={() => {
+          // Hide promo card and continue to next item
+          setShowPromoCard(false);
+          setCurrentIndex(prev => {
+            const newIndex = prev + 1;
+            if (onIndexChange) {
+              onIndexChange(newIndex);
+            }
+            return newIndex;
+          });
+        }}
       />
 
       {/* Login Prompt Modal */}

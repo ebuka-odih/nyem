@@ -40,21 +40,27 @@ class ItemController extends Controller
             if (empty($data['price'])) {
                 return response()->json(['message' => 'Price is required for marketplace items'], 422);
             }
-            
-            // Check if user has verified their phone number (required for selling)
-            if (!$user->phone_verified_at) {
-                return response()->json([
-                    'message' => 'Phone number verification is required to sell items in the marketplace',
-                    'requires_phone_verification' => true,
-                ], 403);
-            }
-            
             $data['looking_for'] = null;
         } else {
             if (empty($data['looking_for'])) {
                 return response()->json(['message' => 'looking_for is required for barter items'], 422);
             }
             $data['price'] = null;
+        }
+        
+        // Check phone verification requirement:
+        // Users can upload up to 2 items without phone verification
+        // After 2 items, phone verification is required to upload more
+        $itemsCount = $user->items()->count();
+        $freeUploadLimit = 2;
+        
+        if (!$user->phone_verified_at && $itemsCount >= $freeUploadLimit) {
+            return response()->json([
+                'message' => 'Verify your account to upload more items. You can upload up to 2 items without verification.',
+                'requires_phone_verification' => true,
+                'items_count' => $itemsCount,
+                'free_limit' => $freeUploadLimit,
+            ], 403);
         }
         
         $item = Item::create([

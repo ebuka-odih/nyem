@@ -3,16 +3,24 @@ import { X, Check, RefreshCw, Flame, Loader2 } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { SwipeItem } from '../../types';
 import { SwipeCard } from './SwipeCard';
+import { WelcomeCard } from './WelcomeCard';
+import { PromoCard } from './PromoCard';
 
 interface SwipeCardStackProps {
   items: SwipeItem[];
   currentIndex: number;
   activeTab: 'Marketplace' | 'Services' | 'Swap';
   loading?: boolean;
+  likedItems?: Set<number>;
+  showWelcomeCard?: boolean;
+  showPromoCard?: boolean;
+  onLike?: (itemId: number, isCurrentlyLiked: boolean) => void;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
   onItemClick: (item: SwipeItem) => void;
   onReset: () => void;
+  onWelcomeCardDismiss?: () => void;
+  onPromoCardDismiss?: () => void;
 }
 
 export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
@@ -20,10 +28,16 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   currentIndex,
   activeTab,
   loading = false,
+  likedItems = new Set(),
+  showWelcomeCard = false,
+  showPromoCard = false,
+  onLike,
   onSwipeLeft,
   onSwipeRight,
   onItemClick,
   onReset,
+  onWelcomeCardDismiss,
+  onPromoCardDismiss,
 }) => {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -101,15 +115,74 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
           </div>
         )}
 
-        {/* Next Card (Background) */}
-        {!loading && nextItem && (
+        {/* Next Card (Background) - Show current item if special card is displayed */}
+        {!loading && (showWelcomeCard || showPromoCard) && currentItem && (
+          <div className="absolute inset-0 w-full h-full scale-[0.96] translate-y-2 opacity-50 z-0 pointer-events-none">
+            <SwipeCard item={currentItem} />
+          </div>
+        )}
+        
+        {/* Next Card (Background) - Normal flow when no special card */}
+        {!loading && !showWelcomeCard && !showPromoCard && nextItem && (
           <div className="absolute inset-0 w-full h-full scale-[0.96] translate-y-2 opacity-50 z-0 pointer-events-none">
             <SwipeCard item={nextItem} />
           </div>
         )}
 
-        {/* Current Card */}
-        {!loading && currentItem && (
+        {/* Welcome Card - Shown as first card when enabled */}
+        {!loading && showWelcomeCard && (
+          <motion.div
+            key="welcome-card"
+            className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
+            style={{ x, rotate, opacity }}
+            animate={controls}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.7}
+            onDragEnd={async (event: any, info: PanInfo) => {
+              if (Math.abs(info.offset.x) > 100) {
+                // Swipe in either direction dismisses the welcome card
+                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0 });
+                x.set(0);
+                onWelcomeCardDismiss?.();
+              } else {
+                controls.start({ x: 0, rotate: 0 });
+              }
+            }}
+            whileTap={{ scale: 1.005 }}
+          >
+            <WelcomeCard />
+          </motion.div>
+        )}
+
+        {/* Promo Card - Shown every N swipes on Marketplace tab */}
+        {!loading && !showWelcomeCard && showPromoCard && (
+          <motion.div
+            key="promo-card"
+            className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
+            style={{ x, rotate, opacity }}
+            animate={controls}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.7}
+            onDragEnd={async (event: any, info: PanInfo) => {
+              if (Math.abs(info.offset.x) > 100) {
+                // Swipe in either direction dismisses the promo card
+                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0 });
+                x.set(0);
+                onPromoCardDismiss?.();
+              } else {
+                controls.start({ x: 0, rotate: 0 });
+              }
+            }}
+            whileTap={{ scale: 1.005 }}
+          >
+            <PromoCard />
+          </motion.div>
+        )}
+
+        {/* Current Card - Only show when no special cards are displayed */}
+        {!loading && !showWelcomeCard && !showPromoCard && currentItem && (
           <motion.div
             key={currentItem.id}
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
@@ -123,6 +196,8 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
           >
             <SwipeCard
               item={currentItem}
+              isLiked={likedItems.has(currentItem.id)}
+              onLike={onLike ? () => onLike(currentItem.id, likedItems.has(currentItem.id)) : undefined}
               onInfoClick={() => onItemClick(currentItem)}
               onBuyClick={onSwipeRight}
             />
@@ -135,18 +210,38 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         <div className="flex justify-center items-center space-x-8 mt-2 py-1 shrink-0 relative z-20">
           <button
             onClick={async () => {
-              if (currentItem) {
+              if (showWelcomeCard) {
+                await controls.start({ x: -500, opacity: 0 });
+                x.set(0);
+                onWelcomeCardDismiss?.();
+              } else if (showPromoCard) {
+                await controls.start({ x: -500, opacity: 0 });
+                x.set(0);
+                onPromoCardDismiss?.();
+              } else if (currentItem) {
                 await swipe('left');
               }
             }}
-            disabled={!currentItem}
+            disabled={!currentItem && !showWelcomeCard && !showPromoCard}
             className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
           >
             <X size={32} strokeWidth={2.5} />
           </button>
           <button
-            onClick={() => currentItem && onSwipeRight()}
-            disabled={!currentItem}
+            onClick={async () => {
+              if (showWelcomeCard) {
+                await controls.start({ x: 500, opacity: 0 });
+                x.set(0);
+                onWelcomeCardDismiss?.();
+              } else if (showPromoCard) {
+                await controls.start({ x: 500, opacity: 0 });
+                x.set(0);
+                onPromoCardDismiss?.();
+              } else if (currentItem) {
+                onSwipeRight();
+              }
+            }}
+            disabled={!currentItem && !showWelcomeCard && !showPromoCard}
             className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
           >
             <Check size={32} strokeWidth={3} />
