@@ -220,21 +220,21 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
         </motion.div>
       )}
 
-      {/* Marketplace Contact Seller Modal */}
+      {/* Marketplace Contact Seller Modal - Centered Compact Modal */}
       {showMarketplaceModal && (
         <motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
           exit={{ opacity: 0 }} 
-          className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          className="absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => !isSending && onCloseMarketplace()}
         >
           <motion.div 
-            initial={{ y: 100, opacity: 0 }} 
-            animate={{ y: 0, opacity: 1 }} 
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", damping: 28, stiffness: 300 }}
-            className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col"
+            initial={{ scale: 0.95, opacity: 0 }} 
+            animate={{ scale: 1, opacity: 1 }} 
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Success State */}
@@ -242,53 +242,49 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
               <motion.div 
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="p-8 pt-12 text-center"
+                className="p-6 text-center"
               >
                 <motion.div 
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", delay: 0.1 }}
-                  className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+                  className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3"
                 >
-                  <Check size={40} className="text-green-600" strokeWidth={3} />
+                  <Check size={32} className="text-green-600" strokeWidth={3} />
                 </motion.div>
-                <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Message Sent!</h2>
-                <p className="text-gray-500">
+                <h2 className="text-xl font-bold text-gray-900 mb-1">Message Sent!</h2>
+                <p className="text-sm text-gray-500">
                   Your message has been sent to <strong>{currentItem?.owner.name}</strong>
                 </p>
               </motion.div>
             ) : (
               <>
-                {/* Header with Item Preview */}
-                <div className="relative bg-gradient-to-b from-brand/5 to-white pt-6 px-5 pb-4">
-                  {/* Close Button - positioned with safe area spacing from notch */}
+                {/* Compact Header */}
+                <div className="relative p-4 pb-3 border-b border-gray-100">
+                  {/* Close Button */}
                   <button 
                     onClick={onCloseMarketplace}
                     disabled={isSending}
-                    className="absolute top-5 right-4 w-9 h-9 flex items-center justify-center bg-white/80 backdrop-blur-sm rounded-full hover:bg-gray-100 transition-colors text-gray-500 shadow-sm disabled:opacity-50 z-10"
+                    className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-gray-400 disabled:opacity-50"
                   >
-                    <X size={20} />
+                    <X size={18} />
                   </button>
 
-                  {/* Icon - with top margin to clear the close button */}
-                  <div className="flex justify-center mb-4 mt-4">
-                    <div className="w-14 h-14 bg-brand/10 rounded-2xl flex items-center justify-center">
-                      <MessageCircle size={28} className="text-brand" />
+                  {/* Title Row */}
+                  <div className="flex items-center gap-3 pr-8">
+                    <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center shrink-0">
+                      <MessageCircle size={20} className="text-brand" />
                     </div>
-            </div>
+                    <div>
+                      <h2 className="text-base font-bold text-gray-900">Message Seller</h2>
+                      <p className="text-xs text-gray-500">Start a conversation</p>
+                    </div>
+                  </div>
 
-                  {/* Title */}
-                  <h2 className="text-xl font-extrabold text-gray-900 text-center mb-1">
-                    Message Seller
-                  </h2>
-                  <p className="text-sm text-gray-500 text-center">
-                    Send a message to start the conversation
-                  </p>
-
-                  {/* Item Preview Card */}
+                  {/* Item Preview - Compact */}
                   {currentItem && (
-                    <div className="mt-4 flex items-center gap-3 bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
-                      <div className="w-14 h-14 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+                    <div className="mt-3 flex items-center gap-2 bg-gray-50 rounded-xl p-2">
+                      <div className="w-10 h-10 rounded-lg bg-gray-200 overflow-hidden shrink-0">
                         <img 
                           src={currentItem.image} 
                           alt={currentItem.title} 
@@ -296,17 +292,8 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-gray-900 text-sm truncate">{currentItem.title}</h4>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <div className="w-5 h-5 rounded-full bg-gray-200 overflow-hidden">
-                            <img 
-                              src={currentItem.owner.image} 
-                              alt={currentItem.owner.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <span className="text-xs text-gray-500 truncate">{currentItem.owner.name}</span>
-                        </div>
+                        <h4 className="font-semibold text-gray-900 text-sm truncate">{currentItem.title}</h4>
+                        <p className="text-xs text-gray-500 truncate">{currentItem.owner.name}</p>
                       </div>
                       {currentItem.type === 'marketplace' && 'price' in currentItem && (
                         <div className="text-brand font-bold text-sm shrink-0">
@@ -317,45 +304,45 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
                   )}
                 </div>
 
-                {/* Message Options */}
-                <div className="p-5 pt-3 flex-1 overflow-y-auto">
+                {/* Message Options - Compact */}
+                <div className="p-4 max-h-[50vh] overflow-y-auto">
                   {/* Error Message */}
                   {error && (
                     <motion.div 
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm text-center"
+                      className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg text-red-600 text-xs text-center"
                     >
                       {error}
                     </motion.div>
                   )}
 
-                  {/* Quick Messages Section */}
-                  <div className="mb-4">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Sparkles size={14} className="text-amber-500" />
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Quick Messages</span>
+                  {/* Quick Messages - Compact */}
+                  <div className="mb-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Sparkles size={12} className="text-amber-500" />
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quick Messages</span>
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-1.5">
                       {quickMessages.map((msg, index) => (
                         <button
                           key={index}
                           onClick={() => handleQuickMessageSelect(index)}
                           disabled={isSending}
-                          className={`w-full text-left p-3 rounded-xl border-2 transition-all text-sm leading-relaxed disabled:opacity-50 ${
+                          className={`w-full text-left px-3 py-2 rounded-lg border transition-all text-xs leading-relaxed disabled:opacity-50 ${
                             selectedQuickMessage === index
                               ? 'border-brand bg-brand/5 text-gray-900'
-                              : 'border-gray-100 hover:border-gray-200 text-gray-600 hover:text-gray-900'
+                              : 'border-gray-100 hover:border-gray-200 text-gray-600'
                           }`}
                         >
                           <div className="flex items-start gap-2">
-                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
                               selectedQuickMessage === index
                                 ? 'border-brand bg-brand'
                                 : 'border-gray-300'
                             }`}>
                               {selectedQuickMessage === index && (
-                                <Check size={12} className="text-white" strokeWidth={3} />
+                                <Check size={10} className="text-white" strokeWidth={3} />
                               )}
                             </div>
                             <span>{msg}</span>
@@ -365,51 +352,51 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
                     </div>
                   </div>
 
-                  {/* Custom Message Input */}
+                  {/* Custom Message Input - Compact */}
                   <div>
-                    <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
                       Or write your own
                     </label>
                     <textarea
                       value={customMessage}
                       onChange={(e) => handleCustomMessageChange(e.target.value)}
                       disabled={isSending}
-                      placeholder="Type your message here..."
-                      className="w-full p-3 border-2 border-gray-100 rounded-xl text-sm resize-none focus:outline-none focus:border-brand transition-colors disabled:opacity-50 disabled:bg-gray-50"
-                      rows={3}
+                      placeholder="Type your message..."
+                      className="w-full p-2.5 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/20 transition-all disabled:opacity-50 disabled:bg-gray-50"
+                      rows={2}
                     />
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="p-5 pt-3 border-t border-gray-100 space-y-3">
+                {/* Action Buttons - Compact */}
+                <div className="p-4 pt-0 space-y-2">
                   <Button 
                     fullWidth 
                     onClick={handleSendMessage}
                     disabled={isSending || (!customMessage.trim() && selectedQuickMessage === null)}
-                    className="gap-2"
+                    className="gap-2 !py-3"
                   >
                     {isSending ? (
                       <>
-                        <Loader2 size={20} className="animate-spin" />
+                        <Loader2 size={18} className="animate-spin" />
                         Sending...
                       </>
                     ) : (
                       <>
-                        <Send size={18} />
+                        <Send size={16} />
                         Send Message
                       </>
                     )}
                   </Button>
-              <button 
-                onClick={onComplete} 
+                  <button 
+                    onClick={onComplete} 
                     disabled={isSending}
-                    className="w-full py-3 rounded-full font-semibold text-gray-500 hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-              >
+                    className="w-full py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors flex items-center justify-center gap-1 disabled:opacity-50"
+                  >
                     Skip & Keep Swiping
-                    <ArrowRight size={16} />
-              </button>
-            </div>
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
               </>
             )}
           </motion.div>
