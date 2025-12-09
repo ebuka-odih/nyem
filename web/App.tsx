@@ -1,12 +1,11 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { SignInScreen } from './components/SignInScreen';
 import { SignUpScreen } from './components/SignUpScreen';
-import { SignUpPhoneScreen } from './components/SignUpPhoneScreen';
-import { SignUpOtpScreen } from './components/SignUpOtpScreen';
 import { SignUpEmailOtpScreen } from './components/SignUpEmailOtpScreen';
 import { SetupProfileScreen } from './components/SetupProfileScreen';
+import { ForgotPasswordScreen } from './components/ForgotPasswordScreen';
+import { ResetPasswordScreen } from './components/ResetPasswordScreen';
 import { SwipeScreen } from './components/SwipeScreen';
 import { UploadScreen } from './components/UploadScreen';
 import { MatchesScreen } from './components/MatchesScreen';
@@ -26,11 +25,12 @@ const AppContent: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<ScreenState>('welcome');
   const [activeTab, setActiveTab] = useState<TabState>('discover');
   const [swipeTab, setSwipeTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
-  const [signupPhone, setSignupPhone] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupName, setSignupName] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [selectedItem, setSelectedItem] = useState<SwipeItem | null>(null);
+  // Password reset flow state
+  const [resetPasswordEmail, setResetPasswordEmail] = useState('');
   // Store current index per tab to preserve position when navigating back
   const [swipeIndex, setSwipeIndex] = useState<Record<'Marketplace' | 'Services' | 'Swap', number>>({
     Marketplace: 0,
@@ -75,7 +75,8 @@ const AppContent: React.FC = () => {
     if (!loading) {
       if (isAuthenticated) {
         // User is authenticated, show home screen
-        if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_phone' || currentScreen === 'signup_otp' || currentScreen === 'signup_email_otp' || currentScreen === 'setup_profile') {
+        // Allow setup_profile to remain visible for new users to complete their profile
+        if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_email_otp' || currentScreen === 'forgot_password' || currentScreen === 'reset_password') {
           navigationHistory.reset('home');
           setCurrentScreen('home');
         }
@@ -90,11 +91,6 @@ const AppContent: React.FC = () => {
       }
     }
   }, [isAuthenticated, loading, currentScreen, navigationHistory]);
-
-  const handleSendOtp = (phone: string) => {
-    setSignupPhone(phone);
-    navigateTo('signup_otp');
-  };
 
   const handleBackToProfile = () => {
     navigateTo('home');
@@ -117,18 +113,16 @@ const AppContent: React.FC = () => {
     navigateTo('item_details');
   };
 
-  const handleLoginRequest = async (method: 'phone_otp' | 'google' | 'email') => {
-    if (method === 'phone_otp') {
-      navigateTo('signup_phone');
-    } else if (method === 'email') {
+  const handleLoginRequest = async (method: 'google' | 'email') => {
+    if (method === 'email') {
       navigateTo('signin');
     } else if (method === 'google') {
       // Handle Google sign-in
       try {
         const result = await loginWithGoogle();
         if (result.new_user) {
-          // New user - might need to complete profile
-          navigateTo('home', true);
+          // New user - navigate to profile setup
+          navigateTo('setup_profile', true);
         } else {
           // Existing user - go to home
           navigateTo('home', true);
@@ -140,8 +134,20 @@ const AppContent: React.FC = () => {
     }
   };
 
+  // Navigate to sign up page for creating account
   const handleSignUpRequest = () => {
-    navigateTo('signup_phone');
+    navigateTo('signup');
+  };
+
+  // Navigate to forgot password flow
+  const handleForgotPassword = () => {
+    navigateTo('forgot_password');
+  };
+
+  // Handle forgot password email submission
+  const handleForgotPasswordSubmit = (email: string) => {
+    setResetPasswordEmail(email);
+    navigateTo('reset_password');
   };
 
   // Memoize onIndexChange to prevent infinite loops
@@ -201,7 +207,10 @@ const AppContent: React.FC = () => {
       {/* Screen Content */}
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative w-full overscroll-none" data-scrollable style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none' }}>
         {currentScreen === 'welcome' && (
-          <WelcomeScreen onGetStarted={() => navigateTo('home')} />
+          <WelcomeScreen 
+            onGetStarted={() => navigateTo('home')} 
+            onSignUp={() => navigateTo('signup')}
+          />
         )}
 
         {currentScreen === 'signin' && (
@@ -209,6 +218,7 @@ const AppContent: React.FC = () => {
             onSignIn={() => navigateTo('home', true)}
             onBack={handleGoBack}
             onSignUp={() => navigateTo('signup')}
+            onForgotPassword={handleForgotPassword}
           />
         )}
 
@@ -225,19 +235,16 @@ const AppContent: React.FC = () => {
           />
         )}
 
-        {currentScreen === 'signup_phone' && (
-          <SignUpPhoneScreen
-            onSendOtp={handleSendOtp}
-            onBack={handleGoBack}
-          />
-        )}
-
-        {currentScreen === 'signup_otp' && (
-          <SignUpOtpScreen
-            phoneNumber={signupPhone}
+        {currentScreen === 'signup_email_otp' && (
+          <SignUpEmailOtpScreen
+            email={signupEmail}
+            name={signupName}
+            password={signupPassword}
             onVerify={(isNewUser) => {
+              // After email verification, new users go to profile setup
+              // Existing users go directly to home
               if (isNewUser) {
-                navigateTo('setup_profile');
+                navigateTo('setup_profile', true);
               } else {
                 navigateTo('home', true);
               }
@@ -246,16 +253,18 @@ const AppContent: React.FC = () => {
           />
         )}
 
-        {currentScreen === 'signup_email_otp' && (
-          <SignUpEmailOtpScreen
-            email={signupEmail}
-            name={signupName}
-            password={signupPassword}
-            onVerify={(isNewUser) => {
-              // After email verification, go directly to discover page
-              // Profile setup is optional and can be done later
-              navigateTo('home', true);
-            }}
+        {currentScreen === 'forgot_password' && (
+          <ForgotPasswordScreen
+            onSubmit={handleForgotPasswordSubmit}
+            onBack={handleGoBack}
+            onSignIn={() => navigateTo('signin')}
+          />
+        )}
+
+        {currentScreen === 'reset_password' && (
+          <ResetPasswordScreen
+            email={resetPasswordEmail}
+            onSuccess={() => navigateTo('signin', true)}
             onBack={handleGoBack}
           />
         )}
@@ -285,7 +294,7 @@ const AppContent: React.FC = () => {
             item={selectedItem}
             onBack={handleGoBack}
             isAuthenticated={isAuthenticated}
-            onLoginPrompt={() => handleLoginRequest('phone_otp')}
+            onLoginPrompt={() => handleLoginRequest('email')}
             onChat={(item) => {
               // Navigate to chat with seller
               // For now, just go back - you can implement chat navigation later

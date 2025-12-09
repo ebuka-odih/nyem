@@ -595,6 +595,96 @@ class AuthController extends Controller
     }
 
     /**
+     * Send forgot password OTP to user's email
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function forgotPassword(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|string|email|max:255',
+        ]);
+
+        // Check if user exists (but don't reveal this to prevent enumeration)
+        $user = User::where('email', $data['email'])->first();
+
+        // Generate 6-digit OTP code
+        $code = (string) random_int(100000, 999999);
+        $expiry = now()->addMinutes(15); // Longer expiry for password reset
+
+        // Store OTP in database
+        OtpCode::create([
+            'email' => $data['email'],
+            'code' => $code,
+            'expires_at' => $expiry,
+        ]);
+
+        // Send OTP via email if user exists
+        if ($user) {
+            $emailResult = $this->emailService->sendPasswordResetCode($data['email'], $code);
+
+            if (!$emailResult['success']) {
+                Log::warning('Failed to send password reset code via email', [
+                    'email' => $data['email'],
+                    'error' => $emailResult['message'],
+                ]);
+            }
+        }
+
+        // Always return success to prevent email enumeration
+        return response()->json([
+            'message' => 'If an account exists with this email, a reset code has been sent.',
+            'expires_at' => $expiry,
+            // Include debug code only in non-production for testing
+            'debug_code' => app()->environment('local', 'testing') ? $code : null,
+        ], 200);
+    }
+
+    /**
+     * Reset user password with OTP verification
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resetPassword(Request $request)
+    {
+        $data = $request->validate([
+            'email' => 'required|string|email|max:255',
+            'code' => 'required|string|max:6',
+            'password' => 'required|string|min:6',
+            'password_confirmation' => 'required|string|same:password',
+        ]);
+
+        // Find OTP
+        $otp = OtpCode::where('email', $data['email'])
+            ->latest()
+            ->first();
+
+        if (!$otp || !$otp->isValidFor($data['email'], $data['code'])) {
+            return response()->json(['message' => 'Invalid or expired reset code'], 422);
+        }
+
+        // Find user
+        $user = User::where('email', $data['email'])->first();
+
+        if (!$user) {
+            return response()->json(['message' => 'User not found'], 404);
+        }
+
+        // Update password
+        $user->password = Hash::make($data['password']);
+        $user->save();
+
+        // Mark OTP as consumed
+        $otp->update(['consumed' => true]);
+
+        return response()->json([
+            'message' => 'Password reset successfully',
+        ], 200);
+    }
+
+    /**
      * Generate a unique username from name or email
      * 
      * @param string $name

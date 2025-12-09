@@ -11,7 +11,7 @@ import { MatchList } from './matches/MatchList';
 interface MatchesScreenProps {
   onNavigateToRequests: () => void;
   onNavigateToChat: () => void;
-  onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onLoginRequest?: (method: 'google' | 'email') => void;
   onSignUpRequest?: () => void;
 }
 

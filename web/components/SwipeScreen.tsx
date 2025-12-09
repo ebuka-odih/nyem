@@ -72,7 +72,7 @@ interface Location {
 interface SwipeScreenProps {
   onBack: () => void;
   onItemClick: (item: SwipeItem, currentTab?: 'Marketplace' | 'Services' | 'Swap', currentIndex?: number) => void;
-  onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onLoginRequest?: (method: 'google' | 'email') => void;
   onSignUpRequest?: () => void;
   initialTab?: 'Marketplace' | 'Services' | 'Swap';
   onTabChange?: (tab: 'Marketplace' | 'Services' | 'Swap') => void;
@@ -391,7 +391,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     }
   };
 
-  const handleLoginMethod = (method: 'phone_otp' | 'google' | 'email') => {
+  const handleLoginMethod = (method: 'google' | 'email') => {
     setShowLoginPrompt(false);
     if (onLoginRequest) {
       onLoginRequest(method);

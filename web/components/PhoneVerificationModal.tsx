@@ -18,7 +18,9 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState<string[]>(new Array(6).fill(""));
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const { sendOtp, verifyPhoneForSeller } = useAuth();
 
@@ -29,6 +31,7 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
       setPhone('');
       setOtp(new Array(6).fill(""));
       setError(null);
+      setSuccessMessage(null);
     }
   }, [isOpen]);
 
@@ -75,6 +78,30 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text');
+    
+    // Extract only numeric characters from pasted text
+    const numericCode = pastedData.replace(/\D/g, '').slice(0, 6);
+    
+    if (numericCode.length > 0) {
+      const newOtp = [...otp];
+      
+      // Fill OTP inputs with pasted code
+      for (let i = 0; i < 6; i++) {
+        newOtp[i] = numericCode[i] || '';
+      }
+      
+      setOtp(newOtp);
+      
+      // Focus the next empty input or the last input if all are filled
+      const nextEmptyIndex = newOtp.findIndex((digit) => !digit);
+      const focusIndex = nextEmptyIndex !== -1 ? nextEmptyIndex : 5;
+      inputRefs.current[focusIndex]?.focus();
     }
   };
 
@@ -127,7 +154,7 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
           {step === 'phone' ? (
             <form onSubmit={handleSendOtp} className="space-y-4">
               <p className="text-gray-600 text-sm mb-4">
-                To sell items in the marketplace, we need to verify your phone number.
+                To upload items and connect with buyers, we need to verify your phone number. This helps keep our community safe and trustworthy.
               </p>
 
               {error && (
@@ -170,6 +197,12 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
                 </div>
               )}
 
+              {successMessage && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                  {successMessage}
+                </div>
+              )}
+
               <div className="flex justify-between gap-2 mb-6">
                 {otp.map((data, index) => (
                   <input
@@ -180,6 +213,7 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
                     value={data}
                     onChange={(e) => handleOtpChange(e.target, index)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
+                    onPaste={index === 0 ? handlePaste : undefined}
                     className="flex-1 h-12 border border-gray-300 rounded-lg text-center text-xl font-bold text-gray-800 focus:border-brand focus:ring-1 focus:ring-brand focus:outline-none transition-all bg-gray-50"
                     inputMode="numeric"
                   />
@@ -194,17 +228,45 @@ export const PhoneVerificationModal: React.FC<PhoneVerificationModalProps> = ({
                 {loading ? 'Verifying...' : 'Verify'}
               </Button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setStep('phone');
-                  setOtp(new Array(6).fill(""));
-                  setError(null);
-                }}
-                className="w-full text-center text-brand font-bold hover:text-brand-dark transition-colors mt-4"
-              >
-                Change Phone Number
-              </button>
+              <div className="flex items-center justify-center space-x-4 mt-4">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setError(null);
+                    setSuccessMessage(null);
+                    setResendLoading(true);
+                    try {
+                      const fullPhone = `+234${phone}`;
+                      await sendOtp(fullPhone);
+                      setSuccessMessage('A new code has been sent to your phone.');
+                      setOtp(new Array(6).fill(""));
+                      inputRefs.current[0]?.focus();
+                      setTimeout(() => setSuccessMessage(null), 5000);
+                    } catch (err: any) {
+                      setError(err.message || 'Failed to resend OTP.');
+                    } finally {
+                      setResendLoading(false);
+                    }
+                  }}
+                  disabled={resendLoading || loading}
+                  className="text-brand font-bold hover:text-brand-dark transition-colors disabled:opacity-50"
+                >
+                  {resendLoading ? 'Sending...' : 'Resend Code'}
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('phone');
+                    setOtp(new Array(6).fill(""));
+                    setError(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="text-gray-500 font-medium hover:text-gray-700 transition-colors"
+                >
+                  Change Number
+                </button>
+              </div>
             </form>
           )}
         </div>

@@ -7,9 +7,10 @@ interface SignInScreenProps {
   onSignIn: () => void;
   onBack: () => void;
   onSignUp: () => void;
+  onForgotPassword?: () => void;
 }
 
-export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, onSignUp }) => {
+export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, onSignUp, onForgotPassword }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -111,7 +112,13 @@ export const SignInScreen: React.FC<SignInScreenProps> = ({ onSignIn, onBack, on
 
                 {/* Forgot Password */}
                 <div className="w-full text-right">
-                    <button type="button" className="text-gray-500 font-bold text-sm hover:text-brand transition-colors">Forgot password?</button>
+                    <button 
+                        type="button" 
+                        onClick={onForgotPassword}
+                        className="text-gray-500 font-bold text-sm hover:text-brand transition-colors"
+                    >
+                        Forgot password?
+                    </button>
                 </div>
                 
                 {/* Submit Button */}

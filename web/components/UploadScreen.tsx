@@ -17,7 +17,7 @@ interface Category {
 }
 
 interface UploadScreenProps {
-  onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onLoginRequest?: (method: 'google' | 'email') => void;
   onSignUpRequest?: () => void;
 }
 
@@ -38,6 +38,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [pendingSubmit, setPendingSubmit] = useState(false); // Track if we need to retry submit after verification
   
   // Refs for file inputs
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -174,8 +175,10 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       return;
     }
 
-    // Check if phone verification is required for marketplace items
-    if (activeTab === 'Marketplace' && user && !user.phone_verified_at) {
+    // Check if phone verification is required for ALL uploads
+    // Users must verify their phone to upload any items (Marketplace, Services, or Swap)
+    if (user && !user.phone_verified_at) {
+      setPendingSubmit(true); // Mark that we have a pending submission
       setShowPhoneVerification(true);
       return;
     }
@@ -302,6 +305,32 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
         
+        {/* Phone Verification Required Banner */}
+        {user && !user.phone_verified_at && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-amber-800 font-semibold text-sm">Phone Verification Required</h3>
+                <p className="text-amber-700 text-xs mt-1 leading-relaxed">
+                  Verify your phone number to start uploading items. This helps keep our community safe and trustworthy.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowPhoneVerification(true)}
+                  className="mt-3 text-amber-700 font-bold text-sm hover:text-amber-800 underline underline-offset-2"
+                >
+                  Verify Now →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Success/Error Messages */}
         {success && (
             <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
@@ -356,11 +385,23 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({ onLoginRequest, onSi
       {/* Phone Verification Modal */}
       <PhoneVerificationModal
         isOpen={showPhoneVerification}
-        onClose={() => setShowPhoneVerification(false)}
+        onClose={() => {
+          setShowPhoneVerification(false);
+          setPendingSubmit(false);
+        }}
         onVerified={async () => {
           await refreshUser();
-          // Retry submission after verification
-          // Note: We'll need to store the form data or trigger submit again
+          // If there was a pending submission, retry it after verification
+          if (pendingSubmit) {
+            setPendingSubmit(false);
+            // Small delay to ensure user state is updated
+            setTimeout(() => {
+              const form = document.querySelector('form');
+              if (form) {
+                form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+              }
+            }, 500);
+          }
         }}
       />
     </div>

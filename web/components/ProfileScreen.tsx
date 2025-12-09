@@ -12,7 +12,7 @@ import { SettingsList } from './profile/SettingsList';
 
 interface ProfileScreenProps {
   onEditProfile: () => void;
-  onLoginRequest?: (method: 'phone_otp' | 'google' | 'email') => void;
+  onLoginRequest?: (method: 'google' | 'email') => void;
   onSignUpRequest?: () => void;
 }
 
