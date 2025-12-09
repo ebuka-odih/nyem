@@ -24,6 +24,7 @@ interface BarterItem {
   image: string;
   description: string;
   lookingFor: string;
+  category?: string;
   owner: Owner;
   gallery?: string[];
 }
@@ -35,6 +36,7 @@ interface MarketplaceItem {
   price: string;
   image: string;
   description: string;
+  category?: string;
   owner: Owner;
   gallery?: string[];
 }
@@ -259,6 +261,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           description: item.description || 'This is a dummy description to demonstrate how the card displays longer text content. The description will be truncated to two lines with an ellipsis if it exceeds the available space. This helps maintain a clean and consistent card layout while still showing enough information to help users make informed decisions.',
           lookingFor: item.looking_for || item.lookingFor || '',
           price: item.price ? (typeof item.price === 'string' ? `₦${item.price}` : `₦${item.price}`) : undefined,
+          category: item.category || undefined,
           owner: {
             name: item.user?.username || item.owner?.name || 'Unknown',
             image: item.user?.profile_photo || item.owner?.image || 'https://i.pravatar.cc/150',

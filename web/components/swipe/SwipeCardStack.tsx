@@ -124,6 +124,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             <SwipeCard
               item={currentItem}
               onInfoClick={() => onItemClick(currentItem)}
+              onBuyClick={onSwipeRight}
             />
           </motion.div>
         )}

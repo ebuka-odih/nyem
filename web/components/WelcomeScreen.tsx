@@ -4,9 +4,10 @@ import { ShoppingBag, Briefcase, RefreshCw, ArrowRight } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onGetStarted: () => void;
+  onSignUp?: () => void;
 }
 
-export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) => {
+export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted, onSignUp }) => {
   return (
     <div className="flex flex-col h-full bg-gradient-to-br from-brand via-brand to-brand-dark relative overflow-hidden">
       
@@ -99,13 +100,18 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onGetStarted }) =>
               onClick={onGetStarted} 
               className="py-3.5 text-base font-bold rounded-2xl shadow-lg shadow-brand/25 hover:shadow-xl hover:shadow-brand/30 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 group"
             >
-              <span>Get Started</span>
+              <span>Start Exploring</span>
               <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
 
+          {/* Create Account Link */}
+          <p className="mt-4 text-center text-sm text-gray-500 animate-[fadeIn_0.4s_ease-out_0.75s_both]">
+            Ready to join? <button onClick={onSignUp || onGetStarted} className="text-brand font-semibold hover:underline">Create an account</button>
+          </p>
+
           {/* Legal Footer */}
-          <div className="mt-8 text-center animate-[fadeIn_0.4s_ease-out_0.8s_both]">
+          <div className="mt-6 text-center animate-[fadeIn_0.4s_ease-out_0.8s_both]">
             <p className="text-xs text-gray-400 leading-relaxed">
               By continuing, you agree to our{' '}
               <a href="#" className="text-brand font-semibold hover:underline underline-offset-2">

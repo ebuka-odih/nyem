@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { Info, MapPin, Share2, Heart, Sparkles, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Info, MapPin, Share2, Heart, Sparkles, CheckCircle2, ArrowRight, Tag, ShoppingBag, Repeat } from 'lucide-react';
 import { SwipeItem } from '../../types';
 
 interface SwipeCardProps {
   item: SwipeItem;
   onInfoClick?: () => void;
+  onBuyClick?: () => void;
 }
 
-export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
+export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick, onBuyClick }) => {
   const isMarketplace = item.type === 'marketplace';
   const [isLiked, setIsLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -61,11 +62,18 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
     setIsLiked(!isLiked);
   };
 
+  const handleBuyClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onBuyClick) {
+      onBuyClick();
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col rounded-[32px] overflow-hidden bg-white shadow-2xl shadow-black/10 border border-white/50">
 
       {/* Image Section - Responsive height: smaller on mobile, larger on desktop */}
-      <div className="relative h-[55%] sm:h-[60%] shrink-0 overflow-hidden">
+      <div className="relative h-[55%] sm:h-[58%] shrink-0 overflow-hidden">
         {/* Shimmer loading state */}
         {!imageLoaded && (
           <div className="absolute inset-0 bg-gradient-to-r from-gray-100 via-gray-50 to-gray-100 animate-pulse" />
@@ -79,10 +87,10 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
         />
 
         {/* Elegant gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
 
         {/* Subtle top gradient for badges */}
-        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/30 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent" />
 
         {/* Top Action Bar */}
         <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
@@ -93,15 +101,21 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
                 <span className="text-[#990033]">{item.price}</span>
               </span>
               <span className="inline-flex items-center gap-1 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                <Sparkles size={9} />
+                <ShoppingBag size={9} />
                 For Sale
               </span>
             </div>
           ) : (
-            <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-gray-800 text-xs font-bold px-2.5 py-1 rounded-lg shadow-lg uppercase tracking-wide">
-              <CheckCircle2 size={11} className="text-emerald-500" />
-              {item.condition}
-            </span>
+            <div className="flex flex-col gap-1.5">
+              <span className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md text-gray-800 text-xs font-bold px-2.5 py-1 rounded-lg shadow-lg uppercase tracking-wide">
+                <CheckCircle2 size={11} className="text-emerald-500" />
+                {item.condition}
+              </span>
+              <span className="inline-flex items-center gap-1 bg-amber-500/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                <Repeat size={9} />
+                For Swap
+              </span>
+            </div>
           )}
 
           {/* Quick Actions */}
@@ -127,15 +141,24 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
           </div>
         </div>
 
-        {/* Title Section - Bottom of image */}
+        {/* Title & Category Section - Bottom of image */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
+          {/* Category Badge */}
+          {item.category && (
+            <div className="mb-2">
+              <span className="inline-flex items-center gap-1 bg-white/15 backdrop-blur-sm text-white/90 text-[10px] font-semibold px-2.5 py-1 rounded-full border border-white/20">
+                <Tag size={10} className="opacity-80" />
+                {item.category}
+              </span>
+            </div>
+          )}
           <h2 className="text-[22px] font-black text-white leading-tight tracking-tight line-clamp-2 drop-shadow-2xl">
             {item.title}
           </h2>
         </div>
       </div>
 
-      {/* Content Section - More compact layout */}
+      {/* Content Section - Optimized layout */}
       <div className="flex-1 px-4 pt-3 pb-3 flex flex-col bg-gradient-to-b from-white to-gray-50/50 min-h-0">
 
         {/* Description - Compact */}
@@ -145,30 +168,38 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
           </p>
         )}
 
-        {/* Status/Action Banner - Compact */}
+        {/* Status/Action Banner - Clickable for Marketplace */}
         {isMarketplace ? (
-          <div className="bg-gradient-to-r from-[#990033]/10 to-[#cc0044]/5 rounded-xl px-3 py-2 flex items-center justify-between border border-[#990033]/10">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-[#990033]/10 flex items-center justify-center">
-                <Sparkles size={12} className="text-[#990033]" />
+          <button
+            onClick={handleBuyClick}
+            className="w-full bg-gradient-to-r from-[#990033] to-[#cc0044] rounded-xl px-4 py-3 flex items-center justify-between shadow-lg shadow-[#990033]/20 hover:shadow-xl hover:shadow-[#990033]/30 active:scale-[0.98] transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+                <ShoppingBag size={16} className="text-white" />
               </div>
-              <span className="text-[#990033] text-sm font-bold">Ready to Buy</span>
+              <div className="text-left">
+                <span className="text-white text-sm font-bold block">Ready to Buy</span>
+                <span className="text-white/70 text-[10px]">Tap to express interest</span>
+              </div>
             </div>
-            <ArrowRight size={16} className="text-[#990033]/60" />
-          </div>
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+              <ArrowRight size={16} className="text-white group-hover:translate-x-0.5 transition-transform" />
+            </div>
+          </button>
         ) : (
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-3 py-2 border border-amber-100/50">
-            <p className="text-[10px] text-amber-600/80 font-medium uppercase tracking-wider">Looking for</p>
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl px-4 py-3 border border-amber-100/50">
+            <p className="text-[10px] text-amber-600/80 font-semibold uppercase tracking-wider mb-0.5">Looking for</p>
             <p className="text-gray-900 font-bold text-sm truncate">{item.lookingFor}</p>
           </div>
         )}
 
-        {/* Seller Info - Larger text for better readability */}
+        {/* Seller Info - Compact footer */}
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
             {/* Avatar with verified badge */}
             <div className="relative shrink-0">
-              <div className="w-11 h-11 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-md">
+              <div className="w-10 h-10 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-md">
                 <img
                   src={item.owner.image}
                   alt={item.owner.name}
@@ -180,10 +211,10 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, onInfoClick }) => {
               </div>
             </div>
 
-            {/* Seller details - Increased text sizes */}
+            {/* Seller details */}
             <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-gray-900 text-[16px] truncate">{item.owner.name}</h3>
-              <div className="flex items-center text-[12px] text-gray-500 mt-0.5 truncate">
+              <h3 className="font-bold text-gray-900 text-[15px] truncate">{item.owner.name}</h3>
+              <div className="flex items-center text-[11px] text-gray-500 truncate">
                 {formatLocation()}
               </div>
             </div>

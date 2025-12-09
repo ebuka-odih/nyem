@@ -31,6 +31,7 @@ export interface BarterItem {
     image: string;
     description: string;
     lookingFor: string;
+    category?: string;
     owner: Owner;
     gallery?: string[];
 }
@@ -42,6 +43,7 @@ export interface MarketplaceItem {
     price: string;
     image: string;
     description: string;
+    category?: string;
     owner: Owner;
     gallery?: string[];
 }
