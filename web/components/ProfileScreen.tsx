@@ -9,6 +9,7 @@ import { ProfileCard } from './profile/ProfileCard';
 import { ProfileTabs } from './profile/ProfileTabs';
 import { ItemsGrid } from './profile/ItemsGrid';
 import { SettingsList } from './profile/SettingsList';
+import { AboutTab } from './profile/AboutTab';
 import { SwipeItem } from '../types';
 
 interface ProfileScreenProps {
@@ -43,9 +44,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
   onAddItem
 }) => {
   const { user, logout, token, refreshUser, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState<'items' | 'settings'>('items');
+  const [activeTab, setActiveTab] = useState<'about' | 'listings' | 'settings'>('about');
   const [userItems, setUserItems] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Determine if listings tab should be shown (only when user has items)
+  const hasItems = userItems.length > 0;
+
+  // If active tab is 'listings' but user has no items, switch to 'about'
+  useEffect(() => {
+    if (activeTab === 'listings' && !hasItems) {
+      setActiveTab('about');
+    }
+  }, [activeTab, hasItems]);
 
   // Fetch user items from profile endpoint
   useEffect(() => {
@@ -146,11 +157,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
         <ProfileCard user={user} onEditProfile={onEditProfile} />
 
         {/* Tabs Navigation */}
-        <ProfileTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        <ProfileTabs 
+          activeTab={activeTab} 
+          onTabChange={setActiveTab}
+          showListings={hasItems}
+        />
 
         {/* Tab Content */}
         <div className="px-6 pb-6">
-          {activeTab === 'items' ? (
+          {activeTab === 'about' && (
+            <AboutTab user={user} />
+          )}
+          {activeTab === 'listings' && hasItems && (
             <ItemsGrid 
               items={userItems} 
               loading={loading}
@@ -158,7 +176,8 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({
               onItemEdit={onItemEdit}
               onAddItem={onAddItem}
             />
-          ) : (
+          )}
+          {activeTab === 'settings' && (
             <SettingsList onLogout={handleLogout} />
           )}
         </div>

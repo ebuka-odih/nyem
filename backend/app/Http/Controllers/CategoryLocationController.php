@@ -69,52 +69,67 @@ class CategoryLocationController extends Controller
      */
     public function areas(Request $request, $cityId = null)
     {
-        // Support both route parameter and query parameter
-        $cityId = $cityId ?? $request->query('city_id');
+        try {
+            // Support both route parameter and query parameter
+            $cityId = $cityId ?? $request->query('city_id');
 
-        if (!$cityId) {
+            if (!$cityId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'City ID is required',
+                ], 422);
+            }
+
+            // Validate that the city exists and is actually a city
+            $city = Location::where('id', $cityId)
+                ->where('type', 'city')
+                ->first();
+
+            if (!$city) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'City not found',
+                ], 404);
+            }
+
+            // Get all areas for this city
+            // Use query() to explicitly start a query builder and avoid conflict with relationship method
+            $areas = Location::query()
+                ->where('type', 'area')
+                ->where('parent_id', $cityId)
+                ->active()
+                ->ordered()
+                ->get([
+                    'id',
+                    'name',
+                    'slug',
+                    'description',
+                    'parent_id',
+                    'sort_order'
+                ]);
+
             return response()->json([
-                'success' => false,
-                'message' => 'City ID is required',
-            ], 422);
-        }
-
-        // Validate that the city exists and is actually a city
-        $city = Location::where('id', $cityId)
-            ->where('type', 'city')
-            ->first();
-
-        if (!$city) {
-            return response()->json([
-                'success' => false,
-                'message' => 'City not found',
-            ], 404);
-        }
-
-        // Get all areas for this city
-        $areas = Location::areas()
-            ->where('parent_id', $cityId)
-            ->active()
-            ->ordered()
-            ->get([
-                'id',
-                'name',
-                'slug',
-                'description',
-                'parent_id',
-                'sort_order'
+                'success' => true,
+                'data' => [
+                    'city' => [
+                        'id' => $city->id,
+                        'name' => $city->name,
+                        'slug' => $city->slug,
+                    ],
+                    'areas' => $areas
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Error fetching areas for city ' . $cityId . ': ' . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
             ]);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'city' => [
-                    'id' => $city->id,
-                    'name' => $city->name,
-                    'slug' => $city->slug,
-                ],
-                'areas' => $areas
-            ]
-        ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch areas. Please try again later.',
+            ], 500);
+        }
     }
 }

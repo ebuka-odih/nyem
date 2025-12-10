@@ -76,7 +76,7 @@ const AppContent: React.FC = () => {
     if (!loading) {
       if (isAuthenticated) {
         // User is authenticated, show home screen
-        // Allow setup_profile to remain visible for new users to complete their profile
+        // setup_profile is only used for Google login users who need to complete their profile
         if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_email_otp' || currentScreen === 'forgot_password' || currentScreen === 'reset_password') {
           navigationHistory.reset('home');
           setCurrentScreen('home');
@@ -276,13 +276,11 @@ const AppContent: React.FC = () => {
             name={signupName}
             password={signupPassword}
             onVerify={(isNewUser) => {
-              // After email verification, new users go to profile setup
-              // Existing users go directly to home
-              if (isNewUser) {
-                navigateTo('setup_profile', true);
-              } else {
-                navigateTo('home', true);
-              }
+              // After email verification, redirect directly to profile
+              // User already has name, email, and password from registration
+              // They can edit profile later if needed
+              navigateTo('home', true);
+              setActiveTab('profile');
             }}
             onBack={handleGoBack}
           />
@@ -306,7 +304,11 @@ const AppContent: React.FC = () => {
 
         {currentScreen === 'setup_profile' && (
           <SetupProfileScreen
-            onComplete={() => navigateTo('home', true)}
+            onComplete={() => {
+              // Navigate to home and set profile tab as active
+              navigateTo('home', true);
+              setActiveTab('profile');
+            }}
             onBack={handleGoBack}
           />
         )}

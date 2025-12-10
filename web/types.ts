@@ -7,7 +7,7 @@ export interface IconProps {
   color?: string;
 }
 
-export type ScreenState = 'welcome' | 'signin' | 'signup' | 'signup_email_otp' | 'setup_profile' | 'forgot_password' | 'reset_password' | 'home' | 'match_requests' | 'chat' | 'edit_profile' | 'item_details' | 'public_profile';
+export type ScreenState = 'welcome' | 'signin' | 'signup' | 'signup_email_otp' | 'location_selection' | 'setup_profile' | 'forgot_password' | 'reset_password' | 'home' | 'match_requests' | 'chat' | 'edit_profile' | 'item_details' | 'public_profile';
 
 export type TabState = 'discover' | 'upload' | 'matches' | 'profile';
 
