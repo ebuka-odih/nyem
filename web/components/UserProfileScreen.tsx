@@ -368,15 +368,6 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                                    <Shield size={18} className="text-emerald-500" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-medium text-gray-900">Trusted Seller</p>
-                                    <p className="text-xs text-gray-500">Great track record</p>
-                                </div>
-                            </div>
                         </div>
                     </div>
 
@@ -393,7 +384,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                                     <p className="text-gray-500 text-xs mt-2">Loading items...</p>
                                 </div>
                             ) : userItems.length > 0 ? (
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 no-scrollbar">
                                     {userItems.map((item) => (
                                         <div
                                             key={item.id}
@@ -421,7 +412,7 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                                                     onItemClick(swipeItem);
                                                 }
                                             }}
-                                            className="bg-gray-50 rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
+                                            className="flex-shrink-0 w-32 bg-gray-50 rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
                                         >
                                             <div className="aspect-square bg-gray-100 relative overflow-hidden">
                                                 <img
@@ -439,8 +430,38 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                                                         {item.condition}
                                                     </div>
                                                 )}
-                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                                    <Eye size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center pointer-events-none">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (onItemClick) {
+                                                                // Convert to SwipeItem format
+                                                                const swipeItem: SwipeItem = {
+                                                                    id: item.id,
+                                                                    type: (item.type as 'marketplace' | 'barter') || 'barter',
+                                                                    title: item.title,
+                                                                    image: item.image,
+                                                                    description: '',
+                                                                    condition: item.condition || 'used',
+                                                                    lookingFor: '',
+                                                                    owner: {
+                                                                        id: user.id,
+                                                                        name: user.name,
+                                                                        image: userData.image,
+                                                                        location: user.location,
+                                                                        distance: user.distance || 'Unknown',
+                                                                    },
+                                                                    gallery: [item.image],
+                                                                    ...(item.type === 'marketplace' && item.price ? { price: item.price } : {}),
+                                                                };
+                                                                onItemClick(swipeItem);
+                                                            }
+                                                        }}
+                                                        className="pointer-events-auto bg-white/90 hover:bg-white text-gray-900 p-2 rounded-full shadow-lg transition-transform hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100"
+                                                        title="View Item"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div className="p-2">

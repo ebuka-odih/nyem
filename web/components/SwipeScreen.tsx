@@ -159,9 +159,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     // Restore the saved index for the new tab (or start at 0)
     const savedIndex = tabIndicesRef.current[tab] || 0;
     setCurrentIndex(savedIndex);
-    if (onIndexChange) {
-      onIndexChange(savedIndex);
-    }
+    // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
     if (onTabChange) {
       onTabChange(tab);
     }
@@ -375,9 +373,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           // Category or location filter changed - reset to first item
           setCurrentIndex(0);
           tabIndicesRef.current[activeTab] = 0;
-          if (onIndexChange) {
-            onIndexChange(0);
-          }
+          // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
         } else {
           // Tab change or initial load - clamp currentIndex to valid range
           const maxIndex = Math.max(0, finalItems.length - 1);
@@ -485,9 +481,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     
     setCurrentIndex(prev => {
       const newIndex = prev + 1;
-      if (onIndexChange) {
-        onIndexChange(newIndex);
-      }
+      // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
       return newIndex;
     });
   };
@@ -578,9 +572,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
 
   const resetStack = () => {
     setCurrentIndex(0);
-    if (onIndexChange) {
-      onIndexChange(0);
-    }
+    // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
   };
 
   const handleCategorySelect = (category: string) => {
@@ -651,9 +643,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           }
           setCurrentIndex(prev => {
             const newIndex = prev + 1;
-            if (onIndexChange) {
-              onIndexChange(newIndex);
-            }
+            // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
             return newIndex;
           });
         }}
@@ -670,9 +660,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           setShowPromoCard(false);
           setCurrentIndex(prev => {
             const newIndex = prev + 1;
-            if (onIndexChange) {
-              onIndexChange(newIndex);
-            }
+            // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
             return newIndex;
           });
         }}
