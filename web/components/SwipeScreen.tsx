@@ -8,6 +8,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 import { SwipeHeader } from './swipe/SwipeHeader';
 import { SwipeCardStack } from './swipe/SwipeCardStack';
 import { SwipeModals } from './swipe/SwipeModals';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../constants/placeholders';
 
 interface Owner {
   name: string;
@@ -41,14 +42,15 @@ interface MarketplaceItem {
   gallery?: string[];
 }
 
+// Mock items with initials avatars
 const MOCK_BARTER_ITEMS: BarterItem[] = [
-  { id: 1, type: 'barter', title: "Vintage Camera", condition: "Antique", image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=800", description: "Fully functional film camera from the 80s. Comes with original leather case.", lookingFor: "Smart Watch ⌚", owner: { name: "David", image: "https://i.pravatar.cc/150?img=3", location: "Abuja", distance: "5km" }, gallery: ["https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f", "https://images.unsplash.com/photo-1516035069371-29a1b244cc32"] },
-  { id: 2, type: 'barter', title: "Sony Headphones", condition: "Used", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=800", description: "Premium noise cancelling headphones. Battery life is great. Minor scratches on ear cup.", lookingFor: "Mechanical Keyboard ⌨️", owner: { name: "Sarah", image: "https://i.pravatar.cc/150?img=5", location: "Lagos", distance: "2km" }, gallery: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e", "https://images.unsplash.com/photo-1546435770-a3e426bf472b"] },
+  { id: 1, type: 'barter', title: "Vintage Camera", condition: "Antique", image: "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&q=80&w=800", description: "Fully functional film camera from the 80s. Comes with original leather case.", lookingFor: "Smart Watch ⌚", owner: { name: "David", image: generateInitialsAvatar("David"), location: "Abuja", distance: "5km" }, gallery: ["https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f", "https://images.unsplash.com/photo-1516035069371-29a1b244cc32"] },
+  { id: 2, type: 'barter', title: "Sony Headphones", condition: "Used", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=800", description: "Premium noise cancelling headphones. Battery life is great. Minor scratches on ear cup.", lookingFor: "Mechanical Keyboard ⌨️", owner: { name: "Sarah", image: generateInitialsAvatar("Sarah"), location: "Lagos", distance: "2km" }, gallery: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e", "https://images.unsplash.com/photo-1546435770-a3e426bf472b"] },
 ];
 
 const MOCK_MARKETPLACE_ITEMS: MarketplaceItem[] = [
-  { id: 3, type: 'marketplace', title: "Phone holder", price: "15,000", image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&q=80&w=800", description: "Phone holder against flat wall or surface area. Great for hands-free video calls or watching movies in bed.", owner: { name: "Ebuka", image: "https://i.pravatar.cc/150?img=11", location: "Abuja", distance: "30m" }, gallery: ["https://images.unsplash.com/photo-1585771724684-38269d6639fd"] },
-  { id: 4, type: 'marketplace', title: "Macbook Stand", price: "25,000", image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=800", description: "Aluminum alloy laptop stand. Ergonomic design to improve posture.", owner: { name: "Miriam", image: "https://i.pravatar.cc/150?img=9", location: "Port Harcourt", distance: "12km" }, gallery: ["https://images.unsplash.com/photo-1527443224154-c4a3942d3acf"] }
+  { id: 3, type: 'marketplace', title: "Phone holder", price: "15,000", image: "https://images.unsplash.com/photo-1585771724684-38269d6639fd?auto=format&fit=crop&q=80&w=800", description: "Phone holder against flat wall or surface area. Great for hands-free video calls or watching movies in bed.", owner: { name: "Ebuka", image: generateInitialsAvatar("Ebuka"), location: "Abuja", distance: "30m" }, gallery: ["https://images.unsplash.com/photo-1585771724684-38269d6639fd"] },
+  { id: 4, type: 'marketplace', title: "Macbook Stand", price: "25,000", image: "https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=800", description: "Aluminum alloy laptop stand. Ergonomic design to improve posture.", owner: { name: "Miriam", image: generateInitialsAvatar("Miriam"), location: "Port Harcourt", distance: "12km" }, gallery: ["https://images.unsplash.com/photo-1527443224154-c4a3942d3acf"] }
 ];
 
 const MOCK_USER_ITEMS = [
@@ -84,7 +86,7 @@ interface SwipeScreenProps {
 const WELCOME_CARD_DISMISSED_KEY = 'nyem_welcome_card_dismissed';
 
 export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, onSignUpRequest, initialTab = 'Marketplace', onTabChange, initialIndex = 0, onIndexChange }) => {
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user } = useAuth();
   const [activeTab, setActiveTab] = useState<'Marketplace' | 'Services' | 'Swap'>(initialTab);
   const [items, setItems] = useState<SwipeItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
@@ -292,14 +294,36 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           title: item.title || item.name || 'Untitled Item',
           condition: item.condition || 'Used',
           image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800"%3E%3Crect fill="%23f3f4f6" width="800" height="800"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
-          description: item.description || 'This is a dummy description to demonstrate how the card displays longer text content. The description will be truncated to two lines with an ellipsis if it exceeds the available space. This helps maintain a clean and consistent card layout while still showing enough information to help users make informed decisions.',
+          description: item.description || '', // Use empty string if no description, don't use dummy text
           lookingFor: item.looking_for || item.lookingFor || '',
           price: item.price ? (typeof item.price === 'string' ? `₦${item.price}` : `₦${item.price}`) : undefined,
           category: item.category || undefined,
           owner: {
             id: item.user?.id || item.owner?.id, // Seller's user ID for starting conversations
             name: item.user?.username || item.owner?.name || 'Unknown',
-            image: item.user?.profile_photo || item.owner?.image || 'https://i.pravatar.cc/150',
+            // Use actual profile_photo only if it exists and is not a generated avatar URL
+            image: (() => {
+              const profilePhoto = item.user?.profile_photo || item.owner?.image;
+              const userName = item.user?.username || item.owner?.name || 'Unknown';
+              // Check if profile_photo exists and is not empty
+              if (!profilePhoto || profilePhoto.trim() === '') {
+                return generateInitialsAvatar(userName);
+              }
+              // Filter out known generated avatar service URLs
+              const generatedAvatarPatterns = [
+                'ui-avatars.com',
+                'pravatar.cc',
+                'i.pravatar.cc',
+                'robohash.org',
+                'dicebear.com',
+                'avatar.vercel.sh',
+              ];
+              const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
+                profilePhoto.toLowerCase().includes(pattern.toLowerCase())
+              );
+              // Return initials avatar if it's a generated avatar, otherwise use the actual photo
+              return isGeneratedAvatar ? generateInitialsAvatar(userName) : profilePhoto;
+            })(),
             // Use item.city (where the item is located) instead of user.city (user's current location)
             location: item.city || item.user?.city || item.owner?.location || 'Unknown',
             distance: (() => {
@@ -316,6 +340,8 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
               }
               return 'Unknown';
             })(),
+            // Include phone verification status
+            phone_verified_at: item.user?.phone_verified_at || item.owner?.phone_verified_at || null,
           },
           gallery: item.images || item.gallery || [item.image].filter(Boolean),
         }));
@@ -610,6 +636,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         likedItems={likedItems}
         showWelcomeCard={showWelcomeCard}
         showPromoCard={showPromoCard}
+        currentUserId={user?.id}
         onLike={handleLike}
         onSwipeLeft={async () => {
           // Track swipe count for Marketplace and Swap tabs (for promo card)

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Eye, Pencil, MoreVertical } from 'lucide-react';
 import { SwipeItem } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../../constants/placeholders';
 
 interface UserItem {
   id: number;
@@ -32,6 +34,7 @@ export const ItemsGrid: React.FC<ItemsGridProps> = ({
   onItemEdit
 }) => {
   const [hoveredItem, setHoveredItem] = useState<number | null>(null);
+  const { user } = useAuth();
 
   if (loading) {
     return (
@@ -42,12 +45,35 @@ export const ItemsGrid: React.FC<ItemsGridProps> = ({
     );
   }
 
+  // Helper function to check if URL is a generated avatar
+  const isGeneratedAvatar = (url: string | null | undefined): boolean => {
+    if (!url || url.trim() === '') return false;
+    const generatedAvatarPatterns = [
+      'ui-avatars.com',
+      'pravatar.cc',
+      'i.pravatar.cc',
+      'robohash.org',
+      'dicebear.com',
+      'avatar.vercel.sh',
+    ];
+    return generatedAvatarPatterns.some(pattern => 
+      url.toLowerCase().includes(pattern.toLowerCase())
+    );
+  };
+
   // Convert UserItem to SwipeItem format for viewing
   const convertToSwipeItem = (item: UserItem): SwipeItem => {
+    // Use actual user profile photo, filter out generated avatars
+    const profilePhoto = (user as any)?.profile_photo || null;
+    const userName = (user as any)?.name || (user as any)?.username || 'You';
+    const ownerImage = (profilePhoto && !isGeneratedAvatar(profilePhoto)) 
+      ? profilePhoto 
+      : generateInitialsAvatar(userName);
+    
     const owner = {
       name: 'You',
-      image: '',
-      location: '',
+      image: ownerImage,
+      location: (user as any)?.cityLocation?.name || (user as any)?.city || '',
       distance: '',
     };
 
@@ -56,7 +82,7 @@ export const ItemsGrid: React.FC<ItemsGridProps> = ({
         id: item.id,
         type: 'marketplace',
         title: item.title,
-        price: item.price || '$0.00',
+        price: item.price || '₦0',
         image: item.image,
         description: item.description || '',
         category: '',

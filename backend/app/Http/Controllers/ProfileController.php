@@ -43,7 +43,17 @@ class ProfileController extends Controller
 
     public function me(Request $request)
     {
-        $user = $request->user()->loadCount('items')->load(['cityLocation', 'areaLocation']);
+        // Load user with items relationship (including category) and location relationships
+        // Items are ordered by latest first
+        $user = $request->user()
+            ->loadCount('items')
+            ->load([
+                'cityLocation', 
+                'areaLocation',
+                'items' => function ($query) {
+                    $query->with('category')->latest();
+                }
+            ]);
         
         // Ensure city string field is populated from relationship for backward compatibility
         if ($user->cityLocation && !$user->city) {

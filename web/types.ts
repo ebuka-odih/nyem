@@ -17,11 +17,12 @@ export interface FeatureItem {
 }
 
 export interface Owner {
-    id?: string;  // Seller's user ID for starting conversations
+    id?: string | number;  // Seller's user ID for starting conversations
     name: string;
     image: string;
     location: string;
     distance: string;
+    phone_verified_at?: string | null;  // Phone verification timestamp
 }
 
 export interface BarterItem {

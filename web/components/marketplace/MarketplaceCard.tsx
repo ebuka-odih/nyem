@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Heart, Share2, ShoppingCart, Sparkles, Star, Verified } from 'lucide-react';
+import { PLACEHOLDER_AVATAR } from '../../constants/placeholders';
 
 // Dummy data for design sample
 const DUMMY_MARKETPLACE_ITEM = {
@@ -17,7 +18,7 @@ const DUMMY_MARKETPLACE_ITEM = {
     reviews: 127,
     seller: {
         name: 'TechHub Nigeria',
-        avatar: 'https://i.pravatar.cc/150?img=32',
+        avatar: null, // Will use placeholder in component
         location: 'Lekki, Lagos',
         distance: '2.5km',
         verified: true,
@@ -216,7 +217,10 @@ export const MarketplaceCard: React.FC<MarketplaceCardProps> = ({
                             <div className="flex items-center gap-3">
                                 <div className="relative">
                                     <img
-                                        src={item.seller.avatar}
+                                        src={item.seller.avatar || PLACEHOLDER_AVATAR}
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).src = PLACEHOLDER_AVATAR;
+                                        }}
                                         alt={item.seller.name}
                                         className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-md"
                                     />

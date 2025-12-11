@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../../constants/placeholders';
 
 interface Match {
   id: number;
@@ -38,7 +39,33 @@ export const MatchList: React.FC<MatchListProps> = ({
           className="w-full bg-white rounded-2xl p-4 flex items-center shadow-sm border border-gray-100 active:scale-[0.98] transition-transform"
         >
           <div className="relative mr-4 shrink-0">
-            <img src={match.avatar} alt={match.name} className="w-12 h-12 rounded-full object-cover border border-gray-100" />
+            <img 
+              src={(() => {
+                const avatar = match.avatar;
+                const name = match.name || 'User';
+                if (!avatar || avatar.trim() === '') {
+                  return generateInitialsAvatar(name);
+                }
+                // Filter out generated avatars
+                const generatedAvatarPatterns = [
+                  'ui-avatars.com',
+                  'pravatar.cc',
+                  'i.pravatar.cc',
+                  'robohash.org',
+                  'dicebear.com',
+                  'avatar.vercel.sh',
+                ];
+                const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
+                  avatar.toLowerCase().includes(pattern.toLowerCase())
+                );
+                return isGeneratedAvatar ? generateInitialsAvatar(name) : avatar;
+              })()}
+              alt={match.name} 
+              className="w-12 h-12 rounded-full object-cover border border-gray-100"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = generateInitialsAvatar(match.name || 'User');
+              }}
+            />
             {match.unread && <div className="absolute top-0 right-0 w-3 h-3 bg-brand border-2 border-white rounded-full"></div>}
           </div>
           
@@ -58,6 +85,7 @@ export const MatchList: React.FC<MatchListProps> = ({
     </div>
   );
 };
+
 
 
 

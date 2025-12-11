@@ -27,7 +27,7 @@ class DemoDataSeeder extends Seeder
         $user = User::firstOrCreate(
             ['phone' => '08000000000'],
             [
-                'username' => 'demo',
+                'username' => 'john_doe',
                 'city' => 'Lagos',
                 'password' => Hash::make('password'),
                 'otp_verified_at' => now(),

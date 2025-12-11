@@ -8,7 +8,7 @@ interface ProfileTabsProps {
 
 export const ProfileTabs: React.FC<ProfileTabsProps> = ({ activeTab, onTabChange, showListings = false }) => {
   const tabs = [
-    { id: 'about' as const, label: 'About' },
+    { id: 'about' as const, label: 'Info' },
     ...(showListings ? [{ id: 'listings' as const, label: 'Listings' }] : []),
     { id: 'settings' as const, label: 'Settings' },
   ];

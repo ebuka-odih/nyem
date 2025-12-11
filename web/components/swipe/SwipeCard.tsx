@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Info, MapPin, Share2, Heart, CheckCircle2, ArrowRight, ShoppingBag, Repeat } from 'lucide-react';
 import { SwipeItem } from '../../types';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../../constants/placeholders';
 
 interface SwipeCardProps {
   item: SwipeItem;
@@ -176,7 +177,9 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
         {isMarketplace ? (
           <button
             onClick={handleBuyClick}
-            className="w-full bg-gradient-to-r from-brand to-brand-600 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg shadow-brand/15 hover:shadow-xl hover:shadow-brand/25 active:scale-[0.98] transition-all group"
+            disabled={!onBuyClick}
+            className={`w-full bg-gradient-to-r from-brand to-brand-600 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg shadow-brand/15 hover:shadow-xl hover:shadow-brand/25 active:scale-[0.98] transition-all group ${!onBuyClick ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={!onBuyClick ? "You can't like your own item" : "Tap to express interest"}
           >
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
@@ -205,9 +208,32 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
             <div className="relative shrink-0">
               <div className="w-9 h-9 rounded-xl bg-gray-100 overflow-hidden ring-2 ring-white shadow-sm">
                 <img
-                  src={item.owner.image}
+                  src={(() => {
+                    // Check if image exists and is not empty
+                    if (!item.owner.image || item.owner.image.trim() === '') {
+                      return generateInitialsAvatar(item.owner.name);
+                    }
+                    // Filter out known generated avatar service URLs
+                    const generatedAvatarPatterns = [
+                      'ui-avatars.com',
+                      'pravatar.cc',
+                      'i.pravatar.cc',
+                      'robohash.org',
+                      'dicebear.com',
+                      'avatar.vercel.sh',
+                    ];
+                    const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
+                      item.owner.image.toLowerCase().includes(pattern.toLowerCase())
+                    );
+                    // Return initials avatar if it's a generated avatar, otherwise use the actual photo
+                    return isGeneratedAvatar ? generateInitialsAvatar(item.owner.name) : item.owner.image;
+                  })()}
                   alt={item.owner.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // If image fails to load, use initials avatar
+                    (e.target as HTMLImageElement).src = generateInitialsAvatar(item.owner.name);
+                  }}
                 />
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-blue-500 rounded-md flex items-center justify-center ring-1.5 ring-white">

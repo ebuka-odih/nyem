@@ -17,7 +17,12 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),
-        }
+        },
+        dedupe: ['react', 'react-dom'], // Ensure single instance of React
+      },
+      optimizeDeps: {
+        // Pre-bundle React to ensure single instance
+        include: ['react', 'react-dom'],
       },
       // Public directory for PWA assets (manifest.json, icons, service worker)
       publicDir: 'public'

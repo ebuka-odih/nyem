@@ -1,5 +1,6 @@
 import React from 'react';
 import { MapPin, Star } from 'lucide-react';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../../constants/placeholders';
 
 interface Owner {
   name: string;
@@ -25,7 +26,34 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({
         <div className="flex items-center">
           <div className="relative w-12 h-12 mr-3">
             <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden border border-gray-200">
-              <img src={owner.image} alt={owner.name} className="w-full h-full object-cover" />
+              <img 
+                src={(() => {
+                  // Check if image exists and is not empty
+                  if (!owner.image || owner.image.trim() === '') {
+                    return generateInitialsAvatar(owner.name);
+                  }
+                  // Filter out known generated avatar service URLs
+                  const generatedAvatarPatterns = [
+                    'ui-avatars.com',
+                    'pravatar.cc',
+                    'i.pravatar.cc',
+                    'robohash.org',
+                    'dicebear.com',
+                    'avatar.vercel.sh',
+                  ];
+                  const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
+                    owner.image.toLowerCase().includes(pattern.toLowerCase())
+                  );
+                  // Return initials avatar if it's a generated avatar, otherwise use the actual photo
+                  return isGeneratedAvatar ? generateInitialsAvatar(owner.name) : owner.image;
+                })()}
+                alt={owner.name} 
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // If image fails to load, use initials avatar
+                  (e.target as HTMLImageElement).src = generateInitialsAvatar(owner.name);
+                }}
+              />
             </div>
             {/* Verified Badge - Blue Tick */}
             <div className="absolute -bottom-0.5 -right-0.5 bg-blue-500 rounded-full p-0.5 border-2 border-white">

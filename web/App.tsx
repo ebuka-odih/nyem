@@ -30,6 +30,7 @@ const AppContent: React.FC = () => {
   const [signupPassword, setSignupPassword] = useState('');
   const [selectedItem, setSelectedItem] = useState<SwipeItem | null>(null);
   const [editItem, setEditItem] = useState<any | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<any | null>(null);
   // Password reset flow state
   const [resetPasswordEmail, setResetPasswordEmail] = useState('');
   // Store current index per tab to preserve position when navigating back
@@ -75,11 +76,12 @@ const AppContent: React.FC = () => {
   useEffect(() => {
     if (!loading) {
       if (isAuthenticated) {
-        // User is authenticated, show home screen
+        // User is authenticated, show home screen with discover tab
         // setup_profile is only used for Google login users who need to complete their profile
         if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_email_otp' || currentScreen === 'forgot_password' || currentScreen === 'reset_password') {
           navigationHistory.reset('home');
           setCurrentScreen('home');
+          setActiveTab('discover'); // Always redirect to discover page after login
         }
       } else {
         // User is not authenticated
@@ -117,7 +119,7 @@ const AppContent: React.FC = () => {
   const handleLoginRequest = async (method: 'google' | 'email') => {
     if (method === 'email') {
       navigateTo('signin');
-    } else if (method === 'google') {
+      } else if (method === 'google') {
       // Handle Google sign-in
       try {
         const result = await loginWithGoogle();
@@ -125,8 +127,9 @@ const AppContent: React.FC = () => {
           // New user - navigate to profile setup
           navigateTo('setup_profile', true);
         } else {
-          // Existing user - go to home
+          // Existing user - go to home with discover tab
           navigateTo('home', true);
+          setActiveTab('discover'); // Redirect to discover page after Google login
         }
       } catch (error: any) {
         console.error('Google sign-in error:', error);
@@ -197,7 +200,10 @@ const AppContent: React.FC = () => {
       case 'matches':
         return <MatchesScreen
           onNavigateToRequests={() => navigateTo('match_requests')}
-          onNavigateToChat={() => navigateTo('chat')}
+          onNavigateToChat={(conversation) => {
+            setSelectedConversation(conversation);
+            navigateTo('chat');
+          }}
           onLoginRequest={handleLoginRequest}
           onSignUpRequest={handleSignUpRequest}
         />;
@@ -250,7 +256,10 @@ const AppContent: React.FC = () => {
 
         {currentScreen === 'signin' && (
           <SignInScreen
-            onSignIn={() => navigateTo('home', true)}
+            onSignIn={() => {
+              navigateTo('home', true);
+              setActiveTab('discover'); // Redirect to discover page after login
+            }}
             onBack={handleGoBack}
             onSignUp={() => navigateTo('signup')}
             onForgotPassword={handleForgotPassword}
@@ -319,7 +328,13 @@ const AppContent: React.FC = () => {
         )}
 
         {currentScreen === 'chat' && (
-          <ChatScreen onBack={handleGoBack} />
+          <ChatScreen 
+            conversation={selectedConversation}
+            onBack={() => {
+              setSelectedConversation(null);
+              handleGoBack();
+            }} 
+          />
         )}
 
         {currentScreen === 'edit_profile' && (
@@ -336,6 +351,10 @@ const AppContent: React.FC = () => {
               // Navigate to chat with seller
               // For now, just go back - you can implement chat navigation later
               navigateTo('chat');
+            }}
+            onItemClick={(item) => {
+              setSelectedItem(item);
+              // Stay on item_details screen, just update the item
             }}
           />
         )}

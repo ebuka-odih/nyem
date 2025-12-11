@@ -7,10 +7,11 @@ import { LoginPrompt } from './common/LoginPrompt';
 import { SearchBar } from './matches/SearchBar';
 import { MatchRequestsCard } from './matches/MatchRequestsCard';
 import { MatchList } from './matches/MatchList';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../constants/placeholders';
 
 interface MatchesScreenProps {
   onNavigateToRequests: () => void;
-  onNavigateToChat: () => void;
+  onNavigateToChat: (conversation: any) => void;
   onLoginRequest?: (method: 'google' | 'email') => void;
   onSignUpRequest?: () => void;
 }
@@ -44,7 +45,8 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
         const conversationsData = conversationsRes.data || conversationsRes.conversations || [];
 
         // Transform API conversations to Match format for display
-        const transformedMatches: Match[] = conversationsData.map((conversation: any) => {
+        // Store full conversation data for navigation
+        const transformedMatches: (Match & { conversationData?: any })[] = conversationsData.map((conversation: any) => {
           const otherUser = conversation.other_user || {};
           const lastMessage = conversation.last_message || {};
           
@@ -52,9 +54,29 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
             id: conversation.id || conversation.conversation_id,
             name: otherUser.username || 'Unknown',
             message: lastMessage.message_text || lastMessage.content || 'Start a conversation',
-            avatar: otherUser.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.username || 'User')}`,
+            avatar: (() => {
+              const profilePhoto = otherUser.profile_photo;
+              const userName = otherUser.username || 'Unknown';
+              if (!profilePhoto || profilePhoto.trim() === '') {
+                return generateInitialsAvatar(userName);
+              }
+              // Filter out generated avatars
+              const generatedAvatarPatterns = [
+                'ui-avatars.com',
+                'pravatar.cc',
+                'i.pravatar.cc',
+                'robohash.org',
+                'dicebear.com',
+                'avatar.vercel.sh',
+              ];
+              const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
+                profilePhoto.toLowerCase().includes(pattern.toLowerCase())
+              );
+              return isGeneratedAvatar ? generateInitialsAvatar(userName) : profilePhoto;
+            })(),
             time: conversation.updated_at ? formatTime(conversation.updated_at) : 'Just now',
             unread: conversation.unread_count > 0,
+            conversationData: conversation, // Store full conversation data
           };
         });
 
@@ -132,7 +154,12 @@ export const MatchesScreen: React.FC<MatchesScreenProps> = ({ onNavigateToReques
         <MatchList 
           matches={matches}
           loading={loading}
-          onMatchClick={() => onNavigateToChat()}
+          onMatchClick={(match) => {
+            const conversation = (match as any).conversationData;
+            if (conversation) {
+              onNavigateToChat(conversation);
+            }
+          }}
         />
       </div>
     </div>

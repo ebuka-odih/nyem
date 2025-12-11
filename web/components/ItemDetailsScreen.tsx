@@ -13,6 +13,7 @@ interface ItemDetailsScreenProps {
     isAuthenticated?: boolean;
     onLoginPrompt?: () => void;
     onChat?: (item: SwipeItem) => void;
+    onItemClick?: (item: SwipeItem) => void;
 }
 
 export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
@@ -21,6 +22,7 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
     isAuthenticated = false,
     onLoginPrompt,
     onChat,
+    onItemClick,
 }) => {
     const [showUserProfile, setShowUserProfile] = useState(false);
     const [showImageViewer, setShowImageViewer] = useState(false);
@@ -58,9 +60,19 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
 
     // Show User Profile Screen
     if (showUserProfile) {
+        // Get user data from item - check if we have user object with phone_verified_at
+        // The item might have a 'user' property with full user data, or just 'owner' with basic info
+        const userData = (item as any).user 
+            ? {
+                ...item.owner,
+                id: (item as any).user.id || item.owner.id,
+                phone_verified_at: (item as any).user.phone_verified_at || null,
+              }
+            : item.owner;
+
         return (
             <UserProfileScreen
-                user={item.owner}
+                user={userData}
                 onBack={handleBackFromProfile}
                 onChat={() => {
                     if (isAuthenticated) {
@@ -71,6 +83,7 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
                 }}
                 isAuthenticated={isAuthenticated}
                 onLoginPrompt={onLoginPrompt}
+                onItemClick={onItemClick}
             />
         );
     }

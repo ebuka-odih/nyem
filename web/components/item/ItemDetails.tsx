@@ -32,12 +32,14 @@ export const ItemDetails: React.FC<ItemDetailsProps> = ({ item, onImageClick }) 
       )}
 
       {/* Description */}
-      <div className="mb-8">
-        <h3 className="text-lg font-bold text-gray-900 mb-2">Description</h3>
-        <p className="text-gray-600 leading-relaxed text-sm">
-          {item.description}
-        </p>
-      </div>
+      {item.description && (
+        <div className="mb-8">
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Description</h3>
+          <p className="text-gray-600 leading-relaxed text-sm">
+            {item.description}
+          </p>
+        </div>
+      )}
 
       {/* Looking For (if barter) */}
       {!isMarketplace && (

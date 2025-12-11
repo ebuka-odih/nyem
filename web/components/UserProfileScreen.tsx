@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     ArrowLeft,
     MapPin,
@@ -12,11 +12,19 @@ import {
     Heart,
     Share2,
     UserPlus,
-    UserCheck
+    UserCheck,
+    Clock,
+    Eye
 } from 'lucide-react';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../constants/placeholders';
+import { apiFetch } from '../utils/api';
+import { ENDPOINTS } from '../constants/endpoints';
+import { useAuth } from '../contexts/AuthContext';
+import { SwipeItem } from '../types';
 
 interface UserProfileProps {
     user: {
+        id?: string | number;
         name: string;
         image: string;
         location: string;
@@ -27,11 +35,22 @@ interface UserProfileProps {
         memberSince?: string;
         verified?: boolean;
         bio?: string;
+        phone_verified_at?: string | null;
     };
     onBack: () => void;
     onChat?: () => void;
     isAuthenticated?: boolean;
     onLoginPrompt?: () => void;
+    onItemClick?: (item: SwipeItem) => void;
+}
+
+interface UserItem {
+    id: number;
+    title: string;
+    image: string;
+    type?: string;
+    price?: string;
+    condition?: string;
 }
 
 export const UserProfileScreen: React.FC<UserProfileProps> = ({
@@ -40,20 +59,106 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
     onChat,
     isAuthenticated = false,
     onLoginPrompt,
+    onItemClick,
 }) => {
     const [isLiked, setIsLiked] = useState(false);
     const [isFollowed, setIsFollowed] = useState(false);
+    const [userItems, setUserItems] = useState<UserItem[]>([]);
+    const [loadingItems, setLoadingItems] = useState(true);
+    const { token } = useAuth();
 
-    // Generate mock data for demo purposes
+    // Helper function to check if URL is a generated avatar
+    const isGeneratedAvatar = (url: string): boolean => {
+      if (!url || url.trim() === '') return false;
+      const generatedAvatarPatterns = [
+        'ui-avatars.com',
+        'pravatar.cc',
+        'i.pravatar.cc',
+        'robohash.org',
+        'dicebear.com',
+        'avatar.vercel.sh',
+      ];
+      return generatedAvatarPatterns.some(pattern => 
+        url.toLowerCase().includes(pattern.toLowerCase())
+      );
+    };
+
+    // Fetch user items when component mounts
+    useEffect(() => {
+        const fetchUserItems = async () => {
+            if (!user.id) {
+                setLoadingItems(false);
+                return;
+            }
+
+            setLoadingItems(true);
+            try {
+                // Fetch items from feed and filter by user_id
+                // Note: This is a workaround since there's no direct endpoint to get items by user ID
+                // In production, you might want to add a dedicated endpoint like /api/users/{id}/items
+                const res = await apiFetch(ENDPOINTS.items.feed, { 
+                    token: token || undefined 
+                });
+                
+                const allItems = res.items || res.data || [];
+                
+                // Filter items by user ID
+                const filteredItems = allItems
+                    .filter((item: any) => {
+                        const itemUserId = item.user?.id || item.user_id;
+                        return String(itemUserId) === String(user.id);
+                    })
+                    .filter((item: any) => item.status === 'active') // Only show active items
+                    .slice(0, 6) // Limit to 6 items for display
+                    .map((item: any) => {
+                        const photos = item.photos || item.images || [];
+                        const primaryImage = photos[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f3f4f6" width="300" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+                        
+                        return {
+                            id: item.id,
+                            title: item.title || 'Untitled Item',
+                            image: primaryImage,
+                            type: item.type,
+                            price: item.price ? (typeof item.price === 'string' ? item.price : `₦${item.price}`) : undefined,
+                            condition: item.condition,
+                        };
+                    });
+                
+                setUserItems(filteredItems);
+            } catch (error) {
+                console.error('Failed to fetch user items:', error);
+                setUserItems([]);
+            } finally {
+                setLoadingItems(false);
+            }
+        };
+
+        fetchUserItems();
+    }, [user.id, token]);
+
+    // Use actual user data, only show fields if they exist (no dummy/mock data)
     const userData = {
         ...user,
-        rating: user.rating || 4.9,
-        reviews: user.reviews || 12,
-        itemsListed: user.itemsListed || 8,
-        memberSince: user.memberSince || 'Dec 2023',
-        verified: user.verified !== undefined ? user.verified : true,
-        bio: user.bio || 'Passionate about quality items and fair trades. Always looking for unique finds and great deals! 🛍️',
+        // Only use provided values, don't set defaults
+        rating: user.rating,
+        reviews: user.reviews,
+        itemsListed: user.itemsListed,
+        memberSince: user.memberSince,
+        verified: user.verified,
+        bio: user.bio,
+        // Ensure image uses actual profile photo or initials avatar (filter out generated avatars)
+        image: (() => {
+          const userName = user.name || 'User';
+          if (!user.image || user.image.trim() === '') {
+            return generateInitialsAvatar(userName);
+          }
+          // Filter out generated avatar URLs
+          return isGeneratedAvatar(user.image) ? generateInitialsAvatar(userName) : user.image;
+        })(),
     };
+
+    // Check if phone is verified
+    const isPhoneVerified = user.phone_verified_at !== null && user.phone_verified_at !== undefined;
 
     const handleChatClick = () => {
         if (isAuthenticated) {
@@ -94,6 +199,10 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                                     src={userData.image}
                                     alt={userData.name}
                                     className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        // If image fails to load, use initials avatar
+                                        (e.target as HTMLImageElement).src = generateInitialsAvatar(userData.name);
+                                    }}
                                 />
                             </div>
                             {userData.verified && (
@@ -182,48 +291,58 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                         </div>
                     </div>
 
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-3 divide-x divide-gray-100 py-4">
-                        {/* Rating */}
-                        <div className="flex flex-col items-center px-4">
-                            <div className="flex items-center gap-1 mb-1">
-                                <Star size={16} className="text-amber-400 fill-amber-400" />
-                                <span className="text-lg font-bold text-gray-900">{userData.rating}</span>
-                            </div>
-                            <span className="text-xs text-gray-500">{userData.reviews} Reviews</span>
-                        </div>
+                    {/* Stats Row - Only show if data exists */}
+                    {(userData.rating !== undefined || userData.itemsListed !== undefined || userData.memberSince) && (
+                        <div className="grid grid-cols-3 divide-x divide-gray-100 py-4">
+                            {/* Rating */}
+                            {userData.rating !== undefined && (
+                                <div className="flex flex-col items-center px-4">
+                                    <div className="flex items-center gap-1 mb-1">
+                                        <Star size={16} className="text-amber-400 fill-amber-400" />
+                                        <span className="text-lg font-bold text-gray-900">{userData.rating}</span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">{userData.reviews || 0} Reviews</span>
+                                </div>
+                            )}
 
-                        {/* Items Listed */}
-                        <div className="flex flex-col items-center px-4">
-                            <div className="flex items-center gap-1 mb-1">
-                                <Package size={16} className="text-brand" />
-                                <span className="text-lg font-bold text-gray-900">{userData.itemsListed}</span>
-                            </div>
-                            <span className="text-xs text-gray-500">Items</span>
-                        </div>
+                            {/* Items Listed */}
+                            {userData.itemsListed !== undefined && (
+                                <div className="flex flex-col items-center px-4">
+                                    <div className="flex items-center gap-1 mb-1">
+                                        <Package size={16} className="text-brand" />
+                                        <span className="text-lg font-bold text-gray-900">{userData.itemsListed}</span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">Items</span>
+                                </div>
+                            )}
 
-                        {/* Member Since */}
-                        <div className="flex flex-col items-center px-4">
-                            <div className="flex items-center gap-1 mb-1">
-                                <Calendar size={16} className="text-emerald-500" />
-                            </div>
-                            <span className="text-xs text-gray-500">{userData.memberSince}</span>
+                            {/* Member Since */}
+                            {userData.memberSince && (
+                                <div className="flex flex-col items-center px-4">
+                                    <div className="flex items-center gap-1 mb-1">
+                                        <Calendar size={16} className="text-emerald-500" />
+                                    </div>
+                                    <span className="text-xs text-gray-500">{userData.memberSince}</span>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 {/* Content Section */}
                 <div className="px-4 space-y-4">
-                    {/* About Section */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                        <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
-                            <span className="w-1 h-4 bg-brand rounded-full" />
-                            About
-                        </h2>
-                        <p className="text-gray-600 text-sm leading-relaxed">
-                            {userData.bio}
-                        </p>
-                    </div>
+                    {/* About Section - Only show if bio exists */}
+                    {userData.bio && (
+                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                            <h2 className="text-sm font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                <span className="w-1 h-4 bg-brand rounded-full" />
+                                About
+                            </h2>
+                            <p className="text-gray-600 text-sm leading-relaxed">
+                                {userData.bio}
+                            </p>
+                        </div>
+                    )}
 
                     {/* Trust & Safety */}
                     <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -233,12 +352,20 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                         </h2>
                         <div className="space-y-3">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                                    <CheckCircle2 size={18} className="text-blue-500" />
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                    isPhoneVerified ? 'bg-blue-50' : 'bg-gray-50'
+                                }`}>
+                                    {isPhoneVerified ? (
+                                        <CheckCircle2 size={18} className="text-blue-500" />
+                                    ) : (
+                                        <Clock size={18} className="text-gray-400" />
+                                    )}
                                 </div>
                                 <div>
                                     <p className="text-sm font-medium text-gray-900">Verified Account</p>
-                                    <p className="text-xs text-gray-500">Phone number verified</p>
+                                    <p className={`text-xs ${isPhoneVerified ? 'text-gray-500' : 'text-amber-600'}`}>
+                                        {isPhoneVerified ? 'Phone number verified' : 'Not Verified'}
+                                    </p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -254,69 +381,84 @@ export const UserProfileScreen: React.FC<UserProfileProps> = ({
                     </div>
 
                     {/* User's Listings */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                <span className="w-1 h-4 bg-purple-500 rounded-full" />
-                                Listings
+                    {user.id && (
+                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                            <h2 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
+                                <span className="w-1 h-4 bg-brand rounded-full" />
+                                Uploaded Items
                             </h2>
-                            <button className="text-xs text-brand font-medium flex items-center gap-1">
-                                View All <ExternalLink size={12} />
-                            </button>
-                        </div>
-
-                        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 no-scrollbar">
-                            {[1, 2, 3, 4].map((item) => (
-                                <div key={item} className="w-32 shrink-0">
-                                    <div className="aspect-square rounded-xl bg-gray-100 mb-2 overflow-hidden relative">
-                                        <img
-                                            src={`https://source.unsplash.com/random/200x200?product&sig=${item}`}
-                                            alt="Product"
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute top-1 right-1 bg-black/50 backdrop-blur-sm rounded-full px-1.5 py-0.5">
-                                            <span className="text-[10px] font-bold text-white">₦{(item * 15000).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                    <h3 className="text-xs font-bold text-gray-900 truncate">Product Item {item}</h3>
-                                    <p className="text-[10px] text-gray-500 truncate">Electronics • Used</p>
+                            {loadingItems ? (
+                                <div className="text-center py-8">
+                                    <div className="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-brand"></div>
+                                    <p className="text-gray-500 text-xs mt-2">Loading items...</p>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Recent Reviews Preview */}
-                    <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                        <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                <span className="w-1 h-4 bg-amber-400 rounded-full" />
-                                Reviews
-                            </h2>
-                            <button className="text-xs text-brand font-medium flex items-center gap-1">
-                                View All <ExternalLink size={12} />
-                            </button>
-                        </div>
-
-                        {/* Sample Review */}
-                        <div className="bg-gray-50 rounded-xl p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                                <div className="flex">
-                                    {[1, 2, 3, 4, 5].map((star) => (
-                                        <Star
-                                            key={star}
-                                            size={12}
-                                            className={star <= 5 ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}
-                                        />
+                            ) : userItems.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-3">
+                                    {userItems.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            onClick={() => {
+                                                if (onItemClick) {
+                                                    // Convert to SwipeItem format
+                                                    const swipeItem: SwipeItem = {
+                                                        id: item.id,
+                                                        type: (item.type as 'marketplace' | 'barter') || 'barter',
+                                                        title: item.title,
+                                                        image: item.image,
+                                                        description: '',
+                                                        condition: item.condition || 'used',
+                                                        lookingFor: '',
+                                                        owner: {
+                                                            id: user.id,
+                                                            name: user.name,
+                                                            image: userData.image,
+                                                            location: user.location,
+                                                            distance: user.distance || 'Unknown',
+                                                        },
+                                                        gallery: [item.image],
+                                                        ...(item.type === 'marketplace' && item.price ? { price: item.price } : {}),
+                                                    };
+                                                    onItemClick(swipeItem);
+                                                }
+                                            }}
+                                            className="bg-gray-50 rounded-xl overflow-hidden cursor-pointer hover:shadow-md transition-shadow group"
+                                        >
+                                            <div className="aspect-square bg-gray-100 relative overflow-hidden">
+                                                <img
+                                                    src={item.image}
+                                                    alt={item.title}
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                />
+                                                {item.price && (
+                                                    <div className="absolute top-2 left-2 bg-gradient-to-r from-brand to-brand-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
+                                                        {item.price}
+                                                    </div>
+                                                )}
+                                                {!item.price && item.condition && (
+                                                    <div className="absolute top-2 left-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md uppercase">
+                                                        {item.condition}
+                                                    </div>
+                                                )}
+                                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                                    <Eye size={16} className="text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                </div>
+                                            </div>
+                                            <div className="p-2">
+                                                <h3 className="font-semibold text-gray-900 text-xs truncate">{item.title}</h3>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
-                                <span className="text-xs text-gray-500">2 days ago</span>
-                            </div>
-                            <p className="text-sm text-gray-600">
-                                "Great seller! Item was exactly as described. Fast communication and smooth transaction. Highly recommend!"
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">- Happy Buyer</p>
+                            ) : (
+                                <div className="text-center py-8">
+                                    <Package size={32} className="text-gray-300 mx-auto mb-2" />
+                                    <p className="text-gray-500 text-sm">No items uploaded yet</p>
+                                </div>
+                            )}
                         </div>
-                    </div>
+                    )}
+
+                    {/* Recent Reviews Preview - Removed dummy reviews, should be populated from actual reviews */}
                 </div>
             </div>
 

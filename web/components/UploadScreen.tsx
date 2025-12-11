@@ -10,6 +10,7 @@ import { PhotoUpload } from './upload/PhotoUpload';
 import { UploadForm } from './upload/UploadForm';
 import { PhoneVerificationModal } from './PhoneVerificationModal';
 import { PreUploadProfileSetup } from './upload/PreUploadProfileSetup';
+import { SuccessModal } from './upload/SuccessModal';
 
 // Number of items users can upload before phone verification is required
 const FREE_UPLOAD_LIMIT = 2;
@@ -68,6 +69,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
@@ -216,6 +218,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
     e.preventDefault();
     setError(null);
     setSuccess(false);
+    setShowSuccessModal(false);
 
     if (!title.trim()) {
       setError('Title is required');
@@ -263,9 +266,24 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       }
 
       // Map condition values to backend expected values
-      let conditionValue = condition;
-      if (condition === 'used_good' || condition === 'used_fair') {
+      // Backend transforms condition for display (e.g., 'like_new' → 'Like new')
+      // We need to convert it back to the backend format before sending
+      let conditionValue: string | undefined = undefined;
+      
+      // Convert display format back to backend format
+      if (condition === 'New' || condition === 'new') {
+        conditionValue = 'new';
+      } else if (condition === 'Like new' || condition === 'like_new') {
+        conditionValue = 'like_new';
+      } else if (condition === 'Used' || condition === 'used' || condition === 'used_good' || condition === 'used_fair') {
         conditionValue = 'used';
+      }
+      
+      // Validate that we have a valid condition value
+      if (!conditionValue) {
+        setError('Please select a valid condition');
+        setLoading(false);
+        return;
       }
 
       const payload: any = {
@@ -330,6 +348,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       });
 
       setSuccess(true);
+      setShowSuccessModal(true);
       
       // Refresh user to update items_count after successful upload
       await refreshUser();
@@ -343,17 +362,6 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
         setLookingFor('');
         setPrice('');
         setPhotos([]);
-      }
-
-      // Call onEditComplete callback if provided
-      if (isEditMode && onEditComplete) {
-        setTimeout(() => {
-          onEditComplete();
-        }, 1500);
-      } else {
-        setTimeout(() => {
-          setSuccess(false);
-        }, 3000);
       }
     } catch (err: any) {
       // Check if error is due to phone verification requirement
@@ -430,58 +438,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-6 py-6 space-y-8">
         
-        {/* Verification Banner - Show different messages based on item count */}
-        {user && !user.phone_verified_at && (
-          <div className={`rounded-xl p-4 ${needsPhoneVerification ? 'bg-amber-50 border border-amber-200' : 'bg-blue-50 border border-blue-200'}`}>
-            <div className="flex items-start space-x-3">
-              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${needsPhoneVerification ? 'bg-amber-100' : 'bg-blue-100'}`}>
-                <svg className={`w-5 h-5 ${needsPhoneVerification ? 'text-amber-600' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                {needsPhoneVerification ? (
-                  <>
-                    <h3 className="text-amber-800 font-semibold text-sm">Verify to Upload More Items</h3>
-                    <p className="text-amber-700 text-xs mt-1 leading-relaxed">
-                      You've reached the limit of {FREE_UPLOAD_LIMIT} free uploads. Verify your phone number to continue uploading items and build trust in our community.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowPhoneVerification(true)}
-                      className="mt-3 text-amber-700 font-bold text-sm hover:text-amber-800 underline underline-offset-2"
-                    >
-                      Verify Now →
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-blue-800 font-semibold text-sm">
-                      {remainingFreeUploads} Free Upload{remainingFreeUploads !== 1 ? 's' : ''} Remaining
-                    </h3>
-                    <p className="text-blue-700 text-xs mt-1 leading-relaxed">
-                      You can upload {remainingFreeUploads} more item{remainingFreeUploads !== 1 ? 's' : ''} before verifying your phone. Verify now to unlock unlimited uploads!
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setShowPhoneVerification(true)}
-                      className="mt-3 text-blue-700 font-bold text-sm hover:text-blue-800 underline underline-offset-2"
-                    >
-                      Verify Early →
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Success/Error Messages */}
-        {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
-                {isEditMode ? 'Item updated successfully!' : 'Item posted successfully!'}
-            </div>
-        )}
+        {/* Error Messages */}
         {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {error}
@@ -504,35 +461,50 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
            </p>
         </div>
 
-        {/* Photo Upload */}
-        <PhotoUpload
-          photos={photos}
-          activeTab={activeTab}
-          onCameraCapture={handleCameraCapture}
-          onGallerySelect={handleGallerySelect}
-          onRemovePhoto={removePhoto}
-        />
+        {/* Services Tab - Coming Soon */}
+        {activeTab === 'Services' && !isEditMode ? (
+          <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Coming Soon</h3>
+              <p className="text-gray-500 text-base">
+                Services will be available soon. Stay tuned!
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Photo Upload */}
+            <PhotoUpload
+              photos={photos}
+              activeTab={activeTab}
+              onCameraCapture={handleCameraCapture}
+              onGallerySelect={handleGallerySelect}
+              onRemovePhoto={removePhoto}
+            />
 
-        {/* Form Fields */}
-        <UploadForm
-          activeTab={activeTab}
-          title={title}
-          description={description}
-          category={category}
-          condition={condition}
-          lookingFor={lookingFor}
-          price={price}
-          categories={categories}
-          loadingCategories={loadingCategories}
-          loading={loading}
-          onTitleChange={setTitle}
-          onDescriptionChange={setDescription}
-          onCategoryChange={setCategory}
-          onConditionChange={setCondition}
-          onLookingForChange={setLookingFor}
-          onPriceChange={setPrice}
-          onSubmit={handleSubmit}
-        />
+            {/* Form Fields */}
+            <UploadForm
+              activeTab={activeTab}
+              title={title}
+              description={description}
+              category={category}
+              condition={condition}
+              lookingFor={lookingFor}
+              price={price}
+              categories={categories}
+              loadingCategories={loadingCategories}
+              loading={loading}
+              isEditMode={isEditMode}
+              onTitleChange={setTitle}
+              onDescriptionChange={setDescription}
+              onCategoryChange={setCategory}
+              onConditionChange={setCondition}
+              onLookingForChange={setLookingFor}
+              onPriceChange={setPrice}
+              onSubmit={handleSubmit}
+            />
+          </>
+        )}
       </div>
 
       {/* Phone Verification Modal */}
@@ -560,6 +532,20 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
           ? `You've used your ${FREE_UPLOAD_LIMIT} free uploads! Verify your phone number to continue uploading items and build trust with buyers in our community.`
           : undefined
         }
+      />
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        isEditMode={isEditMode}
+        onClose={() => {
+          setShowSuccessModal(false);
+          setSuccess(false);
+          // Call onEditComplete callback if provided and in edit mode
+          if (isEditMode && onEditComplete) {
+            onEditComplete();
+          }
+        }}
       />
     </div>
   );

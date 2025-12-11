@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { AppHeader } from './AppHeader';
 import { apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../constants/placeholders';
 
 interface EditProfileScreenProps {
   onBack: () => void;
@@ -190,7 +191,30 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ onBack }) 
         <div className="flex justify-center">
             <div className="relative">
                 <img 
-                    src={user?.profile_photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.username || 'User')}&background=random`}
+                    src={(() => {
+                      const profilePhoto = user?.profile_photo;
+                      const userName = (user as any)?.name || user?.username || 'User';
+                      if (!profilePhoto || profilePhoto.trim() === '') {
+                        return generateInitialsAvatar(userName);
+                      }
+                      // Filter out generated avatars
+                      const generatedAvatarPatterns = [
+                        'ui-avatars.com',
+                        'pravatar.cc',
+                        'i.pravatar.cc',
+                        'robohash.org',
+                        'dicebear.com',
+                        'avatar.vercel.sh',
+                      ];
+                      const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
+                        profilePhoto.toLowerCase().includes(pattern.toLowerCase())
+                      );
+                      return isGeneratedAvatar ? generateInitialsAvatar(userName) : profilePhoto;
+                    })()}
+                    onError={(e) => {
+                      const userName = (user as any)?.name || user?.username || 'User';
+                      (e.target as HTMLImageElement).src = generateInitialsAvatar(userName);
+                    }}
                     alt="Profile Avatar" 
                     className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg" 
                 />

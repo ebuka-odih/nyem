@@ -171,6 +171,7 @@ class ItemController extends Controller
             }
             
             // Get photos array - default to empty array if null
+            // URLs are automatically transformed by the Item model accessor
             $photos = $item->photos ?? [];
             $primaryImage = !empty($photos) ? $photos[0] : 'https://via.placeholder.com/800';
             
@@ -195,17 +196,20 @@ class ItemController extends Controller
                 'user' => [
                     'id' => $item->user->id,
                     'username' => $item->user->username,
-                    'profile_photo' => $item->user->profile_photo ?? 'https://i.pravatar.cc/150',
+                    'profile_photo' => $item->user->profile_photo ?? null, // Return null instead of auto-generated avatar
                     'city' => $item->user->cityLocation->name ?? $item->user->city ?? 'Unknown',
                     'area' => $item->user->areaLocation->name ?? null,
                     'city_id' => $item->user->city_id,
                     'area_id' => $item->user->area_id,
+                    'phone_verified_at' => $item->user->phone_verified_at?->toIso8601String() ?? null,
                 ],
                 'owner' => [
+                    'id' => $item->user->id,
                     'name' => $item->user->username,
-                    'image' => $item->user->profile_photo ?? 'https://i.pravatar.cc/150',
+                    'image' => $item->user->profile_photo ?? null, // Return null instead of auto-generated avatar
                     'location' => $this->formatUserLocation($item->user), // Format city and area
                     'distance' => $distanceKm !== null ? ($distanceKm < 1 ? round($distanceKm * 1000) . 'm' : $distanceKm . 'km') : 'Unknown',
+                    'phone_verified_at' => $item->user->phone_verified_at?->toIso8601String() ?? null,
                 ],
             ];
             
@@ -242,6 +246,8 @@ class ItemController extends Controller
 
         $item->load(['user.cityLocation', 'user.areaLocation']);
         
+        // Photo URLs are automatically transformed by the Item model accessor
+        
         // Calculate distance if both users have location
         $user = $request->user();
         if ($user->hasLocation() && $item->user && $item->user->hasLocation()) {
@@ -275,12 +281,54 @@ class ItemController extends Controller
             'condition' => ['sometimes', Rule::in(['new', 'like_new', 'used'])],
             'photos' => 'sometimes|array|min:1',
             'photos.*' => 'string|max:2048',
-            'looking_for' => 'sometimes|string|max:255',
+            'type' => ['sometimes', Rule::in(['barter', 'marketplace', 'services'])],
+            'price' => 'sometimes|nullable|numeric|min:0',
+            'looking_for' => 'sometimes|nullable|string|max:255',
             'city' => 'sometimes|string|max:255',
             'status' => ['sometimes', Rule::in(['active', 'swapped'])],
         ]);
 
+        // Handle type-specific logic
+        $type = $data['type'] ?? $item->type ?? 'barter';
+        
+        // If type is being changed, enforce type-specific rules
+        if (isset($data['type'])) {
+            // For marketplace items, ensure price is provided and looking_for is null
+            if ($type === 'marketplace') {
+                if (isset($data['price']) && empty($data['price'])) {
+                    return response()->json(['message' => 'Price is required for marketplace items'], 422);
+                }
+                $data['looking_for'] = null;
+            } 
+            // For barter items, ensure looking_for is provided and price is null
+            else if ($type === 'barter') {
+                if (isset($data['looking_for']) && empty($data['looking_for'])) {
+                    return response()->json(['message' => 'looking_for is required for barter items'], 422);
+                }
+                $data['price'] = null;
+            }
+            // For services items, both price and looking_for can be null
+        } else {
+            // If type is not being changed, validate based on current type
+            if ($type === 'marketplace') {
+                // If updating price for marketplace item, ensure it's not empty
+                if (isset($data['price']) && ($data['price'] === null || $data['price'] === '')) {
+                    return response()->json(['message' => 'Price is required for marketplace items'], 422);
+                }
+            } else if ($type === 'barter') {
+                // If updating looking_for for barter item, ensure it's not empty
+                if (isset($data['looking_for']) && ($data['looking_for'] === null || $data['looking_for'] === '')) {
+                    return response()->json(['message' => 'looking_for is required for barter items'], 422);
+                }
+            }
+        }
+
         $item->update($data);
+        
+        // Reload the item to get fresh data
+        $item->refresh();
+        
+        // Photo URLs are automatically transformed by the Item model accessor
 
         return response()->json(['item' => $item]);
     }
@@ -314,4 +362,5 @@ class ItemController extends Controller
         
         return $city;
     }
+
 }

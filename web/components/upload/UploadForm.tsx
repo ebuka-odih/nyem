@@ -18,6 +18,7 @@ interface UploadFormProps {
   categories: Category[];
   loadingCategories: boolean;
   loading: boolean;
+  isEditMode?: boolean;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
@@ -38,6 +39,7 @@ export const UploadForm: React.FC<UploadFormProps> = ({
   categories,
   loadingCategories,
   loading,
+  isEditMode = false,
   onTitleChange,
   onDescriptionChange,
   onCategoryChange,
@@ -146,7 +148,9 @@ export const UploadForm: React.FC<UploadFormProps> = ({
           className="bg-brand hover:bg-brand-light text-white rounded-xl py-4 shadow-lg text-lg"
           disabled={loading}
         >
-          {loading ? 'Saving...' : 'Save Item'}
+          {loading 
+            ? (isEditMode ? 'Updating...' : 'Saving...') 
+            : (isEditMode ? 'Update Item' : 'Save Item')}
         </Button>
       </div>
     </form>
