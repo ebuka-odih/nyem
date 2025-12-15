@@ -6,6 +6,7 @@ use App\Models\Location;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -79,6 +80,14 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         
+        // Log incoming request data for debugging
+        Log::info('Profile update request', [
+            'user_id' => $user->id,
+            'request_data' => $request->all(),
+            'current_area_id' => $user->area_id,
+            'current_city_id' => $user->city_id,
+        ]);
+        
         $data = $request->validate([
             'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
             'name' => 'sometimes|nullable|string|max:255',
@@ -107,27 +116,74 @@ class ProfileController extends Controller
             ],
         ]);
 
-        // Explicitly handle area_id when it's sent as null or empty string to clear it
-        if ($request->has('area_id') && ($request->input('area_id') === null || $request->input('area_id') === '')) {
-            $data['area_id'] = null;
+        // Explicitly handle area_id - ensure it's always in $data if it was in the request
+        // This is important because 'sometimes' rule might exclude null values
+        if ($request->has('area_id')) {
+            $requestAreaId = $request->input('area_id');
+            if ($requestAreaId === null || $requestAreaId === '' || $requestAreaId === 'null') {
+                $data['area_id'] = null;
+                Log::info('Profile update: area_id explicitly set to null from request', [
+                    'user_id' => $user->id,
+                    'request_value' => $requestAreaId,
+                ]);
+            } else {
+                // Ensure it's an integer
+                $data['area_id'] = (int) $requestAreaId;
+                Log::info('Profile update: area_id set from request', [
+                    'user_id' => $user->id,
+                    'area_id' => $data['area_id'],
+                ]);
+            }
         }
+        
+        // Log validated data
+        Log::info('Profile update: validated data', [
+            'user_id' => $user->id,
+            'validated_data' => $data,
+            'area_id_in_data' => $data['area_id'] ?? 'NOT_SET',
+            'city_id_in_data' => $data['city_id'] ?? 'NOT_SET',
+            'request_has_area_id' => $request->has('area_id'),
+        ]);
 
         // Validate that area_id belongs to the selected city_id
         if (isset($data['area_id']) && $data['area_id'] !== null && isset($data['city_id'])) {
             // Validate that the area belongs to the selected city
+            Log::info('Profile update: Validating area_id with city_id', [
+                'user_id' => $user->id,
+                'area_id' => $data['area_id'],
+                'city_id' => $data['city_id'],
+            ]);
+            
             $area = Location::where('id', $data['area_id'])
                 ->where('type', 'area')
                 ->where('parent_id', $data['city_id'])
                 ->first();
 
             if (!$area) {
+                Log::warning('Profile update: Area does not belong to city', [
+                    'user_id' => $user->id,
+                    'area_id' => $data['area_id'],
+                    'city_id' => $data['city_id'],
+                ]);
                 throw ValidationException::withMessages([
                     'area_id' => ['The selected area does not belong to the selected city.'],
                 ]);
             }
+            
+            Log::info('Profile update: Area validation passed', [
+                'user_id' => $user->id,
+                'area_id' => $data['area_id'],
+                'area_name' => $area->name,
+            ]);
         } elseif (isset($data['area_id']) && $data['area_id'] !== null) {
             // If area_id is provided but city_id is not, validate against user's current city_id
             $cityId = $data['city_id'] ?? $user->city_id;
+            
+            Log::info('Profile update: Validating area_id with current city_id', [
+                'user_id' => $user->id,
+                'area_id' => $data['area_id'],
+                'city_id' => $cityId,
+            ]);
             
             if ($cityId) {
                 $area = Location::where('id', $data['area_id'])
@@ -136,14 +192,31 @@ class ProfileController extends Controller
                     ->first();
 
                 if (!$area) {
+                    Log::warning('Profile update: Area does not belong to current city', [
+                        'user_id' => $user->id,
+                        'area_id' => $data['area_id'],
+                        'city_id' => $cityId,
+                    ]);
                     throw ValidationException::withMessages([
                         'area_id' => ['The selected area does not belong to your city. Please select a city first.'],
                     ]);
                 }
+                
+                Log::info('Profile update: Area validation passed with current city', [
+                    'user_id' => $user->id,
+                    'area_id' => $data['area_id'],
+                    'area_name' => $area->name,
+                ]);
             }
         } elseif (isset($data['city_id']) && !isset($data['area_id'])) {
             // If city_id is being updated but area_id is not provided, 
             // check if current area_id belongs to new city, if not, clear it
+            Log::info('Profile update: City changed, checking if current area belongs to new city', [
+                'user_id' => $user->id,
+                'new_city_id' => $data['city_id'],
+                'current_area_id' => $user->area_id,
+            ]);
+            
             if ($user->area_id) {
                 $currentArea = Location::where('id', $user->area_id)
                     ->where('type', 'area')
@@ -152,10 +225,27 @@ class ProfileController extends Controller
                 
                 // If current area doesn't belong to new city, clear it
                 if (!$currentArea) {
+                    Log::info('Profile update: Current area does not belong to new city, clearing area_id', [
+                        'user_id' => $user->id,
+                        'old_area_id' => $user->area_id,
+                        'new_city_id' => $data['city_id'],
+                    ]);
                     $data['area_id'] = null;
+                } else {
+                    Log::info('Profile update: Current area belongs to new city, keeping area_id', [
+                        'user_id' => $user->id,
+                        'area_id' => $user->area_id,
+                    ]);
                 }
             }
         }
+        
+        // Log final data that will be saved
+        Log::info('Profile update: Final data before save', [
+            'user_id' => $user->id,
+            'data_to_save' => $data,
+            'area_id_to_save' => $data['area_id'] ?? 'NOT_SET',
+        ]);
 
         // Check username change limit (24 hours) - but allow first-time setup
         if (isset($data['username']) && $data['username'] !== $user->username) {
@@ -178,12 +268,75 @@ class ProfileController extends Controller
         }
 
         try {
+            // Log before fill
+            Log::info('Profile update: Before fill', [
+                'user_id' => $user->id,
+                'current_area_id' => $user->area_id,
+                'current_city_id' => $user->city_id,
+                'data_to_fill' => $data,
+                'area_id_in_fillable' => in_array('area_id', $user->getFillable()),
+            ]);
+            
+            // Ensure area_id is explicitly set if it's in the data
+            if (array_key_exists('area_id', $data)) {
+                Log::info('Profile update: Explicitly setting area_id attribute', [
+                    'user_id' => $user->id,
+                    'area_id_value' => $data['area_id'],
+                ]);
+                $user->area_id = $data['area_id'];
+            }
+            
             $user->fill($data);
-            $user->save();
+            
+            // Log after fill, before save
+            Log::info('Profile update: After fill, before save', [
+                'user_id' => $user->id,
+                'user_area_id' => $user->area_id,
+                'user_city_id' => $user->city_id,
+                'isDirty_area_id' => $user->isDirty('area_id'),
+                'isDirty_city_id' => $user->isDirty('city_id'),
+                'getDirty' => $user->getDirty(),
+                'getOriginal_area_id' => $user->getOriginal('area_id'),
+                'getOriginal_city_id' => $user->getOriginal('city_id'),
+            ]);
+            
+            // Double-check area_id is set correctly before save
+            if (array_key_exists('area_id', $data)) {
+                if ($user->area_id != $data['area_id']) {
+                    Log::warning('Profile update: area_id mismatch after fill, correcting', [
+                        'user_id' => $user->id,
+                        'expected_area_id' => $data['area_id'],
+                        'actual_area_id' => $user->area_id,
+                    ]);
+                    $user->area_id = $data['area_id'];
+                }
+            }
+            
+            $saveResult = $user->save();
+            
+            Log::info('Profile update: Save result', [
+                'user_id' => $user->id,
+                'save_result' => $saveResult,
+            ]);
+            
+            // Log after save
+            Log::info('Profile update: After save', [
+                'user_id' => $user->id,
+                'saved_area_id' => $user->area_id,
+                'saved_city_id' => $user->city_id,
+            ]);
             
             // Reload user with relationships to get fresh data
             $user->refresh();
             $user->load(['cityLocation', 'areaLocation']);
+            
+            // Log after refresh
+            Log::info('Profile update: After refresh', [
+                'user_id' => $user->id,
+                'refreshed_area_id' => $user->area_id,
+                'refreshed_city_id' => $user->city_id,
+                'areaLocation' => $user->areaLocation ? $user->areaLocation->name : null,
+            ]);
             
             // Update city string field from relationship for backward compatibility
             // Always sync city field when city_id is set
@@ -196,6 +349,13 @@ class ProfileController extends Controller
                 $user->save();
             }
         } catch (\Illuminate\Database\QueryException $e) {
+            // Log database errors
+            Log::error('Profile update: Database error', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            
             // Handle database errors (like column size issues)
             if (str_contains($e->getMessage(), 'profile_photo') || str_contains($e->getMessage(), 'too long') || str_contains($e->getMessage(), 'Data too long')) {
                 throw ValidationException::withMessages([
@@ -203,10 +363,28 @@ class ProfileController extends Controller
                 ]);
             }
             throw $e;
+        } catch (\Exception $e) {
+            // Log any other errors
+            Log::error('Profile update: Unexpected error', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            throw $e;
         }
 
+        $freshUser = $user->fresh(['cityLocation', 'areaLocation']);
+        
+        // Log final response
+        Log::info('Profile update: Success', [
+            'user_id' => $user->id,
+            'final_area_id' => $freshUser->area_id,
+            'final_city_id' => $freshUser->city_id,
+            'areaLocation_name' => $freshUser->areaLocation ? $freshUser->areaLocation->name : null,
+        ]);
+
         return response()->json([
-            'user' => $user->fresh(['cityLocation', 'areaLocation']),
+            'user' => $freshUser,
             'message' => 'Profile updated successfully',
         ]);
     }
