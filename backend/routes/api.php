@@ -8,6 +8,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\MatchController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\MessageRequestController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SwipeController;
@@ -76,6 +77,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/trade-offers/pending', [TradeOfferController::class, 'pending']);
     Route::post('/trade-offers/{id}/respond', [TradeOfferController::class, 'respond']);
+
+    Route::get('/message-requests/pending', [MessageRequestController::class, 'pending']);
+    Route::post('/message-requests/{id}/respond', [MessageRequestController::class, 'respond']);
 
     Route::get('/matches', [MatchController::class, 'index']);
     Route::get('/matches/{match}', [MatchController::class, 'show']);

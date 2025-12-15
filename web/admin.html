@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Admin Login - Nyem</title>
+    
+    <meta name="description" content="Admin login for Nyem" />
+    <meta name="theme-color" content="#880e4f" />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#fdf2f7',
+                100: '#fce7f0',
+                200: '#f9c3d9',
+                300: '#f299bc',
+                400: '#e8619a',
+                500: '#880e4f',
+                DEFAULT: '#880e4f',
+                600: '#751043',
+                700: '#5c0d35',
+                800: '#4a0a2a',
+                900: '#3d0823',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      * {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', sans-serif;
+        background-color: white;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: white;
+      }
+
+      @keyframes slide-in-from-bottom {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      .animate-in {
+        animation: slide-in-from-bottom 0.5s ease-out;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- CSRF Token for Laravel -->
+    <meta name="csrf-token" content="">
+    <script type="module" src="/admin.tsx"></script>
+    <script>
+      // Fetch CSRF token on page load
+      fetch('http://127.0.0.1:8000/sanctum/csrf-cookie', {
+        method: 'GET',
+        credentials: 'include'
+      }).then(() => {
+        // Update meta tag with CSRF token from cookie
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+          const [name, value] = cookie.trim().split('=');
+          if (name === 'XSRF-TOKEN') {
+            const metaTag = document.querySelector('meta[name="csrf-token"]');
+            if (metaTag) {
+              metaTag.setAttribute('content', decodeURIComponent(value));
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+

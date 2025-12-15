@@ -96,3 +96,7 @@ export const generateInitialsAvatar = (
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 };
 
+
+
+
+

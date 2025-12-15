@@ -6,7 +6,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 3000,
+        port: 5173,
         host: '0.0.0.0',
       },
       plugins: [react()],
@@ -25,6 +25,14 @@ export default defineConfig(({ mode }) => {
         include: ['react', 'react-dom'],
       },
       // Public directory for PWA assets (manifest.json, icons, service worker)
-      publicDir: 'public'
+      publicDir: 'public',
+      build: {
+        rollupOptions: {
+          input: {
+            main: path.resolve(__dirname, 'index.html'),
+            admin: path.resolve(__dirname, 'admin.html'),
+          },
+        },
+      },
     };
 });

@@ -145,10 +145,9 @@ export const SetupProfileScreen: React.FC<SetupProfileScreenProps> = ({ onComple
         updateData.name = displayname.trim();
       }
 
-      // Add area_id if selected
-      if (areaId) {
-        updateData.area_id = areaId;
-      }
+      // Always include area_id - send null if not selected, or the ID if selected
+      // This ensures the backend can properly clear or set the area
+      updateData.area_id = areaId || null;
 
       await updateProfile(updateData);
       onComplete();

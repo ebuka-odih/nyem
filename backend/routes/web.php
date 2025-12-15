@@ -1,7 +1,25 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminUsersController;
+use App\Http\Controllers\Admin\AdminMatchesController;
+use App\Http\Controllers\Admin\AdminItemsController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+// Admin login routes
+Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AdminAuthController::class, 'login']);
+Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
+
+// Admin routes (require authentication and admin role)
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/users', [AdminUsersController::class, 'index'])->name('users');
+    Route::get('/matches', [AdminMatchesController::class, 'index'])->name('matches');
+    Route::get('/items', [AdminItemsController::class, 'index'])->name('items');
 });

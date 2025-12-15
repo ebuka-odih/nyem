@@ -252,9 +252,9 @@ export const PreUploadProfileSetup: React.FC<PreUploadProfileSetupProps> = ({
         city_id: cityId,
       };
       
-      if (areaId) {
-        payload.area_id = areaId;
-      }
+      // Always include area_id - send null if not selected, or the ID if selected
+      // This ensures the backend can properly clear or set the area
+      payload.area_id = areaId || null;
       
       if (bio.trim()) {
         payload.bio = bio.trim();

@@ -16,17 +16,17 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
-    // Dashboard stats
+Route::middleware(['auth', 'admin'])->prefix('api/admin')->group(function () {
+    // Dashboard stats (API endpoint, kept for backward compatibility)
     Route::get('/dashboard', [AdminController::class, 'dashboard']);
 
-    // User management
+    // User management (API endpoints for Inertia forms)
     Route::apiResource('users', AdminUserController::class);
 
-    // Match management
+    // Match management (API endpoints for Inertia forms)
     Route::apiResource('matches', AdminMatchController::class);
 
-    // Item management
+    // Item management (API endpoints for Inertia forms)
     Route::apiResource('items', AdminItemController::class);
 });
 

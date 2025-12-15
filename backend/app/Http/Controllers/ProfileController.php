@@ -97,14 +97,24 @@ class ProfileController extends Controller
                 'sometimes',
                 'nullable',
                 'integer',
-                Rule::exists('locations', 'id')->where(function ($query) {
-                    $query->where('type', 'area');
-                }),
+                Rule::when(function ($input) {
+                    return isset($input['area_id']) && $input['area_id'] !== null;
+                }, [
+                    Rule::exists('locations', 'id')->where(function ($query) {
+                        $query->where('type', 'area');
+                    }),
+                ]),
             ],
         ]);
 
+        // Explicitly handle area_id when it's sent as null or empty string to clear it
+        if ($request->has('area_id') && ($request->input('area_id') === null || $request->input('area_id') === '')) {
+            $data['area_id'] = null;
+        }
+
         // Validate that area_id belongs to the selected city_id
-        if (isset($data['area_id']) && isset($data['city_id'])) {
+        if (isset($data['area_id']) && $data['area_id'] !== null && isset($data['city_id'])) {
+            // Validate that the area belongs to the selected city
             $area = Location::where('id', $data['area_id'])
                 ->where('type', 'area')
                 ->where('parent_id', $data['city_id'])
@@ -115,7 +125,7 @@ class ProfileController extends Controller
                     'area_id' => ['The selected area does not belong to the selected city.'],
                 ]);
             }
-        } elseif (isset($data['area_id'])) {
+        } elseif (isset($data['area_id']) && $data['area_id'] !== null) {
             // If area_id is provided but city_id is not, validate against user's current city_id
             $cityId = $data['city_id'] ?? $user->city_id;
             
@@ -129,6 +139,20 @@ class ProfileController extends Controller
                     throw ValidationException::withMessages([
                         'area_id' => ['The selected area does not belong to your city. Please select a city first.'],
                     ]);
+                }
+            }
+        } elseif (isset($data['city_id']) && !isset($data['area_id'])) {
+            // If city_id is being updated but area_id is not provided, 
+            // check if current area_id belongs to new city, if not, clear it
+            if ($user->area_id) {
+                $currentArea = Location::where('id', $user->area_id)
+                    ->where('type', 'area')
+                    ->where('parent_id', $data['city_id'])
+                    ->first();
+                
+                // If current area doesn't belong to new city, clear it
+                if (!$currentArea) {
+                    $data['area_id'] = null;
                 }
             }
         }
