@@ -105,14 +105,24 @@ class ProfileController extends Controller
             'area_id' => [
                 'sometimes',
                 'nullable',
-                'integer',
-                Rule::when(function ($input) {
-                    return isset($input['area_id']) && $input['area_id'] !== null;
-                }, [
-                    Rule::exists('locations', 'id')->where(function ($query) {
-                        $query->where('type', 'area');
-                    }),
-                ]),
+                function ($attribute, $value, $fail) use ($request) {
+                    // Allow null values
+                    if ($value === null || $value === '' || $value === 'null') {
+                        return;
+                    }
+                    // Validate that it's an integer
+                    if (!is_numeric($value)) {
+                        $fail('The area must be a valid number.');
+                        return;
+                    }
+                    // Validate that the location exists and is an area
+                    $area = Location::where('id', (int)$value)
+                        ->where('type', 'area')
+                        ->exists();
+                    if (!$area) {
+                        $fail('The selected area is invalid.');
+                    }
+                },
             ],
         ]);
 
@@ -340,13 +350,33 @@ class ProfileController extends Controller
             
             // Update city string field from relationship for backward compatibility
             // Always sync city field when city_id is set
+            // IMPORTANT: Preserve area_id during this save
+            $needsCityUpdate = false;
             if (isset($data['city_id']) && $user->cityLocation) {
-                $user->city = $user->cityLocation->name;
-                $user->save();
+                if ($user->city !== $user->cityLocation->name) {
+                    $user->city = $user->cityLocation->name;
+                    $needsCityUpdate = true;
+                }
             } elseif ($user->cityLocation && !$user->city) {
-                // Also sync if cityLocation exists but city field is empty
                 $user->city = $user->cityLocation->name;
+                $needsCityUpdate = true;
+            }
+            
+            // Only save if city needs updating, and preserve area_id
+            if ($needsCityUpdate) {
+                // Ensure area_id is preserved
+                $currentAreaId = $user->area_id;
                 $user->save();
+                // Double-check area_id is still set after save
+                if ($user->area_id !== $currentAreaId) {
+                    Log::warning('Profile update: area_id was lost during city update, restoring', [
+                        'user_id' => $user->id,
+                        'expected_area_id' => $currentAreaId,
+                        'actual_area_id' => $user->area_id,
+                    ]);
+                    $user->area_id = $currentAreaId;
+                    $user->save();
+                }
             }
         } catch (\Illuminate\Database\QueryException $e) {
             // Log database errors

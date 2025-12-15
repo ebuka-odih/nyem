@@ -143,7 +143,7 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ onBack }) 
     try {
       const updateData: any = {
         username: username.trim(),
-        city_id: cityId,
+        city_id: typeof cityId === 'number' ? cityId : parseInt(cityId as string),
         bio: bio || undefined,
       };
 
@@ -154,7 +154,14 @@ export const EditProfileScreen: React.FC<EditProfileScreenProps> = ({ onBack }) 
 
       // Always include area_id - send null if not selected, or the ID if selected
       // This ensures the backend can properly clear or set the area
-      updateData.area_id = areaId || null;
+      // Convert to number if it's a valid number, otherwise send null
+      if (areaId && areaId !== '' && !isNaN(Number(areaId))) {
+        updateData.area_id = typeof areaId === 'number' ? areaId : parseInt(areaId as string);
+      } else {
+        updateData.area_id = null;
+      }
+
+      console.log('[EditProfileScreen] Sending update data:', updateData);
 
       await updateProfile(updateData);
       await refreshUser();
