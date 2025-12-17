@@ -105,29 +105,16 @@ class ProfileController extends Controller
             'area_id' => [
                 'sometimes',
                 'nullable',
-                function ($attribute, $value, $fail) use ($request) {
-                    // Allow null values
-                    if ($value === null || $value === '' || $value === 'null') {
-                        return;
-                    }
-                    // Validate that it's an integer
-                    if (!is_numeric($value)) {
-                        $fail('The area must be a valid number.');
-                        return;
-                    }
-                    // Validate that the location exists and is an area
-                    $area = Location::where('id', (int)$value)
-                        ->where('type', 'area')
-                        ->exists();
-                    if (!$area) {
-                        $fail('The selected area is invalid.');
-                    }
-                },
+                'integer',
+                Rule::exists('locations', 'id')->where(function ($query) {
+                    $query->where('type', 'area');
+                }),
             ],
         ]);
 
         // Explicitly handle area_id - ensure it's always in $data if it was in the request
         // This is important because 'sometimes' rule might exclude null values
+        // Also handle the case where validation might have excluded it
         if ($request->has('area_id')) {
             $requestAreaId = $request->input('area_id');
             if ($requestAreaId === null || $requestAreaId === '' || $requestAreaId === 'null') {
@@ -137,13 +124,22 @@ class ProfileController extends Controller
                     'request_value' => $requestAreaId,
                 ]);
             } else {
-                // Ensure it's an integer
-                $data['area_id'] = (int) $requestAreaId;
+                // Ensure it's an integer and add to data if not already there
+                $areaIdValue = (int) $requestAreaId;
+                $data['area_id'] = $areaIdValue;
                 Log::info('Profile update: area_id set from request', [
                     'user_id' => $user->id,
                     'area_id' => $data['area_id'],
+                    'was_in_validated_data' => isset($data['area_id']),
                 ]);
             }
+        } else {
+            // If area_id was not in request but is in validated data, keep it
+            // This handles edge cases
+            Log::info('Profile update: area_id not in request', [
+                'user_id' => $user->id,
+                'area_id_in_validated' => $data['area_id'] ?? 'NOT_SET',
+            ]);
         }
         
         // Log validated data
@@ -285,18 +281,36 @@ class ProfileController extends Controller
                 'current_city_id' => $user->city_id,
                 'data_to_fill' => $data,
                 'area_id_in_fillable' => in_array('area_id', $user->getFillable()),
+                'area_id_in_data' => array_key_exists('area_id', $data),
             ]);
             
-            // Ensure area_id is explicitly set if it's in the data
+            // CRITICAL: Explicitly set area_id BEFORE fill() to ensure it's saved
+            // This handles cases where fill() might not include it
             if (array_key_exists('area_id', $data)) {
-                Log::info('Profile update: Explicitly setting area_id attribute', [
+                $areaIdValue = $data['area_id'];
+                Log::info('Profile update: Explicitly setting area_id attribute before fill', [
                     'user_id' => $user->id,
-                    'area_id_value' => $data['area_id'],
+                    'area_id_value' => $areaIdValue,
+                    'area_id_type' => gettype($areaIdValue),
                 ]);
-                $user->area_id = $data['area_id'];
+                // Set it directly on the model
+                $user->setAttribute('area_id', $areaIdValue);
             }
             
+            // Now fill the rest of the data
             $user->fill($data);
+            
+            // After fill, verify area_id is still set correctly
+            if (array_key_exists('area_id', $data)) {
+                if ($user->getAttribute('area_id') != $data['area_id']) {
+                    Log::warning('Profile update: area_id was changed during fill, restoring', [
+                        'user_id' => $user->id,
+                        'expected' => $data['area_id'],
+                        'actual' => $user->getAttribute('area_id'),
+                    ]);
+                    $user->setAttribute('area_id', $data['area_id']);
+                }
+            }
             
             // Log after fill, before save
             Log::info('Profile update: After fill, before save', [

@@ -8,6 +8,7 @@ import { LoginPrompt } from './common/LoginPrompt';
 import { UploadTabs } from './upload/UploadTabs';
 import { PhotoUpload } from './upload/PhotoUpload';
 import { UploadForm } from './upload/UploadForm';
+import { ServiceProfileForm } from './upload/ServiceProfileForm';
 import { PhoneVerificationModal } from './PhoneVerificationModal';
 import { PreUploadProfileSetup } from './upload/PreUploadProfileSetup';
 import { SuccessModal } from './upload/SuccessModal';
@@ -75,6 +76,14 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
   const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [pendingSubmit, setPendingSubmit] = useState(false); // Track if we need to retry submit after verification
   
+  // Service profile state
+  const [serviceCategory, setServiceCategory] = useState('');
+  const [startingPrice, setStartingPrice] = useState('');
+  const [serviceCity, setServiceCity] = useState('');
+  const [bio, setBio] = useState('');
+  const [workImages, setWorkImages] = useState<string[]>([]);
+  const [loadingServiceProfile, setLoadingServiceProfile] = useState(false);
+  
   // Refs for file inputs
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -132,6 +141,44 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
     fetchCategories();
   }, [activeTab]);
 
+  // Load existing service profile when Services tab is active
+  useEffect(() => {
+    const loadServiceProfile = async () => {
+      if (activeTab === 'Services' && isAuthenticated && token && !isEditMode) {
+        try {
+          setLoadingServiceProfile(true);
+          const response = await apiFetch(ENDPOINTS.serviceProviders.me, { token });
+          if (response.success && response.data) {
+            const profile = response.data;
+            setServiceCategory(profile.service_category_id?.toString() || '');
+            setStartingPrice(profile.starting_price ? profile.starting_price.toString().replace(/,/g, '') : '');
+            setServiceCity(profile.city || '');
+            setBio(profile.bio || '');
+            setWorkImages(profile.work_images || []);
+          } else {
+            // No existing profile - set default city from user
+            if (user?.city) {
+              setServiceCity(user.city);
+            }
+          }
+        } catch (err) {
+          // No existing profile, that's fine - set default city from user
+          if (user?.city) {
+            setServiceCity(user.city);
+          }
+          console.log('No existing service profile found');
+        } finally {
+          setLoadingServiceProfile(false);
+        }
+      } else if (activeTab === 'Services' && user?.city && !serviceCity) {
+        // Set default city when tab is first opened
+        setServiceCity(user.city);
+      }
+    };
+
+    loadServiceProfile();
+  }, [activeTab, isAuthenticated, token, isEditMode, user?.city, serviceCity]);
+
   // Handle camera capture (instant snap only)
   const handleCameraCapture = () => {
     cameraInputRef.current?.click();
@@ -143,7 +190,11 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const imageUrl = reader.result as string;
-        setPhotos(prev => [...prev, imageUrl]);
+        if (activeTab === 'Services') {
+          setWorkImages(prev => [...prev, imageUrl]);
+        } else {
+          setPhotos(prev => [...prev, imageUrl]);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -170,7 +221,11 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       });
 
       Promise.all(readers).then(imageUrls => {
-        setPhotos(prev => [...prev, ...imageUrls]);
+        if (activeTab === 'Services') {
+          setWorkImages(prev => [...prev, ...imageUrls]);
+        } else {
+          setPhotos(prev => [...prev, ...imageUrls]);
+        }
       });
     }
     // Reset input so same files can be selected again
@@ -213,6 +268,98 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       setPhotos([]);
     }
   }, [editItem]);
+
+  // Handle service profile submission
+  const handleServiceProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(false);
+    setShowSuccessModal(false);
+
+    if (!serviceCategory) {
+      setError('Service category is required');
+      return;
+    }
+    if (!serviceCity.trim()) {
+      setError('City is required');
+      return;
+    }
+
+    if (!token) {
+      setError('You must be logged in to create a service profile');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Validate category ID
+      const categoryId = parseInt(serviceCategory, 10);
+      if (!categoryId || isNaN(categoryId)) {
+        setError('Please select a valid service category');
+        setLoading(false);
+        return;
+      }
+
+      const payload: any = {
+        service_category_id: categoryId,
+        city: serviceCity.trim(),
+        bio: bio.trim() || undefined,
+      };
+
+      if (startingPrice.trim()) {
+        payload.starting_price = parseFloat(startingPrice.replace(/,/g, ''));
+      }
+
+      // Upload work images if we have photos
+      if (workImages.length > 0) {
+        // Check if photos are already URLs (from existing profile) or base64 data URIs (new uploads)
+        const needsUpload = workImages.some(photo => photo.startsWith('data:image/'));
+        
+        if (needsUpload) {
+          // Upload base64 images
+          try {
+            const uploadResponse = await apiFetch(ENDPOINTS.images.uploadMultipleBase64, {
+              method: 'POST',
+              token,
+              body: {
+                images: workImages,
+              },
+            });
+            
+            if (uploadResponse.success && uploadResponse.urls && uploadResponse.urls.length > 0) {
+              payload.work_images = uploadResponse.urls;
+            } else {
+              throw new Error('Failed to upload images. Please try again.');
+            }
+          } catch (uploadError: any) {
+            setError(uploadError.message || 'Failed to upload images. Please try again.');
+            setLoading(false);
+            return;
+          }
+        } else {
+          // Photos are already URLs (from existing profile), use them directly
+          payload.work_images = workImages;
+        }
+      }
+
+      await apiFetch(ENDPOINTS.serviceProviders.create, {
+        method: 'POST',
+        token,
+        body: payload,
+      });
+
+      setSuccess(true);
+      setShowSuccessModal(true);
+      
+      // Refresh user to update profile
+      await refreshUser();
+    } catch (err: any) {
+      setError(err.message || 'Failed to save service profile. Please try again.');
+      console.error('Service profile error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -461,16 +608,37 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
            </p>
         </div>
 
-        {/* Services Tab - Coming Soon */}
+        {/* Services Tab - Service Profile Form */}
         {activeTab === 'Services' && !isEditMode ? (
-          <div className="flex flex-col items-center justify-center py-16 px-6">
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Coming Soon</h3>
-              <p className="text-gray-500 text-base">
-                Services will be available soon. Stay tuned!
-              </p>
-            </div>
-          </div>
+          <>
+            {/* Work Images Upload */}
+            <PhotoUpload
+              photos={workImages}
+              activeTab={activeTab}
+              onCameraCapture={handleCameraCapture}
+              onGallerySelect={handleGallerySelect}
+              onRemovePhoto={(index) => setWorkImages(prev => prev.filter((_, i) => i !== index))}
+            />
+
+            {/* Service Profile Form */}
+            {!loadingServiceProfile && (
+              <ServiceProfileForm
+                serviceCategory={serviceCategory}
+                startingPrice={startingPrice}
+                city={serviceCity}
+                bio={bio}
+                workImages={workImages}
+                categories={categories}
+                loadingCategories={loadingCategories}
+                loading={loading}
+                onServiceCategoryChange={setServiceCategory}
+                onStartingPriceChange={setStartingPrice}
+                onCityChange={setServiceCity}
+                onBioChange={setBio}
+                onSubmit={handleServiceProfileSubmit}
+              />
+            )}
+          </>
         ) : (
           <>
             {/* Photo Upload */}
@@ -538,6 +706,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
       <SuccessModal
         isOpen={showSuccessModal}
         isEditMode={isEditMode}
+        isServiceProfile={activeTab === 'Services'}
         onClose={() => {
           setShowSuccessModal(false);
           setSuccess(false);

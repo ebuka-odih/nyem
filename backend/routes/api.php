@@ -11,6 +11,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MessageRequestController;
 use App\Http\Controllers\ModerationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ServiceProviderController;
 use App\Http\Controllers\SwipeController;
 use App\Http\Controllers\TradeOfferController;
 use Illuminate\Http\Request;
@@ -30,8 +31,9 @@ Route::get('/locations/areas', [CategoryLocationController::class, 'areas']); //
 // Public endpoint for username availability check
 Route::post('/profile/check-username', [ProfileController::class, 'checkUsername']);
 
-// Public feed endpoint - works with or without authentication
+// Public feed endpoints - work with or without authentication
 Route::get('/items/feed', [ItemController::class, 'feed']);
+Route::get('/service-providers/feed', [ServiceProviderController::class, 'feed']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);
@@ -93,6 +95,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/report', [ModerationController::class, 'report']);
     Route::post('/block', [ModerationController::class, 'block']);
+
+    // Service provider endpoints
+    Route::post('/service-providers', [ServiceProviderController::class, 'store']);
+    Route::get('/service-providers/me', [ServiceProviderController::class, 'me']);
 
     // Phone verification for sellers (marketplace)
     Route::post('/auth/verify-phone-for-seller', [AuthController::class, 'verifyPhoneForSeller']);

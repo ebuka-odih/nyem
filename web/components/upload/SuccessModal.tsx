@@ -6,6 +6,7 @@ interface SuccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   isEditMode?: boolean;
+  isServiceProfile?: boolean;
 }
 
 /**
@@ -15,6 +16,7 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
   isOpen,
   onClose,
   isEditMode = false,
+  isServiceProfile = false,
 }) => {
   if (!isOpen) return null;
 
@@ -43,12 +45,18 @@ export const SuccessModal: React.FC<SuccessModalProps> = ({
 
           {/* Success Message */}
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            {isEditMode ? 'Item Updated!' : 'Item Posted!'}
+            {isServiceProfile 
+              ? 'Service Profile Saved!'
+              : isEditMode 
+                ? 'Item Updated!' 
+                : 'Item Posted!'}
           </h2>
           <p className="text-gray-600 text-sm mb-6">
-            {isEditMode 
-              ? 'Your item has been successfully updated.' 
-              : 'Your item has been posted successfully and is now live.'}
+            {isServiceProfile
+              ? 'Your service profile has been saved successfully and is now visible on the discover page.'
+              : isEditMode 
+                ? 'Your item has been successfully updated.' 
+                : 'Your item has been posted successfully and is now live.'}
           </p>
 
           {/* Close Button */}

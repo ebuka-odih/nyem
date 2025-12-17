@@ -19,7 +19,11 @@ export const PhotoUpload: React.FC<PhotoUploadProps> = ({
   return (
     <div>
       <label className="block text-brand font-bold text-sm mb-3">
-        Photos {activeTab === 'Swap' ? '(Camera Only)' : '(Select from Gallery)'}
+        {activeTab === 'Services' 
+          ? 'Work Samples (Select from Gallery)' 
+          : activeTab === 'Swap' 
+            ? 'Photos (Camera Only)' 
+            : 'Photos (Select from Gallery)'}
       </label>
       <div className="flex space-x-3 overflow-x-auto pb-2">
         {activeTab === 'Swap' ? (

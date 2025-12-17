@@ -65,6 +65,11 @@ export const ENDPOINTS = {
     uploadBase64: '/images/upload-base64',
     uploadMultipleBase64: '/images/upload-multiple-base64',
   },
+  serviceProviders: {
+    feed: '/service-providers/feed',
+    create: '/service-providers',
+    me: '/service-providers/me',
+  },
 };
 
 

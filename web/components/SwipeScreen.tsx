@@ -230,136 +230,171 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   // Fetch items from API - works with or without authentication
   useEffect(() => {
     const fetchItems = async () => {
-      // Services tab is coming soon - show empty state
-      if (activeTab === 'Services') {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
-
       setLoading(true);
       try {
-        // Build query parameters
-        const params: string[] = [];
+        let apiItems: any[] = [];
 
-        // Add type parameter based on active tab
-        // Map: Shop -> marketplace, Swap -> barter
-        // Services is coming soon, so skip fetching
-        let itemType = 'marketplace';
-        if (activeTab === 'Swap') {
-          itemType = 'barter';
+        // Handle Services tab separately - fetch service providers
+        if (activeTab === 'Services') {
+          // Build query parameters for service providers
+          const params: string[] = [];
+
+          // Add category filter if not "All Categories"
+          if (selectedCategoryId) {
+            params.push(`category=${selectedCategoryId}`);
+          }
+
+          // Add city filter
+          if (selectedLocation && selectedLocation !== 'all') {
+            params.push(`city=${encodeURIComponent(selectedLocation)}`);
+          } else if (selectedLocation === 'all') {
+            params.push('city=all');
+          }
+
+          // Build feed URL with query parameters
+          let feedUrl = ENDPOINTS.serviceProviders.feed;
+          if (params.length > 0) {
+            feedUrl += `?${params.join('&')}`;
+          }
+
+          console.log('[SwipeScreen] Fetching service providers with URL:', feedUrl);
+          console.log('[SwipeScreen] Filter state:', { selectedCategory, selectedCategoryId, selectedLocation });
+
+          // Fetch service providers - token is optional (for browsing without login)
+          const res = await apiFetch(feedUrl, { token: token || undefined });
+          apiItems = res.items || res.data || [];
+        } else {
+          // Build query parameters for items (Marketplace/Swap)
+          const params: string[] = [];
+
+          // Add type parameter based on active tab
+          // Map: Shop -> marketplace, Swap -> barter
+          let itemType = 'marketplace';
+          if (activeTab === 'Swap') {
+            itemType = 'barter';
+          }
+          params.push(`type=${encodeURIComponent(itemType)}`);
+
+          // Add category filter if not "All Categories"
+          if (selectedCategoryId) {
+            params.push(`category_id=${selectedCategoryId}`);
+          }
+
+          // Add city filter
+          if (selectedLocation && selectedLocation !== 'all') {
+            params.push(`city=${encodeURIComponent(selectedLocation)}`);
+          } else if (selectedLocation === 'all') {
+            params.push('city=all');
+          }
+
+          // Build feed URL with query parameters
+          let feedUrl = ENDPOINTS.items.feed;
+          if (params.length > 0) {
+            feedUrl += `?${params.join('&')}`;
+          }
+
+          console.log('[SwipeScreen] Fetching items with URL:', feedUrl);
+          console.log('[SwipeScreen] Filter state:', { selectedCategory, selectedCategoryId, selectedLocation });
+
+          // Fetch items - token is optional (for browsing without login)
+          const res = await apiFetch(feedUrl, { token: token || undefined });
+          apiItems = res.items || res.data || [];
         }
-        params.push(`type=${encodeURIComponent(itemType)}`);
 
-        // Add category filter if not "All Categories"
-        if (selectedCategoryId) {
-          params.push(`category_id=${selectedCategoryId}`);
-        }
-
-        // Add city filter
-        if (selectedLocation && selectedLocation !== 'all') {
-          params.push(`city=${encodeURIComponent(selectedLocation)}`);
-        } else if (selectedLocation === 'all') {
-          params.push('city=all');
-        }
-
-        // Build feed URL with query parameters
-        let feedUrl = ENDPOINTS.items.feed;
-        if (params.length > 0) {
-          feedUrl += `?${params.join('&')}`;
-        }
-
-        console.log('[SwipeScreen] Fetching items with URL:', feedUrl);
-        console.log('[SwipeScreen] Filter state:', { selectedCategory, selectedCategoryId, selectedLocation });
-
-        // Fetch items - token is optional (for browsing without login)
-        const res = await apiFetch(feedUrl, { token: token || undefined });
-
-        const apiItems = res.items || res.data || [];
-
-        console.log(`[SwipeScreen] Fetched ${apiItems.length} items for ${activeTab} tab`, {
-          type: itemType,
+        console.log(`[SwipeScreen] Fetched ${apiItems.length} ${activeTab === 'Services' ? 'service providers' : 'items'} for ${activeTab} tab`, {
           category: selectedCategory,
           categoryId: selectedCategoryId,
           location: selectedLocation,
-          items: apiItems.length,
+          count: apiItems.length,
         });
 
         // Transform API items to SwipeItem format
-        const transformedItems: SwipeItem[] = apiItems.map((item: any) => ({
-          id: item.id,
-          type: item.type || (item.price ? 'marketplace' : 'barter'),
-          title: item.title || item.name || 'Untitled Item',
-          condition: item.condition || 'Used',
-          image: item.images?.[0] || item.image || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800"%3E%3Crect fill="%23f3f4f6" width="800" height="800"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
-          description: item.description || '', // Use empty string if no description, don't use dummy text
-          lookingFor: item.looking_for || item.lookingFor || '',
-          price: item.price ? (typeof item.price === 'string' ? `₦${item.price}` : `₦${item.price}`) : undefined,
-          category: item.category || undefined,
-          owner: {
-            id: item.user?.id || item.owner?.id, // Seller's user ID for starting conversations
-            name: item.user?.username || item.owner?.name || 'Unknown',
-            // Use actual profile_photo only if it exists and is not a generated avatar URL
-            image: (() => {
-              const profilePhoto = item.user?.profile_photo || item.owner?.image;
-              const userName = item.user?.username || item.owner?.name || 'Unknown';
-              // Check if profile_photo exists and is not empty
-              if (!profilePhoto || profilePhoto.trim() === '') {
-                return generateInitialsAvatar(userName);
-              }
-              // Filter out known generated avatar service URLs
-              const generatedAvatarPatterns = [
-                'ui-avatars.com',
-                'pravatar.cc',
-                'i.pravatar.cc',
-                'robohash.org',
-                'dicebear.com',
-                'avatar.vercel.sh',
-              ];
-              const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
-                profilePhoto.toLowerCase().includes(pattern.toLowerCase())
-              );
-              // Return initials avatar if it's a generated avatar, otherwise use the actual photo
-              return isGeneratedAvatar ? generateInitialsAvatar(userName) : profilePhoto;
-            })(),
-            // Use item.city (where the item is located) instead of user.city (user's current location)
-            location: item.city || item.user?.city || item.owner?.location || 'Unknown',
-            distance: (() => {
-              // Check distance_km first, then distance, then owner.distance
-              const distanceKm = item.distance_km ?? item.distance;
-              if (distanceKm !== null && distanceKm !== undefined) {
-                return distanceKm < 1
-                  ? `${Math.round(distanceKm * 1000)}m`
-                  : `${distanceKm}km`;
-              }
-              // Fallback to formatted distance from owner object
-              if (item.owner?.distance) {
-                return item.owner.distance;
-              }
-              return 'Unknown';
-            })(),
-            // Include phone verification status
-            phone_verified_at: item.user?.phone_verified_at || item.owner?.phone_verified_at || null,
-          },
-          gallery: item.images || item.gallery || [item.image].filter(Boolean),
-        }));
+        const transformedItems: SwipeItem[] = apiItems.map((item: any) => {
+          // For service providers, use different title/description mapping
+          const isServiceProvider = activeTab === 'Services';
+          
+          return {
+            id: item.id,
+            type: item.type || (isServiceProvider ? 'services' : (item.price ? 'marketplace' : 'barter')),
+            title: isServiceProvider 
+              ? (item.title || item.serviceCategory?.name || 'Service Provider')
+              : (item.title || item.name || 'Untitled Item'),
+            condition: item.condition || (isServiceProvider ? undefined : 'Used'),
+            image: item.images?.[0] || item.image || item.work_images?.[0] || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="800"%3E%3Crect fill="%23f3f4f6" width="800" height="800"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E',
+            description: isServiceProvider
+              ? (item.description || item.bio || '')
+              : (item.description || ''),
+            lookingFor: item.looking_for || item.lookingFor || '',
+            price: item.price || item.starting_price 
+              ? (typeof (item.price || item.starting_price) === 'string' 
+                  ? `₦${item.price || item.starting_price}` 
+                  : `₦${item.price || item.starting_price}`) 
+              : undefined,
+            category: item.category || item.serviceCategory?.name || undefined,
+            owner: {
+              id: item.user?.id || item.owner?.id,
+              name: item.user?.username || item.owner?.name || 'Unknown',
+              image: (() => {
+                const profilePhoto = item.user?.profile_photo || item.owner?.image;
+                const userName = item.user?.username || item.owner?.name || 'Unknown';
+                if (!profilePhoto || profilePhoto.trim() === '') {
+                  return generateInitialsAvatar(userName);
+                }
+                const generatedAvatarPatterns = [
+                  'ui-avatars.com',
+                  'pravatar.cc',
+                  'i.pravatar.cc',
+                  'robohash.org',
+                  'dicebear.com',
+                  'avatar.vercel.sh',
+                ];
+                const isGeneratedAvatar = generatedAvatarPatterns.some(pattern => 
+                  profilePhoto.toLowerCase().includes(pattern.toLowerCase())
+                );
+                return isGeneratedAvatar ? generateInitialsAvatar(userName) : profilePhoto;
+              })(),
+              location: item.city || item.user?.city || item.owner?.location || 'Unknown',
+              distance: (() => {
+                const distanceKm = item.distance_km ?? item.distance;
+                if (distanceKm !== null && distanceKm !== undefined) {
+                  return distanceKm < 1
+                    ? `${Math.round(distanceKm * 1000)}m`
+                    : `${distanceKm}km`;
+                }
+                if (item.owner?.distance) {
+                  return item.owner.distance;
+                }
+                return 'Unknown';
+              })(),
+              phone_verified_at: item.user?.phone_verified_at || item.owner?.phone_verified_at || null,
+            },
+            gallery: item.images || item.gallery || item.work_images || [item.image].filter(Boolean),
+            // Service provider specific fields
+            ...(isServiceProvider && {
+              rating: item.rating,
+              rating_count: item.rating_count,
+              availability: item.availability,
+            }),
+          };
+        });
 
         // Use mock data as fallback ONLY if API returns no items AND no filters are applied
         // This ensures filtered results show empty state rather than mock data
+        // Note: Services tab doesn't have mock data, so always use API results
         let finalItems: SwipeItem[];
         const hasFiltersApplied = selectedCategoryId !== null || selectedLocation !== 'all';
         
-        if (transformedItems.length === 0 && !hasFiltersApplied) {
-          // No items and no filters - use mock data for design preview
+        if (transformedItems.length === 0 && !hasFiltersApplied && activeTab !== 'Services') {
+          // No items and no filters - use mock data for design preview (only for Marketplace/Swap)
           const mockItems = activeTab === 'Marketplace'
             ? MOCK_MARKETPLACE_ITEMS.map(item => ({
-              ...item,
-              price: `₦${item.price}`,
-            }))
+                ...item,
+                price: `₦${item.price}`,
+              }))
             : MOCK_BARTER_ITEMS;
           finalItems = mockItems as SwipeItem[];
         } else {
-          // Use API results (even if empty when filters are applied)
+          // Use API results (even if empty when filters are applied, or for Services tab)
           finalItems = transformedItems;
         }
         
