@@ -1,29 +1,76 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { WelcomeScreen } from './components/WelcomeScreen';
-import { SignInScreen } from './components/SignInScreen';
-import { SignUpScreen } from './components/SignUpScreen';
-import { SignUpEmailOtpScreen } from './components/SignUpEmailOtpScreen';
-import { SetupProfileScreen } from './components/SetupProfileScreen';
-import { ForgotPasswordScreen } from './components/ForgotPasswordScreen';
-import { ResetPasswordScreen } from './components/ResetPasswordScreen';
-import { SwipeScreen } from './components/SwipeScreen';
-import { UploadScreen } from './components/UploadScreen';
-import { MatchesScreen } from './components/MatchesScreen';
-import { MatchRequestsScreen } from './components/MatchRequestsScreen';
-import { ChatScreen } from './components/ChatScreen';
-import { ProfileScreen } from './components/ProfileScreen';
-import { EditProfileScreen } from './components/EditProfileScreen';
-import { ItemDetailsScreen } from './components/ItemDetailsScreen';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { AppShell } from './components/AppShell';
 import { BottomNav } from './components/BottomNav';
 import { ScreenState, TabState, SwipeItem } from './types';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useNavigationHistory } from './hooks/useNavigationHistory';
 import { useSwipeToGoBack } from './hooks/useSwipeToGoBack';
 
+// Lazy load all screen components for code splitting
+// These will only load when needed, reducing initial bundle size
+// React.lazy requires default exports, so we wrap named exports
+const WelcomeScreen = lazy(() => 
+  import('./components/WelcomeScreen').then(module => ({ default: module.WelcomeScreen }))
+);
+const SignInScreen = lazy(() => 
+  import('./components/SignInScreen').then(module => ({ default: module.SignInScreen }))
+);
+const SignUpScreen = lazy(() => 
+  import('./components/SignUpScreen').then(module => ({ default: module.SignUpScreen }))
+);
+const SignUpEmailOtpScreen = lazy(() => 
+  import('./components/SignUpEmailOtpScreen').then(module => ({ default: module.SignUpEmailOtpScreen }))
+);
+const SetupProfileScreen = lazy(() => 
+  import('./components/SetupProfileScreen').then(module => ({ default: module.SetupProfileScreen }))
+);
+const ForgotPasswordScreen = lazy(() => 
+  import('./components/ForgotPasswordScreen').then(module => ({ default: module.ForgotPasswordScreen }))
+);
+const ResetPasswordScreen = lazy(() => 
+  import('./components/ResetPasswordScreen').then(module => ({ default: module.ResetPasswordScreen }))
+);
+const SwipeScreen = lazy(() => 
+  import('./components/SwipeScreen').then(module => ({ default: module.SwipeScreen }))
+);
+const UploadScreen = lazy(() => 
+  import('./components/UploadScreen').then(module => ({ default: module.UploadScreen }))
+);
+const MatchesScreen = lazy(() => 
+  import('./components/MatchesScreen').then(module => ({ default: module.MatchesScreen }))
+);
+const MatchRequestsScreen = lazy(() => 
+  import('./components/MatchRequestsScreen').then(module => ({ default: module.MatchRequestsScreen }))
+);
+const ChatScreen = lazy(() => 
+  import('./components/ChatScreen').then(module => ({ default: module.ChatScreen }))
+);
+const ProfileScreen = lazy(() => 
+  import('./components/ProfileScreen').then(module => ({ default: module.ProfileScreen }))
+);
+const EditProfileScreen = lazy(() => 
+  import('./components/EditProfileScreen').then(module => ({ default: module.EditProfileScreen }))
+);
+const ItemDetailsScreen = lazy(() => 
+  import('./components/ItemDetailsScreen').then(module => ({ default: module.ItemDetailsScreen }))
+);
+
+// Minimal loading fallback - just a blank screen to avoid layout shift
+const ScreenSkeleton = () => <div className="flex-1 bg-white" />;
+
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, loginWithGoogle, refreshUser } = useAuth();
-  const [currentScreen, setCurrentScreen] = useState<ScreenState>('welcome');
-  const [activeTab, setActiveTab] = useState<TabState>('discover');
+  
+  // Restore state from localStorage for instant restoration
+  // This allows the app to show the last viewed screen immediately
+  const [currentScreen, setCurrentScreen] = useState<ScreenState>(() => {
+    const saved = localStorage.getItem('last_screen');
+    return (saved as ScreenState) || 'welcome';
+  });
+  const [activeTab, setActiveTab] = useState<TabState>(() => {
+    const saved = localStorage.getItem('last_tab');
+    return (saved as TabState) || 'discover';
+  });
   const [swipeTab, setSwipeTab] = useState<'Marketplace' | 'Services' | 'Swap'>('Marketplace');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupName, setSignupName] = useState('');
@@ -49,6 +96,8 @@ const AppContent: React.FC = () => {
       navigationHistory.push(screen);
     }
     setCurrentScreen(screen);
+    // Persist current screen for state restoration
+    localStorage.setItem('last_screen', screen);
   }, [navigationHistory]);
 
   // Handle back navigation
@@ -72,28 +121,34 @@ const AppContent: React.FC = () => {
   });
 
 
-  // Handle authentication state changes
+  // Persist active tab changes
   useEffect(() => {
-    if (!loading) {
-      if (isAuthenticated) {
-        // User is authenticated, show home screen with discover tab
-        // setup_profile is only used for Google login users who need to complete their profile
-        if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_email_otp' || currentScreen === 'forgot_password' || currentScreen === 'reset_password') {
-          navigationHistory.reset('home');
-          setCurrentScreen('home');
-          setActiveTab('discover'); // Always redirect to discover page after login
-        }
-      } else {
-        // User is not authenticated
-        // Allow browsing (home/discover) but restrict authenticated-only screens
-        if (currentScreen === 'edit_profile' || currentScreen === 'match_requests' || currentScreen === 'chat') {
-          navigationHistory.reset('home');
-          setCurrentScreen('home');
-        }
-        // Don't force welcome screen - allow browsing without login
-      }
+    if (activeTab) {
+      localStorage.setItem('last_tab', activeTab);
     }
-  }, [isAuthenticated, loading, currentScreen, navigationHistory]);
+  }, [activeTab]);
+
+  // Handle authentication state changes (non-blocking - runs after first render)
+  useEffect(() => {
+    // Don't wait for loading - render optimistically with cached state
+    if (isAuthenticated) {
+      // User is authenticated, show home screen with discover tab
+      // setup_profile is only used for Google login users who need to complete their profile
+      if (currentScreen === 'welcome' || currentScreen === 'signin' || currentScreen === 'signup_email_otp' || currentScreen === 'forgot_password' || currentScreen === 'reset_password') {
+        navigationHistory.reset('home');
+        setCurrentScreen('home');
+        setActiveTab('discover'); // Always redirect to discover page after login
+      }
+    } else {
+      // User is not authenticated
+      // Allow browsing (home/discover) but restrict authenticated-only screens
+      if (currentScreen === 'edit_profile' || currentScreen === 'match_requests' || currentScreen === 'chat') {
+        navigationHistory.reset('home');
+        setCurrentScreen('home');
+      }
+      // Don't force welcome screen - allow browsing without login
+    }
+  }, [isAuthenticated, currentScreen, navigationHistory]); // Removed loading dependency
 
   const handleBackToProfile = () => {
     navigateTo('home');
@@ -172,191 +227,227 @@ const AppContent: React.FC = () => {
   const renderMainContent = () => {
     switch (activeTab) {
       case 'discover':
-        return <SwipeScreen
-          onBack={() => navigateTo('welcome')}
-          onItemClick={(item, currentTab, currentIndex) => handleItemClick(item, currentTab, currentIndex)}
-          onLoginRequest={handleLoginRequest}
-          onSignUpRequest={handleSignUpRequest}
-          initialTab={swipeTab}
-          onTabChange={setSwipeTab}
-          initialIndex={swipeIndex[swipeTab]}
-          onIndexChange={handleIndexChange}
-        />;
+        return (
+          <Suspense fallback={<ScreenSkeleton />}>
+            <SwipeScreen
+              onBack={() => navigateTo('welcome')}
+              onItemClick={(item, currentTab, currentIndex) => handleItemClick(item, currentTab, currentIndex)}
+              onLoginRequest={handleLoginRequest}
+              onSignUpRequest={handleSignUpRequest}
+              initialTab={swipeTab}
+              onTabChange={setSwipeTab}
+              initialIndex={swipeIndex[swipeTab]}
+              onIndexChange={handleIndexChange}
+            />
+          </Suspense>
+        );
       case 'upload':
         return (
-          <UploadScreen 
-            onLoginRequest={handleLoginRequest} 
-            onSignUpRequest={handleSignUpRequest}
-            editItem={editItem}
-            onEditComplete={async () => {
-              setEditItem(null);
-              // Refresh user data to update items list
-              await refreshUser();
-              // Navigate back to profile tab to see updated items
-              setActiveTab('profile');
-            }}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <UploadScreen 
+              onLoginRequest={handleLoginRequest} 
+              onSignUpRequest={handleSignUpRequest}
+              editItem={editItem}
+              onEditComplete={async () => {
+                setEditItem(null);
+                // Refresh user data to update items list
+                await refreshUser();
+                // Navigate back to profile tab to see updated items
+                setActiveTab('profile');
+              }}
+            />
+          </Suspense>
         );
       case 'matches':
-        return <MatchesScreen
-          onNavigateToRequests={() => navigateTo('match_requests')}
-          onNavigateToChat={(conversation) => {
-            setSelectedConversation(conversation);
-            navigateTo('chat');
-          }}
-          onLoginRequest={handleLoginRequest}
-          onSignUpRequest={handleSignUpRequest}
-        />;
+        return (
+          <Suspense fallback={<ScreenSkeleton />}>
+            <MatchesScreen
+              onNavigateToRequests={() => navigateTo('match_requests')}
+              onNavigateToChat={(conversation) => {
+                setSelectedConversation(conversation);
+                navigateTo('chat');
+              }}
+              onLoginRequest={handleLoginRequest}
+              onSignUpRequest={handleSignUpRequest}
+            />
+          </Suspense>
+        );
       case 'profile':
         return (
-          <ProfileScreen
-            onEditProfile={() => navigateTo('edit_profile')}
-            onLoginRequest={handleLoginRequest}
-            onSignUpRequest={handleSignUpRequest}
-            onItemClick={(item) => {
-              setSelectedItem(item);
-              navigateTo('item_details');
-            }}
-            onItemEdit={(item) => {
-              setEditItem(item);
-              setActiveTab('upload');
-            }}
-            onAddItem={() => {
-              setEditItem(null);
-              setActiveTab('upload');
-            }}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <ProfileScreen
+              onEditProfile={() => navigateTo('edit_profile')}
+              onLoginRequest={handleLoginRequest}
+              onSignUpRequest={handleSignUpRequest}
+              onItemClick={(item) => {
+                setSelectedItem(item);
+                navigateTo('item_details');
+              }}
+              onItemEdit={(item) => {
+                setEditItem(item);
+                setActiveTab('upload');
+              }}
+              onAddItem={() => {
+                setEditItem(null);
+                setActiveTab('upload');
+              }}
+            />
+          </Suspense>
         );
       default:
-        return <SwipeScreen
-          onBack={() => navigateTo('welcome')}
-          onItemClick={(item, currentTab, currentIndex) => handleItemClick(item, currentTab, currentIndex)}
-          onLoginRequest={handleLoginRequest}
-          onSignUpRequest={handleSignUpRequest}
-          initialTab={swipeTab}
-          onTabChange={setSwipeTab}
-          initialIndex={swipeIndex[swipeTab]}
-          onIndexChange={handleIndexChange}
-        />;
+        return (
+          <Suspense fallback={<ScreenSkeleton />}>
+            <SwipeScreen
+              onBack={() => navigateTo('welcome')}
+              onItemClick={(item, currentTab, currentIndex) => handleItemClick(item, currentTab, currentIndex)}
+              onLoginRequest={handleLoginRequest}
+              onSignUpRequest={handleSignUpRequest}
+              initialTab={swipeTab}
+              onTabChange={setSwipeTab}
+              initialIndex={swipeIndex[swipeTab]}
+              onIndexChange={handleIndexChange}
+            />
+          </Suspense>
+        );
     }
   };
 
   return (
-    // Main container with safe area support - extends to cover bottom safe area
-    <div className="w-full md:max-w-md md:mx-auto md:h-[95dvh] md:my-[2.5dvh] bg-white relative overflow-visible md:overflow-hidden md:rounded-[3rem] shadow-2xl md:border-[8px] md:border-gray-900 flex flex-col safe-area-container">
-
+    <AppShell>
       {/* Screen Content */}
       <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative w-full overscroll-none" data-scrollable style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none' }}>
         {currentScreen === 'welcome' && (
-          <WelcomeScreen 
-            onGetStarted={() => navigateTo('home')} 
-            onSignUp={() => navigateTo('signup')}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <WelcomeScreen 
+              onGetStarted={() => navigateTo('home')} 
+              onSignUp={() => navigateTo('signup')}
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'signin' && (
-          <SignInScreen
-            onSignIn={() => {
-              navigateTo('home', true);
-              setActiveTab('discover'); // Redirect to discover page after login
-            }}
-            onBack={handleGoBack}
-            onSignUp={() => navigateTo('signup')}
-            onForgotPassword={handleForgotPassword}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <SignInScreen
+              onSignIn={() => {
+                navigateTo('home', true);
+                setActiveTab('discover'); // Redirect to discover page after login
+              }}
+              onBack={handleGoBack}
+              onSignUp={() => navigateTo('signup')}
+              onForgotPassword={handleForgotPassword}
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'signup' && (
-          <SignUpScreen
-            onSignUp={(email, name, password) => {
-              setSignupEmail(email);
-              setSignupName(name);
-              setSignupPassword(password);
-              navigateTo('signup_email_otp');
-            }}
-            onBack={handleGoBack}
-            onSignIn={() => navigateTo('signin')}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <SignUpScreen
+              onSignUp={(email, name, password) => {
+                setSignupEmail(email);
+                setSignupName(name);
+                setSignupPassword(password);
+                navigateTo('signup_email_otp');
+              }}
+              onBack={handleGoBack}
+              onSignIn={() => navigateTo('signin')}
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'signup_email_otp' && (
-          <SignUpEmailOtpScreen
-            email={signupEmail}
-            name={signupName}
-            password={signupPassword}
-            onVerify={(isNewUser) => {
-              // After email verification, redirect directly to profile
-              // User already has name, email, and password from registration
-              // They can edit profile later if needed
-              navigateTo('home', true);
-              setActiveTab('profile');
-            }}
-            onBack={handleGoBack}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <SignUpEmailOtpScreen
+              email={signupEmail}
+              name={signupName}
+              password={signupPassword}
+              onVerify={(isNewUser) => {
+                // After email verification, redirect directly to profile
+                // User already has name, email, and password from registration
+                // They can edit profile later if needed
+                navigateTo('home', true);
+                setActiveTab('profile');
+              }}
+              onBack={handleGoBack}
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'forgot_password' && (
-          <ForgotPasswordScreen
-            onSubmit={handleForgotPasswordSubmit}
-            onBack={handleGoBack}
-            onSignIn={() => navigateTo('signin')}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <ForgotPasswordScreen
+              onSubmit={handleForgotPasswordSubmit}
+              onBack={handleGoBack}
+              onSignIn={() => navigateTo('signin')}
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'reset_password' && (
-          <ResetPasswordScreen
-            email={resetPasswordEmail}
-            onSuccess={() => navigateTo('signin', true)}
-            onBack={handleGoBack}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <ResetPasswordScreen
+              email={resetPasswordEmail}
+              onSuccess={() => navigateTo('signin', true)}
+              onBack={handleGoBack}
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'setup_profile' && (
-          <SetupProfileScreen
-            onComplete={() => {
-              // Navigate to home and set profile tab as active
-              navigateTo('home', true);
-              setActiveTab('profile');
-            }}
-            onBack={handleGoBack}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <SetupProfileScreen
+              onComplete={() => {
+                // Navigate to home and set profile tab as active
+                navigateTo('home', true);
+                setActiveTab('profile');
+              }}
+              onBack={handleGoBack}
+            />
+          </Suspense>
         )}
 
         {/* Full Screen Overlays (Hide Bottom Nav) */}
         {currentScreen === 'match_requests' && (
-          <MatchRequestsScreen onBack={handleGoBack} />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <MatchRequestsScreen onBack={handleGoBack} />
+          </Suspense>
         )}
 
         {currentScreen === 'chat' && (
-          <ChatScreen 
-            conversation={selectedConversation}
-            onBack={() => {
-              setSelectedConversation(null);
-              handleGoBack();
-            }} 
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <ChatScreen 
+              conversation={selectedConversation}
+              onBack={() => {
+                setSelectedConversation(null);
+                handleGoBack();
+              }} 
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'edit_profile' && (
-          <EditProfileScreen onBack={handleBackToProfile} />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <EditProfileScreen onBack={handleBackToProfile} />
+          </Suspense>
         )}
 
         {currentScreen === 'item_details' && (
-          <ItemDetailsScreen
-            item={selectedItem}
-            onBack={handleGoBack}
-            isAuthenticated={isAuthenticated}
-            onLoginPrompt={() => handleLoginRequest('email')}
-            onChat={(item) => {
-              // Navigate to chat with seller
-              // For now, just go back - you can implement chat navigation later
-              navigateTo('chat');
-            }}
-            onItemClick={(item) => {
-              setSelectedItem(item);
-              // Stay on item_details screen, just update the item
-            }}
-          />
+          <Suspense fallback={<ScreenSkeleton />}>
+            <ItemDetailsScreen
+              item={selectedItem}
+              onBack={handleGoBack}
+              isAuthenticated={isAuthenticated}
+              onLoginPrompt={() => handleLoginRequest('email')}
+              onChat={(item) => {
+                // Navigate to chat with seller
+                // For now, just go back - you can implement chat navigation later
+                navigateTo('chat');
+              }}
+              onItemClick={(item) => {
+                setSelectedItem(item);
+                // Stay on item_details screen, just update the item
+              }}
+            />
+          </Suspense>
         )}
 
         {currentScreen === 'home' && (
@@ -373,7 +464,7 @@ const AppContent: React.FC = () => {
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 };
 

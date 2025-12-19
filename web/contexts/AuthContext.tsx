@@ -85,39 +85,44 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Initialize state from localStorage immediately (synchronous) for instant hydration
+  const [user, setUser] = useState<User | null>(() => getStoredUser());
+  const [token, setToken] = useState<string | null>(() => getStoredToken());
+  const [loading, setLoading] = useState(false); // Start as false - we have cached state
 
-  // Initialize auth state from localStorage
+  // Validate token in background after initial render (non-blocking)
   useEffect(() => {
-    const initAuth = async () => {
-      const storedToken = getStoredToken();
-      const storedUser = getStoredUser();
+    // Only validate if we have a token - don't block if no token exists
+    if (!token || !user) {
+      return;
+    }
 
-      if (storedToken && storedUser) {
-        setToken(storedToken);
-        setUser(storedUser);
-
-        // Verify token is still valid by fetching user profile
-        try {
-          const res = await apiFetch<{ user: User }>(ENDPOINTS.profile.me, { token: storedToken });
-          setUser(res.user || res.data?.user || storedUser);
-          storeUser(res.user || res.data?.user || storedUser);
-        } catch (error) {
-          // Token is invalid, clear auth state
-          console.error('[AuthContext] Token validation failed:', error);
-          removeToken();
-          setUser(null);
-          setToken(null);
+    // Validate token asynchronously after first paint
+    // Use requestIdleCallback if available, otherwise setTimeout
+    const validateToken = async () => {
+      try {
+        const res = await apiFetch<{ user: User }>(ENDPOINTS.profile.me, { token });
+        const updatedUser = res.user || res.data?.user;
+        if (updatedUser) {
+          setUser(updatedUser);
+          storeUser(updatedUser);
         }
+      } catch (error) {
+        // Token is invalid, clear auth state silently
+        console.warn('[AuthContext] Token validation failed, clearing auth state:', error);
+        removeToken();
+        setUser(null);
+        setToken(null);
       }
-
-      setLoading(false);
     };
 
-    initAuth();
-  }, []);
+    // Defer validation to avoid blocking initial render
+    if ('requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(validateToken, { timeout: 2000 });
+    } else {
+      setTimeout(validateToken, 100);
+    }
+  }, []); // Only run once on mount
 
   const sendOtp = async (phone: string): Promise<{ debug_code?: string }> => {
     const res = await apiFetch(ENDPOINTS.auth.sendOtp, {

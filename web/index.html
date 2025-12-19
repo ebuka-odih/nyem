@@ -4,7 +4,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>Creative Agency</title>
+    <title>Nyem - Tinder for Barter</title>
     
     <!-- PWA Meta Tags -->
     <meta name="description" content="Swap. Match. Trade. The modern way to barter." />
@@ -12,7 +12,7 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Creative Agency" />
+    <meta name="apple-mobile-web-app-title" content="Nyem" />
     
     <!-- iOS Safari PWA Support -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -33,9 +33,12 @@
     <!-- Favicon -->
     <link rel="shortcut icon" href="/favicon.ico" />
     
+    <!-- Tailwind CSS - Load synchronously for critical styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Google Identity Services -->
+    <!-- Google Fonts - Use font-display: swap for non-blocking font loading -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    <!-- Google Identity Services - Load asynchronously, not needed for first render -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
       tailwind.config = {
