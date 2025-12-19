@@ -50,13 +50,8 @@ export default defineConfig(({ mode }) => {
         chunkSizeWarningLimit: 1000,
         // Enable source maps for production debugging (optional - can disable for smaller builds)
         sourcemap: false,
-        // Minify for production
-        minify: 'terser',
-        terserOptions: {
-          compress: {
-            drop_console: false, // Keep console.log for debugging
-          },
-        },
+        // Minify for production using esbuild (faster than terser, built into Vite)
+        minify: 'esbuild',
       },
     };
 });
