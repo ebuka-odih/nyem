@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AppShell } from './components/AppShell';
 import { BottomNav } from './components/BottomNav';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { ScreenState, TabState, SwipeItem } from './types';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useNavigationHistory } from './hooks/useNavigationHistory';
@@ -9,64 +10,220 @@ import { useSwipeToGoBack } from './hooks/useSwipeToGoBack';
 // Lazy load all screen components for code splitting
 // These will only load when needed, reducing initial bundle size
 // React.lazy requires default exports, so we wrap named exports
-const WelcomeScreen = lazy(() => 
+// Add error handling for failed imports
+const lazyWithErrorHandling = (importFn: () => Promise<any>) => {
+  return lazy(() =>
+    importFn().catch((error) => {
+      console.error('[Lazy Loading] Failed to load component:', error);
+      // Return a fallback component that shows an error message
+      return {
+        default: () => (
+          <div className="flex-1 bg-white flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-gray-600 mb-4">Failed to load component</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-brand-500 text-white rounded-lg"
+              >
+                Reload
+              </button>
+            </div>
+          </div>
+        ),
+      };
+    })
+  );
+};
+
+const WelcomeScreen = lazyWithErrorHandling(() => 
   import('./components/WelcomeScreen').then(module => ({ default: module.WelcomeScreen }))
 );
-const SignInScreen = lazy(() => 
+const SignInScreen = lazyWithErrorHandling(() => 
   import('./components/SignInScreen').then(module => ({ default: module.SignInScreen }))
 );
-const SignUpScreen = lazy(() => 
+const SignUpScreen = lazyWithErrorHandling(() => 
   import('./components/SignUpScreen').then(module => ({ default: module.SignUpScreen }))
 );
-const SignUpEmailOtpScreen = lazy(() => 
+const SignUpEmailOtpScreen = lazyWithErrorHandling(() => 
   import('./components/SignUpEmailOtpScreen').then(module => ({ default: module.SignUpEmailOtpScreen }))
 );
-const SetupProfileScreen = lazy(() => 
+const SetupProfileScreen = lazyWithErrorHandling(() => 
   import('./components/SetupProfileScreen').then(module => ({ default: module.SetupProfileScreen }))
 );
-const ForgotPasswordScreen = lazy(() => 
+const ForgotPasswordScreen = lazyWithErrorHandling(() => 
   import('./components/ForgotPasswordScreen').then(module => ({ default: module.ForgotPasswordScreen }))
 );
-const ResetPasswordScreen = lazy(() => 
+const ResetPasswordScreen = lazyWithErrorHandling(() => 
   import('./components/ResetPasswordScreen').then(module => ({ default: module.ResetPasswordScreen }))
 );
-const SwipeScreen = lazy(() => 
+const SwipeScreen = lazyWithErrorHandling(() => 
   import('./components/SwipeScreen').then(module => ({ default: module.SwipeScreen }))
 );
-const UploadScreen = lazy(() => 
+const UploadScreen = lazyWithErrorHandling(() => 
   import('./components/UploadScreen').then(module => ({ default: module.UploadScreen }))
 );
-const MatchesScreen = lazy(() => 
+const MatchesScreen = lazyWithErrorHandling(() => 
   import('./components/MatchesScreen').then(module => ({ default: module.MatchesScreen }))
 );
-const MatchRequestsScreen = lazy(() => 
+const MatchRequestsScreen = lazyWithErrorHandling(() => 
   import('./components/MatchRequestsScreen').then(module => ({ default: module.MatchRequestsScreen }))
 );
-const ChatScreen = lazy(() => 
+const ChatScreen = lazyWithErrorHandling(() => 
   import('./components/ChatScreen').then(module => ({ default: module.ChatScreen }))
 );
-const ProfileScreen = lazy(() => 
+const ProfileScreen = lazyWithErrorHandling(() => 
   import('./components/ProfileScreen').then(module => ({ default: module.ProfileScreen }))
 );
-const EditProfileScreen = lazy(() => 
+const EditProfileScreen = lazyWithErrorHandling(() => 
   import('./components/EditProfileScreen').then(module => ({ default: module.EditProfileScreen }))
 );
-const ItemDetailsScreen = lazy(() => 
+const ItemDetailsScreen = lazyWithErrorHandling(() => 
   import('./components/ItemDetailsScreen').then(module => ({ default: module.ItemDetailsScreen }))
 );
 
-// Minimal loading fallback - just a blank screen to avoid layout shift
-const ScreenSkeleton = () => <div className="flex-1 bg-white" />;
+// Loading fallback - shows a visible loading state
+const ScreenSkeleton = () => (
+  <div className="flex-1 bg-white flex items-center justify-center">
+    <div className="text-gray-400">Loading...</div>
+  </div>
+);
+
+// Valid screen states that don't require props
+const VALID_STANDALONE_SCREENS: ScreenState[] = [
+  'welcome',
+  'signin',
+  'signup',
+  'signup_email_otp',
+  'setup_profile',
+  'forgot_password',
+  'reset_password',
+  'home',
+];
+
+// Screens that require props and should not be restored from localStorage
+const SCREENS_REQUIRING_PROPS: ScreenState[] = [
+  'item_details', // Requires selectedItem
+  'chat', // Requires selectedConversation
+  'edit_profile', // Should only be accessed from profile
+  'match_requests', // Should only be accessed from matches
+];
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading, loginWithGoogle, refreshUser } = useAuth();
   
-  // Restore state from localStorage for instant restoration
-  // This allows the app to show the last viewed screen immediately
+  // Detect if app was closed vs just minimized
+  // Native apps: minimized apps restore state, closed apps start fresh
   const [currentScreen, setCurrentScreen] = useState<ScreenState>(() => {
-    const saved = localStorage.getItem('last_screen');
-    return (saved as ScreenState) || 'welcome';
+    // Check if app was recently active (within last 10 seconds)
+    // This indicates the app was just minimized/switched away, not fully closed
+    const lastActiveTime = localStorage.getItem('app_last_active');
+    const appWasClosed = localStorage.getItem('app_was_closed') === 'true';
+    const now = Date.now();
+    const timeSinceLastActive = lastActiveTime ? now - parseInt(lastActiveTime, 10) : Infinity;
+    
+    // If app was explicitly closed or inactive for more than 10 seconds, start fresh
+    // This mimics native app behavior - closed apps start fresh
+    if (appWasClosed || timeSinceLastActive > 10000) {
+      console.log('[App] App was closed or inactive, starting fresh');
+      // Clear saved state and close flag
+      localStorage.removeItem('last_screen');
+      localStorage.removeItem('last_tab');
+      localStorage.removeItem('app_was_closed');
+      return 'welcome';
+    }
+    
+    // App was recently active (minimized), try to restore state
+    const saved = localStorage.getItem('last_screen') as ScreenState;
+    
+    // Validate saved screen
+    if (!saved) {
+      return 'welcome';
+    }
+    
+    // Don't restore screens that require props (item_details, chat, etc.)
+    // These won't work on reload since props won't be available
+    if (SCREENS_REQUIRING_PROPS.includes(saved)) {
+      console.log('[App] Restored screen requires props, falling back to home');
+      return 'home';
+    }
+    
+    // Validate it's a known screen state
+    if (!VALID_STANDALONE_SCREENS.includes(saved) && !SCREENS_REQUIRING_PROPS.includes(saved)) {
+      console.warn('[App] Invalid screen state in localStorage:', saved);
+      return 'welcome';
+    }
+    
+    console.log('[App] Restoring state from minimized app:', saved);
+    return saved;
   });
+  
+  // Track app visibility and closure to detect when app is minimized vs closed
+  useEffect(() => {
+    // Update last active time when app becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // App is visible again - clear close flag and update active time
+        localStorage.removeItem('app_was_closed');
+        localStorage.setItem('app_last_active', Date.now().toString());
+      } else {
+        // App is hidden (minimized/switched away)
+        // Update active time but don't mark as closed yet
+        localStorage.setItem('app_last_active', Date.now().toString());
+      }
+    };
+    
+    // Update last active time periodically while app is active
+    const updateActiveTime = () => {
+      if (document.visibilityState === 'visible') {
+        localStorage.setItem('app_last_active', Date.now().toString());
+      }
+    };
+    
+    // Mark app as closed when page is being unloaded
+    const handleBeforeUnload = () => {
+      // App is being closed - mark it so we start fresh on next open
+      localStorage.setItem('app_was_closed', 'true');
+    };
+    
+    const handlePageHide = (e: PageTransitionEvent) => {
+      // If page is being unloaded (not just hidden), mark as closed
+      // persisted = false means page is being unloaded (closed)
+      // persisted = true means page is being cached (minimized)
+      if (!e.persisted) {
+        localStorage.setItem('app_was_closed', 'true');
+      }
+    };
+    
+    // Update on visibility change
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Update every 2 seconds while app is active
+    const interval = setInterval(updateActiveTime, 2000);
+    
+    // Initial update
+    updateActiveTime();
+    
+    // Listen for app closure
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      clearInterval(interval);
+    };
+  }, []);
+  
+  // Clean up invalid localStorage data on mount
+  useEffect(() => {
+    // Clear any invalid screen state that requires props
+    const savedScreen = localStorage.getItem('last_screen') as ScreenState;
+    if (savedScreen && SCREENS_REQUIRING_PROPS.includes(savedScreen)) {
+      console.log('[App] Clearing invalid screen state from localStorage:', savedScreen);
+      localStorage.removeItem('last_screen');
+    }
+  }, []);
   const [activeTab, setActiveTab] = useState<TabState>(() => {
     const saved = localStorage.getItem('last_tab');
     return (saved as TabState) || 'discover';
@@ -313,9 +470,10 @@ const AppContent: React.FC = () => {
   };
 
   return (
-    <AppShell>
-      {/* Screen Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative w-full overscroll-none" data-scrollable style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none' }}>
+    <ErrorBoundary>
+      <AppShell>
+        {/* Screen Content */}
+        <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col relative w-full overscroll-none" data-scrollable style={{ WebkitOverflowScrolling: 'touch', overscrollBehavior: 'none' }}>
         {currentScreen === 'welcome' && (
           <Suspense fallback={<ScreenSkeleton />}>
             <WelcomeScreen 
@@ -414,13 +572,31 @@ const AppContent: React.FC = () => {
 
         {currentScreen === 'chat' && (
           <Suspense fallback={<ScreenSkeleton />}>
-            <ChatScreen 
-              conversation={selectedConversation}
-              onBack={() => {
-                setSelectedConversation(null);
-                handleGoBack();
-              }} 
-            />
+            {selectedConversation ? (
+              <ChatScreen 
+                conversation={selectedConversation}
+                onBack={() => {
+                  setSelectedConversation(null);
+                  handleGoBack();
+                }} 
+              />
+            ) : (
+              // If chat screen was restored but no conversation is available, go back to home
+              <div className="flex-1 bg-white flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-gray-600 mb-4">No conversation selected</p>
+                  <button
+                    onClick={() => {
+                      setSelectedConversation(null);
+                      navigateTo('home', true);
+                    }}
+                    className="px-4 py-2 bg-brand-500 text-white rounded-lg"
+                  >
+                    Go Home
+                  </button>
+                </div>
+              </div>
+            )}
           </Suspense>
         )}
 
@@ -432,21 +608,36 @@ const AppContent: React.FC = () => {
 
         {currentScreen === 'item_details' && (
           <Suspense fallback={<ScreenSkeleton />}>
-            <ItemDetailsScreen
-              item={selectedItem}
-              onBack={handleGoBack}
-              isAuthenticated={isAuthenticated}
-              onLoginPrompt={() => handleLoginRequest('email')}
-              onChat={(item) => {
-                // Navigate to chat with seller
-                // For now, just go back - you can implement chat navigation later
-                navigateTo('chat');
-              }}
-              onItemClick={(item) => {
-                setSelectedItem(item);
-                // Stay on item_details screen, just update the item
-              }}
-            />
+            {selectedItem ? (
+              <ItemDetailsScreen
+                item={selectedItem}
+                onBack={handleGoBack}
+                isAuthenticated={isAuthenticated}
+                onLoginPrompt={() => handleLoginRequest('email')}
+                onChat={(item) => {
+                  // Navigate to chat with seller
+                  // For now, just go back - you can implement chat navigation later
+                  navigateTo('chat');
+                }}
+                onItemClick={(item) => {
+                  setSelectedItem(item);
+                  // Stay on item_details screen, just update the item
+                }}
+              />
+            ) : (
+              // If item_details screen was restored but no item is available, go back to home
+              <div className="flex-1 bg-white flex items-center justify-center">
+                <div className="text-center">
+                  <p className="text-gray-600 mb-4">Item not found</p>
+                  <button
+                    onClick={() => navigateTo('home', true)}
+                    className="px-4 py-2 bg-brand-500 text-white rounded-lg"
+                  >
+                    Go Home
+                  </button>
+                </div>
+              </div>
+            )}
           </Suspense>
         )}
 
@@ -463,16 +654,19 @@ const AppContent: React.FC = () => {
             <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
           </div>
         )}
-      </div>
-    </AppShell>
+        </div>
+      </AppShell>
+    </ErrorBoundary>
   );
 };
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ErrorBoundary>
   );
 };
 
