@@ -64,20 +64,20 @@ export default function Matches({ matches, filters }: Props) {
     <AdminLayout currentPath="/admin/matches">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Matches</h1>
-          <p className="text-gray-600 mt-1">View and manage user matches</p>
+          <h1 className="text-3xl font-bold text-foreground">Matches</h1>
+          <p className="text-muted-foreground mt-1">View and manage user matches</p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-6 bg-card border-border">
           <div className="flex gap-4 mb-6">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
                 placeholder="Search by username..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-10"
+                className="pl-10 bg-background border-input text-foreground"
               />
             </div>
             <Button onClick={handleSearch}>Search</Button>
@@ -108,7 +108,7 @@ export default function Matches({ matches, filters }: Props) {
                       size="sm"
                       onClick={() => handleDelete(match.id)}
                     >
-                      <Trash2 className="w-4 h-4 text-red-600" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -117,7 +117,7 @@ export default function Matches({ matches, filters }: Props) {
           </Table>
 
           {matches.data.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No matches found</div>
+            <div className="text-center py-8 text-muted-foreground">No matches found</div>
           )}
 
           {matches.last_page > 1 && (
@@ -132,7 +132,7 @@ export default function Matches({ matches, filters }: Props) {
               >
                 Previous
               </Button>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 Page {matches.current_page} of {matches.last_page}
               </span>
               <Button
@@ -152,6 +152,9 @@ export default function Matches({ matches, filters }: Props) {
     </AdminLayout>
   );
 }
+
+
+
 
 
 

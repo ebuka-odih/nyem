@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Filter, MapPin, Check, ChevronRight } from 'lucide-react';
 
@@ -42,7 +43,8 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   const icon = type === 'category' ? <Filter size={20} /> : <MapPin size={20} />;
   const placeholder = type === 'category' ? 'Search categories...' : 'Search locations...';
 
-  return (
+  // Use portal to render modal at document body level to ensure it's above all other content
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
@@ -52,7 +54,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
             onClick={onClose}
           />
           
@@ -62,7 +64,7 @@ export const FilterModal: React.FC<FilterModalProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] flex flex-col bg-white rounded-t-[20px] shadow-2xl"
+            className="fixed inset-x-0 bottom-0 z-[9999] max-h-[70vh] flex flex-col bg-white rounded-t-[20px] shadow-2xl"
           >
             {/* Handle bar */}
             <div className="flex justify-center pt-2 pb-1">
@@ -164,5 +166,12 @@ export const FilterModal: React.FC<FilterModalProps> = ({
       )}
     </AnimatePresence>
   );
+
+  // Render modal using portal to document body to ensure it's always on top
+  if (typeof document !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+  
+  return modalContent;
 };
 

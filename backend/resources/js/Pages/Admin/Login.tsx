@@ -1,128 +1,233 @@
-import { useState, FormEvent } from 'react';
-import { router } from '@inertiajs/react';
-import { Eye, EyeOff } from 'lucide-react';
+import { useState, FormEvent, useEffect } from 'react';
+import { router, usePage } from '@inertiajs/react';
+import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Card } from '@/components/ui/card';
 
 export default function Login() {
+  const { errors: pageErrors } = usePage().props as any;
   const [showPassword, setShowPassword] = useState(false);
-  const [usernameOrPhone, setUsernameOrPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Debug: Log error state changes
+  useEffect(() => {
+    console.log('[Login] Error state changed:', error);
+    console.log('[Login] Error type:', typeof error);
+    console.log('[Login] Error length:', error?.length);
+  }, [error]);
+
+  // Get error from page props (Inertia shared errors)
+  useEffect(() => {
+    if (pageErrors) {
+      console.log('[Login] Page errors:', pageErrors);
+      console.log('[Login] Page errors type:', typeof pageErrors);
+      console.log('[Login] Page errors keys:', Object.keys(pageErrors || {}));
+      
+      // Extract error message from various possible locations
+      let errorMessage: string | null = null;
+      
+      if (pageErrors.email) {
+        errorMessage = Array.isArray(pageErrors.email) ? pageErrors.email[0] : pageErrors.email;
+        console.log('[Login] Found email error:', errorMessage);
+      } else if (pageErrors.username_or_phone) {
+        errorMessage = Array.isArray(pageErrors.username_or_phone) ? pageErrors.username_or_phone[0] : pageErrors.username_or_phone;
+        console.log('[Login] Found username_or_phone error:', errorMessage);
+      } else if (pageErrors.message) {
+        errorMessage = Array.isArray(pageErrors.message) ? pageErrors.message[0] : pageErrors.message;
+        console.log('[Login] Found message error:', errorMessage);
+      } else if (typeof pageErrors === 'string') {
+        errorMessage = pageErrors;
+        console.log('[Login] Page errors is string:', errorMessage);
+      }
+      
+      if (errorMessage) {
+        console.log('[Login] Setting error from page props:', errorMessage);
+        setError(String(errorMessage));
+      }
+    }
+  }, [pageErrors]);
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+    console.log('[Login] Form submitted');
+
+    // Client-side validation
+    if (!email.trim()) {
+      const errorMsg = 'Please enter your email address.';
+      console.log('[Login] Validation error:', errorMsg);
+      setError(errorMsg);
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      const errorMsg = 'Please enter a valid email address.';
+      console.log('[Login] Validation error:', errorMsg);
+      setError(errorMsg);
+      return;
+    }
+
+    if (!password.trim()) {
+      const errorMsg = 'Please enter your password.';
+      console.log('[Login] Validation error:', errorMsg);
+      setError(errorMsg);
+      return;
+    }
+
     setLoading(true);
+    console.log('[Login] Submitting to /login with email:', email);
 
     router.post('/login', {
-      username_or_phone: usernameOrPhone.trim(),
+      email: email.trim(),
       password,
       remember: remember ? '1' : '',
     }, {
       onError: (errors) => {
-        setError(errors.username_or_phone?.[0] || 'Login failed. Please try again.');
+        console.log('[Login] Error response:', errors);
+        console.log('[Login] Error type:', typeof errors);
+        console.log('[Login] Error keys:', Object.keys(errors || {}));
+        
+        // Extract error message from various possible locations
+        let errorMessage: string = 'Login failed. Please check your credentials and try again.';
+        
+        if (errors.email) {
+          errorMessage = Array.isArray(errors.email) ? errors.email[0] : String(errors.email);
+          console.log('[Login] Found email error:', errorMessage);
+        } else if (errors.username_or_phone) {
+          errorMessage = Array.isArray(errors.username_or_phone) ? errors.username_or_phone[0] : String(errors.username_or_phone);
+          console.log('[Login] Found username_or_phone error:', errorMessage);
+        } else if (errors.message) {
+          errorMessage = Array.isArray(errors.message) ? errors.message[0] : String(errors.message);
+          console.log('[Login] Found message error:', errorMessage);
+        } else if (errors.password) {
+          errorMessage = Array.isArray(errors.password) ? errors.password[0] : String(errors.password);
+          console.log('[Login] Found password error:', errorMessage);
+        } else if (typeof errors === 'string') {
+          errorMessage = errors;
+          console.log('[Login] Errors is string:', errorMessage);
+        }
+        
+        console.log('[Login] Extracted error message:', errorMessage);
+        console.log('[Login] Error message type:', typeof errorMessage);
+        console.log('[Login] Error message length:', errorMessage?.length);
+        setError(String(errorMessage));
         setLoading(false);
       },
       onSuccess: () => {
+        console.log('[Login] Success');
+        setLoading(false);
+      },
+      onFinish: () => {
+        console.log('[Login] Finished');
         setLoading(false);
       },
     });
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-brand relative">
-      {/* Top Section: Header */}
-      <div className="px-6 pt-8 pb-8 md:pt-10 md:pb-10 shrink-0">
-        <div className="mt-6 md:mt-8 mb-4 text-center">
-          <h1 className="text-3xl md:text-4xl font-extrabold text-white leading-tight tracking-wide">
-            Admin<br/>Login
-          </h1>
-          <p className="text-white/80 mt-2 text-sm">Sign in to access the admin panel</p>
-        </div>
-      </div>
-
-      {/* Bottom Section: Form Card */}
-      <div className="flex-1 bg-white w-full rounded-t-[36px] px-6 md:px-8 pt-10 md:pt-12 pb-6 flex flex-col shadow-[0_-10px_40px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom duration-500">
-        <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 flex-1 flex flex-col">
-          {/* Username/Email/Phone Input */}
-          <div className="flex flex-col space-y-2">
-            <label className="text-brand font-bold text-sm">
-              Username, Email, or Phone
-            </label>
-            <Input 
-              type="text" 
-              value={usernameOrPhone}
-              onChange={(e) => setUsernameOrPhone(e.target.value)}
-              placeholder="admin@site.com" 
-              className="border-b border-gray-200 pb-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-brand font-medium text-lg w-full bg-transparent transition-colors rounded-none"
-              autoFocus
-            />
+    <div className="dark min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="p-8 bg-card border-border shadow-lg">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Admin Login</h1>
+            <p className="text-muted-foreground text-sm">Sign in to access the admin panel</p>
           </div>
 
-          {/* Password Input */}
-          <div className="flex flex-col space-y-2 relative">
-            <label className="text-brand font-bold text-sm">Password</label>
-            <div className="relative">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Email Input */}
+            <div className="space-y-2">
+              <label htmlFor="email" className="text-sm font-medium text-foreground">
+                Email Address
+              </label>
               <Input 
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="........" 
-                className="border-b border-gray-200 pb-2 text-gray-600 placeholder-gray-400 focus:outline-none focus:border-brand font-medium text-lg w-full bg-transparent pr-10 tracking-widest transition-colors rounded-none"
+                id="email"
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@site.com" 
+                className="bg-background border-input text-foreground"
+                autoFocus
+                autoComplete="email"
               />
-              <button 
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-0 bottom-3 text-gray-500 hover:text-gray-700 transition-colors"
+            </div>
+
+            {/* Password Input */}
+            <div className="space-y-2 relative">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">Password</label>
+              <div className="relative">
+                <Input 
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password" 
+                  className="bg-background border-input text-foreground pr-10"
+                />
+                <button 
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="remember"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="w-4 h-4 rounded border-input bg-background text-primary focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              />
+              <label htmlFor="remember" className="text-sm text-muted-foreground font-medium cursor-pointer">
+                Remember me
+              </label>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div 
+                className="bg-red-500/20 border-2 border-red-500/50 text-red-400 px-4 py-3 rounded-md text-sm font-medium flex items-center gap-2 shadow-lg"
+                style={{ 
+                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                  borderColor: 'rgba(239, 68, 68, 0.5)',
+                  color: '#f87171'
+                }}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Remember Me */}
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="remember"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
-            />
-            <label htmlFor="remember" className="text-sm text-gray-600 font-medium">
-              Remember me
-            </label>
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-          
-          {/* Submit Button */}
-          <div className="pt-4">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" style={{ color: '#f87171' }} />
+                <span style={{ color: '#f87171', fontWeight: '500' }}>{error}</span>
+              </div>
+            )}
+            
+            {/* Submit Button */}
             <Button 
               fullWidth 
               type="submit" 
-              className="shadow-xl py-4 uppercase text-lg tracking-wide w-full"
+              className="w-full"
               disabled={loading}
             >
               {loading ? 'Signing In...' : 'Sign In'}
             </Button>
-          </div>
-
-          {/* Spacer to push footer down if there is space */}
-          <div className="flex-grow"></div>
-        </form>
+          </form>
+        </Card>
       </div>
     </div>
   );
 }
+
+
+
 
 
 

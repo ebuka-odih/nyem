@@ -32,34 +32,41 @@ class AdminAuthController extends Controller
     public function login(Request $request)
     {
         $request->validate([
-            'username_or_phone' => 'required|string',
+            'email' => 'required|email',
             'password' => 'required|string',
         ]);
 
-        // Find user by username, phone, or email
-        $user = User::where('phone', $request->username_or_phone)
-            ->orWhere('username', $request->username_or_phone)
-            ->orWhere('email', $request->username_or_phone)
-            ->first();
+        // Find user by email only
+        $user = User::where('email', $request->email)->first();
 
         // Check credentials
-        if (!$user || !$user->password || !Hash::check($request->password, $user->password)) {
+        if (!$user || !$user->password) {
             throw ValidationException::withMessages([
-                'username_or_phone' => ['The provided credentials are incorrect.'],
+                'email' => ['The provided credentials are incorrect.'],
+            ]);
+        }
+
+        // Check password - Laravel's 'hashed' cast stores it correctly
+        // We need to get the raw hash from the database attributes
+        $passwordHash = $user->getAttributes()['password'] ?? $user->getOriginal('password') ?? $user->password;
+        
+        if (!Hash::check($request->password, $passwordHash)) {
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
         // Check if user is admin
         if ($user->role !== 'admin') {
             throw ValidationException::withMessages([
-                'username_or_phone' => ['You do not have admin access.'],
+                'email' => ['You do not have admin access.'],
             ]);
         }
 
         // Check if email-based user has verified their email
-        if ($user->email && !$user->phone && !$user->email_verified_at) {
+        if (!$user->email_verified_at) {
             throw ValidationException::withMessages([
-                'username_or_phone' => ['Please verify your email address before logging in.'],
+                'email' => ['Please verify your email address before logging in.'],
             ]);
         }
 

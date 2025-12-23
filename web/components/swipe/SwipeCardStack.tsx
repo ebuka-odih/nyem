@@ -213,6 +213,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
               onLike={onLike ? () => onLike(currentItem.id, likedItems.has(currentItem.id)) : undefined}
               onInfoClick={() => onItemClick(currentItem)}
               onBuyClick={isOwnItem ? undefined : onSwipeRight} // Disable buy button on own items
+              isOwnItem={isOwnItem} // Pass ownership status to show stats
             />
           </motion.div>
         )}
@@ -254,9 +255,9 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
                 onSwipeRight();
               }
             }}
-            disabled={(!currentItem && !showWelcomeCard && !showPromoCard) || isOwnItem}
+            disabled={(!currentItem && !showWelcomeCard && !showPromoCard) || (!showWelcomeCard && !showPromoCard && isOwnItem)}
             className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none disabled:cursor-not-allowed"
-            title={isOwnItem ? "You can't like your own item" : "Swipe right"}
+            title={(!showWelcomeCard && !showPromoCard && isOwnItem) ? "You can't like your own item" : "Swipe right"}
           >
             <Check size={32} strokeWidth={3} />
           </button>

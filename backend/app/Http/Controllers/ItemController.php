@@ -84,9 +84,13 @@ class ItemController extends Controller
         $query = Item::with(['user.cityLocation', 'user.areaLocation', 'category'])
             ->where('status', 'active');
         
-        // Only exclude user's own items and blocked users if authenticated
+        // Exclude blocked users if authenticated, but include own items (user can see their own items with stats)
         if ($user) {
-            $query->where('user_id', '!=', $user->id);
+            // Allow including own items via query parameter (default: include own items)
+            $includeOwn = $request->boolean('include_own', true);
+            if (!$includeOwn) {
+                $query->where('user_id', '!=', $user->id);
+            }
             if (!empty($blockedIds)) {
                 $query->whereNotIn('user_id', $blockedIds);
             }
@@ -143,6 +147,7 @@ class ItemController extends Controller
             }
         }
 
+        // Get items (we'll calculate stats efficiently using count queries)
         $items = $query->get();
 
         // Format items for frontend consumption
@@ -180,6 +185,11 @@ class ItemController extends Controller
             if ($item->type === 'marketplace' && $item->price) {
                 $price = number_format($item->price, 0, '.', ',');
             }
+            
+            // Calculate item stats efficiently using count queries
+            $views = $item->swipes()->count(); // Total swipes = views
+            $likes = $item->swipes()->where('direction', 'right')->count(); // Right swipes = likes
+            $shares = 0; // TODO: Track shares separately in the future (could add item_shares table)
             
             // Build response in frontend-expected format
             $formattedItem = [
@@ -228,6 +238,11 @@ class ItemController extends Controller
             $formattedItem['status'] = $item->status;
             $formattedItem['created_at'] = $item->created_at;
             $formattedItem['updated_at'] = $item->updated_at;
+            
+            // Add item stats
+            $formattedItem['views'] = $views;
+            $formattedItem['likes'] = $likes;
+            $formattedItem['shares'] = $shares;
             
             return $formattedItem;
         });

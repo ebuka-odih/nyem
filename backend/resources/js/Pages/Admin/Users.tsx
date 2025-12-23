@@ -102,24 +102,24 @@ export default function Users({ users, filters }: Props) {
     <AdminLayout currentPath="/admin/users">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Users</h1>
-          <p className="text-gray-600 mt-1">Manage platform users</p>
+          <h1 className="text-3xl font-bold text-foreground">Users</h1>
+          <p className="text-muted-foreground mt-1">Manage platform users</p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-6 bg-card border-border">
           <div className="flex gap-4 mb-6">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
                 placeholder="Search users..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-10"
+                className="pl-10 bg-background border-input text-foreground"
               />
             </div>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-48 bg-background border-input">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
@@ -172,7 +172,7 @@ export default function Users({ users, filters }: Props) {
                         size="sm"
                         onClick={() => handleDelete(user.id)}
                       >
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                        <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>
@@ -182,7 +182,7 @@ export default function Users({ users, filters }: Props) {
           </Table>
 
           {users.data.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No users found</div>
+            <div className="text-center py-8 text-muted-foreground">No users found</div>
           )}
 
           {users.last_page > 1 && (
@@ -197,7 +197,7 @@ export default function Users({ users, filters }: Props) {
               >
                 Previous
               </Button>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 Page {users.current_page} of {users.last_page}
               </span>
               <Button
@@ -245,6 +245,9 @@ export default function Users({ users, filters }: Props) {
     </AdminLayout>
   );
 }
+
+
+
 
 
 

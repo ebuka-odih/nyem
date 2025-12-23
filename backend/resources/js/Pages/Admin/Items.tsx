@@ -105,24 +105,24 @@ export default function Items({ items, filters }: Props) {
     <AdminLayout currentPath="/admin/items">
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Items</h1>
-          <p className="text-gray-600 mt-1">Manage platform items</p>
+          <h1 className="text-3xl font-bold text-foreground">Items</h1>
+          <p className="text-muted-foreground mt-1">Manage platform items</p>
         </div>
 
-        <Card className="p-6">
+        <Card className="p-6 bg-card border-border">
           <div className="flex gap-4 mb-6">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
                 placeholder="Search items..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="pl-10"
+                className="pl-10 bg-background border-input text-foreground"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
+              <SelectTrigger className="w-48 bg-background border-input">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -158,7 +158,7 @@ export default function Items({ items, filters }: Props) {
                         onClick={() => handleShare(item)}
                         className="h-8 w-8 p-0"
                       >
-                        <Share2 className="w-4 h-4 text-gray-600" />
+                        <Share2 className="w-4 h-4 text-muted-foreground" />
                       </Button>
                     </div>
                   </TableCell>
@@ -169,7 +169,7 @@ export default function Items({ items, filters }: Props) {
                       value={item.status}
                       onValueChange={(value) => handleStatusChange(item.id, value)}
                     >
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className="w-32 bg-background border-input">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -186,7 +186,7 @@ export default function Items({ items, filters }: Props) {
                       size="sm"
                       onClick={() => handleDelete(item.id)}
                     >
-                      <Trash2 className="w-4 h-4 text-red-600" />
+                      <Trash2 className="w-4 h-4 text-destructive" />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -195,7 +195,7 @@ export default function Items({ items, filters }: Props) {
           </Table>
 
           {items.data.length === 0 && (
-            <div className="text-center py-8 text-gray-500">No items found</div>
+            <div className="text-center py-8 text-muted-foreground">No items found</div>
           )}
 
           {items.last_page > 1 && (
@@ -210,7 +210,7 @@ export default function Items({ items, filters }: Props) {
               >
                 Previous
               </Button>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-muted-foreground">
                 Page {items.current_page} of {items.last_page}
               </span>
               <Button
@@ -230,6 +230,9 @@ export default function Items({ items, filters }: Props) {
     </AdminLayout>
   );
 }
+
+
+
 
 
 

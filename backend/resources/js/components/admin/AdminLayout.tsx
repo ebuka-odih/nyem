@@ -26,13 +26,13 @@ export function AdminLayout({ children, currentPath = '' }: AdminLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="dark min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-gray-900">Nyem Admin</h1>
+      <aside className="fixed left-0 top-0 h-full w-64 bg-card border-r border-border">
+        <div className="p-6 border-b border-border">
+          <h1 className="text-2xl font-bold text-foreground">Nyem Admin</h1>
         </div>
-        <nav className="px-4 space-y-1">
+        <nav className="px-4 py-4 space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activePath === item.path;
@@ -43,8 +43,8 @@ export function AdminLayout({ children, currentPath = '' }: AdminLayoutProps) {
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 rounded-lg transition-colors',
                   isActive
-                    ? 'bg-blue-50 text-blue-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
+                    ? 'bg-primary text-primary-foreground font-medium'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
               >
                 <Icon className="w-5 h-5" />
@@ -53,10 +53,10 @@ export function AdminLayout({ children, currentPath = '' }: AdminLayoutProps) {
             );
           })}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 w-full text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+            className="flex items-center gap-3 px-4 py-3 w-full text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
           >
             <LogOut className="w-5 h-5" />
             <span>Logout</span>

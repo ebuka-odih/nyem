@@ -90,15 +90,15 @@
         /* Prevent pull-to-refresh and overscroll */
         overscroll-behavior: none;
         -webkit-overflow-scrolling: touch;
-        background-color: white;
+        background-color: #1a1a1a;
       }
 
       body {
         margin: 0;
         padding: 0;
         font-family: 'Inter', sans-serif;
-        /* Dark background for desktop framing only, white on mobile */
-        background-color: white;
+        /* Dark background for better app view focus */
+        background-color: #1a1a1a;
         /* Prevent browser UI from showing on drag */
         position: fixed;
         width: 100%;
@@ -253,7 +253,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: white !important;
+        background-color: #1a1a1a !important;
         /* Ensure root covers entire viewport including safe areas - extend into bottom safe area */
         height: calc(100vh + env(safe-area-inset-bottom, 0px));
         height: calc(100dvh + env(safe-area-inset-bottom, 0px));

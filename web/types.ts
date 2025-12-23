@@ -36,6 +36,9 @@ export interface BarterItem {
     category?: string;
     owner: Owner;
     gallery?: string[];
+    views?: number;
+    likes?: number;
+    shares?: number;
 }
 
 export interface MarketplaceItem {
@@ -48,6 +51,9 @@ export interface MarketplaceItem {
     category?: string;
     owner: Owner;
     gallery?: string[];
+    views?: number;
+    likes?: number;
+    shares?: number;
 }
 
 export type SwipeItem = BarterItem | MarketplaceItem;

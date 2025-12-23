@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Info, MapPin, Share2, Heart, CheckCircle2, ArrowRight, ShoppingBag, Repeat } from 'lucide-react';
+import { Info, MapPin, Share2, Heart, CheckCircle2, ArrowRight, ShoppingBag, Repeat, Eye } from 'lucide-react';
 import { SwipeItem } from '../../types';
 import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../../constants/placeholders';
 
@@ -9,13 +9,19 @@ interface SwipeCardProps {
   onLike?: () => void;
   onInfoClick?: () => void;
   onBuyClick?: () => void;
+  isOwnItem?: boolean; // Whether this item belongs to the current user
 }
 
-export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp = false, onLike, onInfoClick, onBuyClick }) => {
+export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp = false, onLike, onInfoClick, onBuyClick, isOwnItem = false }) => {
   const isMarketplace = item.type === 'marketplace';
   const [imageLoaded, setImageLoaded] = useState(false);
   // Use prop if provided, otherwise fall back to local state (for backward compatibility)
   const isLiked = onLike ? isLikedProp : false;
+  
+  // Get stats with defaults
+  const views = item.views ?? 0;
+  const likes = item.likes ?? 0;
+  const shares = item.shares ?? 0;
 
   // Format location display: "Wuse, Abuja [icon] 20km Away" or just "Abuja"
   const formatLocation = () => {
@@ -173,8 +179,41 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
           </p>
         )}
 
-        {/* Action Banner */}
-        {isMarketplace ? (
+        {/* Action Banner - Show stats for own items, otherwise show normal action */}
+        {isOwnItem ? (
+          // Stats display for user's own items
+          <div className="w-full bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl px-4 py-3 border border-gray-200/50">
+            <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-2 text-center">Item Performance</p>
+            <div className="flex items-center justify-around gap-2">
+              {/* Views */}
+              <div className="flex flex-col items-center gap-1 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Eye size={14} className="text-blue-600" />
+                </div>
+                <span className="text-gray-900 font-bold text-sm">{views}</span>
+                <span className="text-gray-500 text-[10px] font-medium">Views</span>
+              </div>
+              
+              {/* Likes */}
+              <div className="flex flex-col items-center gap-1 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-rose-100 flex items-center justify-center">
+                  <Heart size={14} className="text-rose-600 fill-rose-600" />
+                </div>
+                <span className="text-gray-900 font-bold text-sm">{likes}</span>
+                <span className="text-gray-500 text-[10px] font-medium">Likes</span>
+              </div>
+              
+              {/* Shares */}
+              <div className="flex flex-col items-center gap-1 flex-1">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Share2 size={14} className="text-emerald-600" />
+                </div>
+                <span className="text-gray-900 font-bold text-sm">{shares}</span>
+                <span className="text-gray-500 text-[10px] font-medium">Shares</span>
+              </div>
+            </div>
+          </div>
+        ) : isMarketplace ? (
           <button
             onClick={handleBuyClick}
             disabled={!onBuyClick}
