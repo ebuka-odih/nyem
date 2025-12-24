@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { X, Check, RefreshCw, Flame, Loader2 } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { SwipeItem } from '../../types';
 import { SwipeCard } from './SwipeCard';
 import { WelcomeCard } from './WelcomeCard';
 import { PromoCard } from './PromoCard';
+import { apiFetch } from '../../utils/api';
+import { ENDPOINTS } from '../../constants/endpoints';
 
 interface SwipeCardStackProps {
   items: SwipeItem[];
@@ -45,6 +47,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
   const controls = useAnimation();
+  const viewedItemsRef = useRef<Set<string | number>>(new Set()); // Track which items have been viewed
 
   React.useEffect(() => {
     controls.set({ scale: 0.9, y: 20, opacity: 0 });
@@ -58,6 +61,39 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   const isOwnItem = currentItem && currentUserId && currentItem.owner?.id 
     ? String(currentItem.owner.id) === String(currentUserId)
     : false;
+
+  // Track view when item becomes visible in the feed
+  useEffect(() => {
+    if (!currentItem || !currentItem.id) return;
+    
+    // Don't track views for own items (users can see their own items)
+    if (isOwnItem) return;
+
+    // Don't track if we've already viewed this item in this session
+    if (viewedItemsRef.current.has(currentItem.id)) return;
+
+    // Mark as viewed to prevent duplicate tracking
+    viewedItemsRef.current.add(currentItem.id);
+
+    // Track view asynchronously (don't block UI)
+    const trackView = async () => {
+      try {
+        await apiFetch(ENDPOINTS.items.trackView(currentItem.id), {
+          method: 'POST',
+        });
+      } catch (error) {
+        // Silently fail - view tracking is not critical for UX
+        console.debug('Failed to track item view:', error);
+        // Remove from set so we can retry later if needed
+        viewedItemsRef.current.delete(currentItem.id);
+      }
+    };
+
+    // Small delay to ensure item is actually visible
+    const timeoutId = setTimeout(trackView, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [currentItem?.id, isOwnItem]);
 
   const handleDragEnd = async (event: any, info: PanInfo) => {
     if (info.offset.x > 100) {
