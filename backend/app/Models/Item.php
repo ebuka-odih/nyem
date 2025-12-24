@@ -48,6 +48,38 @@ class Item extends Model
     }
 
     /**
+     * Get all stats (views, likes, shares) for this item
+     */
+    public function stats()
+    {
+        return $this->hasMany(ItemStat::class);
+    }
+
+    /**
+     * Get views for this item
+     */
+    public function views()
+    {
+        return $this->stats()->where('type', 'view');
+    }
+
+    /**
+     * Get likes for this item
+     */
+    public function likes()
+    {
+        return $this->stats()->where('type', 'like');
+    }
+
+    /**
+     * Get shares for this item
+     */
+    public function shares()
+    {
+        return $this->stats()->where('type', 'share');
+    }
+
+    /**
      * Accessor to transform photo URLs to ensure they're accessible from the frontend
      * This automatically transforms URLs when the photos attribute is accessed
      * 

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Info, MapPin, Share2, Heart, CheckCircle2, ArrowRight, ShoppingBag, Repeat, Eye } from 'lucide-react';
 import { SwipeItem } from '../../types';
 import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../../constants/placeholders';
+import { apiFetch } from '../../utils/api';
+import { ENDPOINTS } from '../../constants/endpoints';
 
 interface SwipeCardProps {
   item: SwipeItem;
@@ -56,6 +58,16 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
         });
       } else {
         await navigator.clipboard.writeText(shareUrl);
+      }
+
+      // Track share in backend (silently fail if it doesn't work)
+      try {
+        await apiFetch(ENDPOINTS.items.trackShare(item.id), {
+          method: 'POST',
+        });
+      } catch (error) {
+        // Silently fail - share tracking is not critical for UX
+        console.debug('Failed to track share:', error);
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {

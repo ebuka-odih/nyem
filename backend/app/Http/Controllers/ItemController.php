@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use App\Models\Item;
+use App\Models\ItemStat;
 use App\Services\LocationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class ItemController extends Controller
@@ -186,10 +188,10 @@ class ItemController extends Controller
                 $price = number_format($item->price, 0, '.', ',');
             }
             
-            // Calculate item stats efficiently using count queries
-            $views = $item->swipes()->count(); // Total swipes = views
-            $likes = $item->swipes()->where('direction', 'right')->count(); // Right swipes = likes
-            $shares = 0; // TODO: Track shares separately in the future (could add item_shares table)
+            // Calculate item stats efficiently using count queries from unified ItemStat model
+            $views = $item->views()->count();
+            $likes = $item->likes()->count();
+            $shares = $item->shares()->count();
             
             // Build response in frontend-expected format
             $formattedItem = [
@@ -255,7 +257,9 @@ class ItemController extends Controller
 
     public function show(Request $request, Item $item)
     {
-        if ($this->isBlockedBetween($request->user(), $item->user_id)) {
+        $user = $request->user();
+        
+        if ($user && $this->isBlockedBetween($user, $item->user_id)) {
             return response()->json(['message' => 'User blocked'], 403);
         }
 
@@ -264,8 +268,7 @@ class ItemController extends Controller
         // Photo URLs are automatically transformed by the Item model accessor
         
         // Calculate distance if both users have location
-        $user = $request->user();
-        if ($user->hasLocation() && $item->user && $item->user->hasLocation()) {
+        if ($user && $user->hasLocation() && $item->user && $item->user->hasLocation()) {
             $distanceKm = $this->locationService->calculateDistance(
                 $user->latitude,
                 $user->longitude,
@@ -283,6 +286,111 @@ class ItemController extends Controller
         }
 
         return response()->json(['item' => $item]);
+    }
+
+    /**
+     * Track a view for an item
+     * Works for both authenticated and unauthenticated users
+     * Prevents duplicate views from the same user/IP within 24 hours
+     */
+    public function trackView(Request $request, Item $item)
+    {
+        $user = $request->user();
+        $ipAddress = $request->ip();
+        $userAgent = $request->userAgent();
+
+        // Check for existing view within last 24 hours
+        $existingView = ItemStat::where('item_id', $item->id)
+            ->where('type', 'view')
+            ->where(function ($query) use ($user, $ipAddress) {
+                if ($user) {
+                    // For authenticated users, check by user_id
+                    $query->where('user_id', $user->id);
+                } else {
+                    // For unauthenticated users, check by IP address
+                    $query->whereNull('user_id')
+                        ->where('ip_address', $ipAddress);
+                }
+            })
+            ->where('created_at', '>=', now()->subDay())
+            ->first();
+
+        // If view already exists within 24 hours, don't create a new one
+        if ($existingView) {
+            return response()->json([
+                'success' => true,
+                'message' => 'View already tracked',
+                'view_count' => $item->views()->count(),
+            ]);
+        }
+
+        // Create new view record using unified ItemStat model
+        $stat = ItemStat::create([
+            'item_id' => $item->id,
+            'user_id' => $user?->id,
+            'type' => 'view',
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+        ]);
+
+        $viewCount = $item->views()->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'View tracked successfully',
+            'view_count' => $viewCount,
+        ], 201);
+    }
+
+    /**
+     * Track a share for an item
+     * Works for both authenticated and unauthenticated users
+     */
+    public function trackShare(Request $request, Item $item)
+    {
+        $user = $request->user();
+        $ipAddress = $request->ip();
+        $userAgent = $request->userAgent();
+
+        // Check for existing share within last 24 hours (to prevent spam)
+        $existingShare = ItemStat::where('item_id', $item->id)
+            ->where('type', 'share')
+            ->where(function ($query) use ($user, $ipAddress) {
+                if ($user) {
+                    $query->where('user_id', $user->id);
+                } else {
+                    $query->whereNull('user_id')
+                        ->where('ip_address', $ipAddress);
+                }
+            })
+            ->where('created_at', '>=', now()->subDay())
+            ->first();
+
+        // If share already exists within 24 hours, don't create a new one
+        if ($existingShare) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Share already tracked',
+                'share_count' => $item->shares()->count(),
+            ]);
+        }
+
+        // Create new share record using unified ItemStat model
+        $stat = ItemStat::create([
+            'item_id' => $item->id,
+            'user_id' => $user?->id,
+            'type' => 'share',
+            'ip_address' => $ipAddress,
+            'user_agent' => $userAgent,
+        ]);
+
+        $shareCount = $item->shares()->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Share tracked successfully',
+            'share_count' => $shareCount,
+        ], 201);
     }
 
     public function update(Request $request, Item $item)

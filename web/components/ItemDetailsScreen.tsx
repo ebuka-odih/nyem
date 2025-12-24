@@ -1,11 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X, MessageCircle, User, Lock } from 'lucide-react';
 import { SwipeItem } from '../types';
 import { ItemDetails } from './item/ItemDetails';
 import { OwnerInfo } from './item/OwnerInfo';
 import { UserProfileScreen } from './UserProfileScreen';
 import { ImageViewerModal } from './item/ImageViewerModal';
+import { apiFetch } from '../utils/api';
+import { ENDPOINTS } from '../constants/endpoints';
 
 interface ItemDetailsScreenProps {
     item: SwipeItem | null;
@@ -27,6 +29,26 @@ export const ItemDetailsScreen: React.FC<ItemDetailsScreenProps> = ({
     const [showUserProfile, setShowUserProfile] = useState(false);
     const [showImageViewer, setShowImageViewer] = useState(false);
     const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+    // Track item view when component mounts
+    useEffect(() => {
+        if (!item?.id) return;
+
+        // Track view asynchronously (don't block UI)
+        const trackView = async () => {
+            try {
+                await apiFetch(ENDPOINTS.items.trackView(item.id), {
+                    method: 'POST',
+                });
+                // Silently track - no need to show error to user if it fails
+            } catch (error) {
+                // Silently fail - view tracking is not critical for UX
+                console.debug('Failed to track item view:', error);
+            }
+        };
+
+        trackView();
+    }, [item?.id]);
 
     if (!item) return <div>No item selected</div>;
 

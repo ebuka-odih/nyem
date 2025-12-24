@@ -35,6 +35,10 @@ Route::post('/profile/check-username', [ProfileController::class, 'checkUsername
 Route::get('/items/feed', [ItemController::class, 'feed']);
 Route::get('/service-providers/feed', [ServiceProviderController::class, 'feed']);
 
+// Public endpoints for tracking item stats (works with or without authentication)
+Route::post('/items/{item}/view', [ItemController::class, 'trackView']);
+Route::post('/items/{item}/share', [ItemController::class, 'trackShare']);
+
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);
     Route::post('/send-email-otp', [AuthController::class, 'sendEmailOtp']);

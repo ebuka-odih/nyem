@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\ConversationCreated;
 use App\Events\MatchCreated;
 use App\Models\Item;
+use App\Models\ItemStat;
 use App\Models\Swipe;
 use App\Models\TradeOffer;
 use App\Models\UserMatch;
@@ -108,6 +109,32 @@ class SwipeController extends Controller
                     'offered_item_id' => ($data['direction'] === 'right' && $itemType === 'barter') ? $data['offered_item_id'] : null,
                 ]
             );
+
+            // Track like in ItemStat when swiping right
+            if ($data['direction'] === 'right') {
+                // Check if like already exists for this swipe
+                $existingLike = ItemStat::where('item_id', $targetItem->id)
+                    ->where('type', 'like')
+                    ->where('user_id', $user->id)
+                    ->where('swipe_id', $swipe->id)
+                    ->first();
+
+                if (!$existingLike) {
+                    ItemStat::create([
+                        'item_id' => $targetItem->id,
+                        'user_id' => $user->id,
+                        'type' => 'like',
+                        'swipe_id' => $swipe->id,
+                    ]);
+                }
+            } else {
+                // Remove like stat when swiping left (if it exists)
+                ItemStat::where('item_id', $targetItem->id)
+                    ->where('type', 'like')
+                    ->where('user_id', $user->id)
+                    ->where('swipe_id', $swipe->id)
+                    ->delete();
+            }
 
             if ($data['direction'] === 'right') {
                 if ($itemType === 'barter') {

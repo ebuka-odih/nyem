@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Search, Filter, MapPin, Check, ChevronRight } from 'lucide-react';
@@ -21,6 +21,31 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   onSelect,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const containerRef = useRef<HTMLElement | null>(null);
+  
+  // Find the AppShell container (phone window container) - find it immediately and on mount
+  if (typeof document !== 'undefined' && !containerRef.current) {
+    // Find the AppShell container - it has the safe-area-container class
+    const appShell = document.querySelector('.safe-area-container') as HTMLElement;
+    if (appShell) {
+      containerRef.current = appShell;
+    } else {
+      // Fallback to root if AppShell not found
+      containerRef.current = document.getElementById('root') || document.body;
+    }
+  }
+  
+  // Also set up on mount to catch cases where DOM isn't ready yet
+  useEffect(() => {
+    if (typeof document !== 'undefined' && !containerRef.current) {
+      const appShell = document.querySelector('.safe-area-container') as HTMLElement;
+      if (appShell) {
+        containerRef.current = appShell;
+      } else {
+        containerRef.current = document.getElementById('root') || document.body;
+      }
+    }
+  }, []);
   
   // Reset search when modal opens
   useEffect(() => {
@@ -43,28 +68,29 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   const icon = type === 'category' ? <Filter size={20} /> : <MapPin size={20} />;
   const placeholder = type === 'category' ? 'Search categories...' : 'Search locations...';
 
-  // Use portal to render modal at document body level to ensure it's above all other content
+  // Use portal to render modal within the phone container to ensure it's contained
   const modalContent = (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop - positioned relative to container */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
             onClick={onClose}
           />
           
-          {/* Modal */}
+          {/* Modal - positioned relative to container, constrained to viewport */}
           <motion.div
             initial={{ opacity: 0, y: '100%' }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed inset-x-0 bottom-0 z-[9999] max-h-[70vh] flex flex-col bg-white rounded-t-[20px] shadow-2xl"
+            className="absolute inset-x-0 bottom-0 z-[9999] max-h-[70vh] flex flex-col bg-white rounded-t-[20px] shadow-2xl"
+            style={{ maxHeight: '70vh' }}
           >
             {/* Handle bar */}
             <div className="flex justify-center pt-2 pb-1">
@@ -167,7 +193,12 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     </AnimatePresence>
   );
 
-  // Render modal using portal to document body to ensure it's always on top
+  // Render modal using portal to AppShell container to keep it within phone window
+  if (typeof document !== 'undefined' && containerRef.current) {
+    return createPortal(modalContent, containerRef.current);
+  }
+  
+  // Fallback if container not found yet
   if (typeof document !== 'undefined') {
     return createPortal(modalContent, document.body);
   }

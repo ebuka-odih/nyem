@@ -26,6 +26,8 @@ export const ENDPOINTS = {
     show: (id: string | number) => `/items/${id}`,
     update: (id: string | number) => `/items/${id}`,
     delete: (id: string | number) => `/items/${id}`,
+    trackView: (id: string | number) => `/items/${id}/view`,
+    trackShare: (id: string | number) => `/items/${id}/share`,
   },
   categories: '/categories',
   locations: '/locations',
