@@ -264,16 +264,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const google = (window as any).google;
     // Get client ID from environment variable
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '799510192998-ieg4vffmi0f6t0pge5unm80m1oq2t68p.apps.googleusercontent.com';
+    
+    // Validate client ID is set
+    if (!clientId || clientId.trim() === '') {
+      reject(new Error('Google Client ID is not configured. Please set VITE_GOOGLE_CLIENT_ID in your environment variables.'));
+      return;
+    }
+    
+    console.log('[Google Auth] Client ID:', clientId.substring(0, 20) + '...');
 
     // Use OAuth 2.0 popup flow (initTokenClient)
     // Note: For this flow, the origin (window.location.origin) must be registered
-    // in Google Cloud Console under "Authorized JavaScript origins"
-    // Example: http://localhost:5173 (dev) or https://yourdomain.com (prod)
+    // in Google Cloud Console under BOTH:
+    // 1. "Authorized JavaScript origins" (required)
+    // 2. "Authorized redirect URIs" (also required for popup flow)
+    // Example: http://localhost:5173 (dev) or https://www.nyem.online (prod)
+    // IMPORTANT: The redirect URI must be the exact origin (no path) for popup flow
+    const currentOrigin = window.location.origin;
+    console.log('[Google Auth] Using origin:', currentOrigin);
+    
     google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: 'email profile',
-      // The callback URL is automatically set to window.location.origin
-      // No redirect_uri parameter needed for popup flow
+      // Explicitly set redirect_uri to the current origin
+      // This must match exactly what's in Google Cloud Console "Authorized redirect URIs"
+      redirect_uri: currentOrigin,
       callback: async (response: any) => {
         if (response.error) {
           reject(new Error(response.error));

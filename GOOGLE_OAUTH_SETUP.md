@@ -39,20 +39,27 @@ https://www.yourdomain.com
 - Do NOT include a path (e.g., `/auth/callback`)
 - Do NOT include a trailing slash
 
-### Step 3: Authorized Redirect URIs (Optional)
-For the popup flow (`initTokenClient`), you typically **don't need** to configure redirect URIs. However, if you plan to use server-side OAuth flows in the future, you can add:
+### Step 3: Authorized Redirect URIs (REQUIRED)
+For the popup flow (`initTokenClient`), you **MUST** also add the origin to "Authorized redirect URIs". 
+The redirect URI must be the exact origin (no path) for popup flow.
 
 **For Development:**
 ```
 http://localhost:5173
-http://localhost:8000/api/auth/google/callback
+http://127.0.0.1:5173
 ```
 
 **For Production:**
 ```
-https://yourdomain.com
-https://yourdomain.com/api/auth/google/callback
+https://www.nyem.online
+https://nyem.online
 ```
+
+**Important:**
+- The redirect URI must match the JavaScript origin exactly
+- Do NOT include a path (e.g., `/auth/callback`)
+- Include both www and non-www versions if your site uses both
+- The redirect URI for popup flow is just the origin, not a callback path
 
 ## Environment Variables
 
