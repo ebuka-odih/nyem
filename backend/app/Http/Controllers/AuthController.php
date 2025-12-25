@@ -6,6 +6,7 @@ use App\Models\OtpCode;
 use App\Models\User;
 use App\Services\TwilioService;
 use App\Services\EmailService;
+use App\Services\GoogleAuthService;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
@@ -17,6 +18,7 @@ class AuthController extends Controller
 {
     protected $twilioService;
     protected $emailService;
+    protected $googleAuthService;
 
     public function __construct()
     {
@@ -30,6 +32,9 @@ class AuthController extends Controller
 
         // Initialize EmailService
         $this->emailService = app(EmailService::class);
+        
+        // Initialize GoogleAuthService
+        $this->googleAuthService = app(GoogleAuthService::class);
     }
 
     /**
@@ -352,7 +357,7 @@ class AuthController extends Controller
 
     /**
      * Authenticate user with Google OAuth
-     * Accepts Google ID token from frontend and verifies it
+     * Accepts Google ID token or access token from frontend and verifies it
      * 
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -367,99 +372,21 @@ class AuthController extends Controller
             'picture' => 'sometimes|string',
         ]);
 
-        try {
-            $googleUser = null;
+        // Use GoogleAuthService to handle authentication
+        $result = $this->googleAuthService->authenticate($data);
 
-            // If id_token is provided, verify it
-            if (isset($data['id_token'])) {
-                $googleUser = $this->verifyGoogleToken($data['id_token']);
-            } 
-            // If access_token is provided, get user info from Google
-            elseif (isset($data['access_token'])) {
-                $googleUser = $this->getUserInfoFromAccessToken($data['access_token']);
-            }
-            
-            if (!$googleUser) {
-                return response()->json(['message' => 'Invalid Google token'], 401);
-            }
-
-            // Extract user information from Google response
-            $googleId = $googleUser['sub'];
-            $email = $googleUser['email'] ?? null;
-            $name = $googleUser['name'] ?? 'User';
-            $picture = $googleUser['picture'] ?? null;
-
-            // Find or create user by Google ID
-            $user = User::where('google_id', $googleId)->first();
-
-            if (!$user) {
-                // Check if user exists with this email
-                if ($email) {
-                    $user = User::where('email', $email)->first();
-                }
-
-                // Create new user if doesn't exist
-                if (!$user) {
-                    // Generate username from name or email
-                    $username = $this->generateUsernameFromName($name, $email);
-                    
-                    $user = User::create([
-                        'google_id' => $googleId,
-                        'email' => $email,
-                        'username' => $username,
-                        'profile_photo' => $picture,
-                        'city' => 'Unknown',
-                        'role' => 'standard_user',
-                        'email_verified_at' => now(), // Google emails are pre-verified
-                        'otp_verified_at' => now(), // Keep for backward compatibility
-                    ]);
-                } else {
-                    // Link Google account to existing user
-                    $user->google_id = $googleId;
-                    if (!$user->email && $email) {
-                        $user->email = $email;
-                        $user->email_verified_at = now(); // Google emails are pre-verified
-                    }
-                    if (!$user->profile_photo && $picture) {
-                        $user->profile_photo = $picture;
-                    }
-                    $user->save();
-                }
-            } else {
-                // Update user info if changed
-                $updated = false;
-                if ($email && $user->email !== $email) {
-                    $user->email = $email;
-                    $updated = true;
-                }
-                if ($picture && $user->profile_photo !== $picture) {
-                    $user->profile_photo = $picture;
-                    $updated = true;
-                }
-                if ($updated) {
-                    $user->save();
-                }
-            }
-
-            $token = $user->createToken('mobile')->plainTextToken;
-            $isNewUser = $user->wasRecentlyCreated;
-
+        if (!$result['success']) {
             return response()->json([
-                'token' => $token,
-                'user' => $user,
-                'new_user' => $isNewUser,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Google OAuth error', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return response()->json([
-                'message' => 'Google authentication failed',
-                'error' => app()->environment('local') ? $e->getMessage() : null,
-            ], 500);
+                'message' => $result['message'] ?? 'Google authentication failed',
+                'error' => $result['error'] ?? null,
+            ], 401);
         }
+
+        return response()->json([
+            'token' => $result['token'],
+            'user' => $result['user'],
+            'new_user' => $result['new_user'],
+        ]);
     }
 
     /**
@@ -513,86 +440,6 @@ class AuthController extends Controller
         ], 200);
     }
 
-    /**
-     * Verify Google ID token
-     * 
-     * @param string $idToken
-     * @return array|null
-     */
-    private function verifyGoogleToken(string $idToken): ?array
-    {
-        try {
-            // Verify token with Google
-            $response = Http::get('https://oauth2.googleapis.com/tokeninfo', [
-                'id_token' => $idToken,
-            ]);
-
-            if (!$response->successful()) {
-                Log::warning('Google token verification failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-                return null;
-            }
-
-            $tokenData = $response->json();
-
-            // Verify the token is for our client ID
-            $clientId = config('services.google.client_id');
-            if ($tokenData['aud'] !== $clientId) {
-                Log::warning('Google token client ID mismatch', [
-                    'expected' => $clientId,
-                    'received' => $tokenData['aud'] ?? null,
-                ]);
-                return null;
-            }
-
-            return $tokenData;
-        } catch (\Exception $e) {
-            Log::error('Error verifying Google token', [
-                'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * Get user info from Google access token
-     * 
-     * @param string $accessToken
-     * @return array|null
-     */
-    private function getUserInfoFromAccessToken(string $accessToken): ?array
-    {
-        try {
-            $response = Http::get('https://www.googleapis.com/oauth2/v2/userinfo', [
-                'access_token' => $accessToken,
-            ]);
-
-            if (!$response->successful()) {
-                Log::warning('Failed to get user info from Google', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-                return null;
-            }
-
-            $userInfo = $response->json();
-            
-            // Convert to same format as ID token response
-            return [
-                'sub' => $userInfo['id'] ?? null,
-                'email' => $userInfo['email'] ?? null,
-                'name' => $userInfo['name'] ?? null,
-                'picture' => $userInfo['picture'] ?? null,
-            ];
-        } catch (\Exception $e) {
-            Log::error('Error getting user info from access token', [
-                'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-    }
 
     /**
      * Send forgot password OTP to user's email

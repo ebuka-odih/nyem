@@ -262,12 +262,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     reject: (error: any) => void
   ) => {
     const google = (window as any).google;
-    const clientId = '799510192998-ieg4vffmi0f6t0pge5unm80m1oq2t68p.apps.googleusercontent.com';
+    // Get client ID from environment variable
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '799510192998-ieg4vffmi0f6t0pge5unm80m1oq2t68p.apps.googleusercontent.com';
 
-    // Use OAuth 2.0 popup flow
+    // Use OAuth 2.0 popup flow (initTokenClient)
+    // Note: For this flow, the origin (window.location.origin) must be registered
+    // in Google Cloud Console under "Authorized JavaScript origins"
+    // Example: http://localhost:5173 (dev) or https://yourdomain.com (prod)
     google.accounts.oauth2.initTokenClient({
       client_id: clientId,
       scope: 'email profile',
+      // The callback URL is automatically set to window.location.origin
+      // No redirect_uri parameter needed for popup flow
       callback: async (response: any) => {
         if (response.error) {
           reject(new Error(response.error));
@@ -276,40 +282,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         try {
           // Get user info using the access token
+          // The initTokenClient popup flow returns an access_token directly
           const userInfoResponse = await fetch(
             `https://www.googleapis.com/oauth2/v2/userinfo?access_token=${response.access_token}`
           );
+          
+          if (!userInfoResponse.ok) {
+            throw new Error('Failed to fetch user info from Google');
+          }
+          
           const userInfo = await userInfoResponse.json();
 
-          // Now get ID token for backend verification
-          // We'll use the access token to get user info, then create/update user
-          // For better security, we should get ID token, but for now we'll use access token
-          // Actually, let's use a different approach - get ID token directly
-          const idTokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              client_id: clientId,
-              code: response.code || '',
-              grant_type: 'authorization_code',
-              redirect_uri: window.location.origin,
-            }),
-          });
-
-          // Actually, let's use a simpler approach - use the access token to verify with our backend
-          // But for security, we should use ID token. Let me use a different method.
-          // We'll create a custom endpoint that accepts access token, or better yet,
-          // use the ID token flow directly.
-
-          // For now, let's use the userInfo and send it to backend
-          // Backend will need to verify with Google
+          // Send access token and user info to backend for verification and user creation
+          // Backend will verify the token with Google and create/update the user
           const res = await apiFetch<{ user: User; token: string; new_user?: boolean }>(
             ENDPOINTS.auth.google,
             {
               method: 'POST',
               body: { 
                 access_token: response.access_token,
-                // Also send user info for immediate user creation
+                // Include user info for faster user creation (optional, backend will verify)
                 email: userInfo.email,
                 name: userInfo.name,
                 picture: userInfo.picture,

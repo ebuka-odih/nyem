@@ -66,8 +66,13 @@ export const triggerGoogleSignIn = (
  * Get Google OAuth client ID from environment or use default
  */
 export const getGoogleClientId = (): string => {
-  // You can add environment variable support here
-  // For now, using the client ID from .env
+  // Get from environment variable (Vite requires VITE_ prefix)
+  const envClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  if (envClientId && envClientId.trim() !== '') {
+    return envClientId.trim();
+  }
+  
+  // Fallback to default (for backward compatibility)
   return '799510192998-ieg4vffmi0f6t0pge5unm80m1oq2t68p.apps.googleusercontent.com';
 };
 
