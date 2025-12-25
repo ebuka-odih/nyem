@@ -24,6 +24,7 @@ interface SwipeCardStackProps {
   onReset: () => void;
   onWelcomeCardDismiss?: () => void;
   onPromoCardDismiss?: () => void;
+  onViewCountUpdate?: (itemId: number | string, viewCount: number) => void; // Callback to update view count
 }
 
 export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
@@ -42,6 +43,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   onReset,
   onWelcomeCardDismiss,
   onPromoCardDismiss,
+  onViewCountUpdate,
 }) => {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-15, 15]);
@@ -78,9 +80,14 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
     // Track view asynchronously (don't block UI)
     const trackView = async () => {
       try {
-        await apiFetch(ENDPOINTS.items.trackView(currentItem.id), {
+        const response = await apiFetch(ENDPOINTS.items.trackView(currentItem.id), {
           method: 'POST',
         });
+        
+        // Update view count if response includes it
+        if (response?.view_count !== undefined && onViewCountUpdate) {
+          onViewCountUpdate(currentItem.id, response.view_count);
+        }
       } catch (error) {
         // Silently fail - view tracking is not critical for UX
         console.debug('Failed to track item view:', error);

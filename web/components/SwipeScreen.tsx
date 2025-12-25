@@ -369,6 +369,10 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
               phone_verified_at: item.user?.phone_verified_at || item.owner?.phone_verified_at || null,
             },
             gallery: item.images || item.gallery || item.work_images || [item.image].filter(Boolean),
+            // Include stats (views, likes, shares) from API
+            views: item.views ?? 0,
+            likes: item.likes ?? 0,
+            shares: item.shares ?? 0,
             // Service provider specific fields
             ...(isServiceProvider && {
               rating: item.rating,
@@ -610,6 +614,20 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
   };
 
+  /**
+   * Handle view count update from view tracking
+   * Updates the view count for a specific item in the items array
+   */
+  const handleViewCountUpdate = (itemId: number | string, viewCount: number) => {
+    setItems(prevItems => 
+      prevItems.map(item => 
+        item.id === itemId 
+          ? { ...item, views: viewCount }
+          : item
+      )
+    );
+  };
+
   const handleCategorySelect = (category: string) => {
     console.log('[SwipeScreen] Category selected:', category);
     setSelectedCategory(category);
@@ -685,6 +703,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         onSwipeRight={handleRightSwipe}
         onItemClick={(item) => onItemClick(item, activeTab, currentIndex)}
         onReset={resetStack}
+        onViewCountUpdate={handleViewCountUpdate}
         onWelcomeCardDismiss={() => {
           // Mark welcome card as dismissed and save to localStorage
           setShowWelcomeCard(false);
