@@ -45,7 +45,10 @@ Route::prefix('auth')->group(function () {
     Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
     Route::post('/login', [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/google', [AuthController::class, 'googleAuth']);
+    // Google OAuth routes
+    Route::get('/google/redirect', [AuthController::class, 'googleRedirect']); // Initiate OAuth flow
+    Route::get('/google/callback', [AuthController::class, 'googleCallback']); // Handle callback from Google
+    Route::post('/google', [AuthController::class, 'googleAuth']); // Direct token authentication (popup flow)
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 });

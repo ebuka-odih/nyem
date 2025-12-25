@@ -6,6 +6,8 @@ import { ScreenState, TabState, SwipeItem } from './types';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { useNavigationHistory } from './hooks/useNavigationHistory';
 import { useSwipeToGoBack } from './hooks/useSwipeToGoBack';
+import { apiFetch } from './utils/api';
+import { ENDPOINTS } from './constants/endpoints';
 
 // Lazy load all screen components for code splitting
 // These will only load when needed, reducing initial bundle size
@@ -109,7 +111,7 @@ const SCREENS_REQUIRING_PROPS: ScreenState[] = [
 ];
 
 const AppContent: React.FC = () => {
-  const { isAuthenticated, loading, loginWithGoogle, refreshUser } = useAuth();
+  const { isAuthenticated, loading, loginWithGoogle, refreshUser, setToken, setUser, storeToken, storeUser } = useAuth();
   
   // Detect if app was closed vs just minimized
   // Native apps: minimized apps restore state, closed apps start fresh
@@ -156,6 +158,53 @@ const AppContent: React.FC = () => {
     console.log('[App] Restoring state from minimized app:', saved);
     return saved;
   });
+  
+  // Handle Google OAuth callback from redirect flow
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleAuth = urlParams.get('google_auth');
+    const token = urlParams.get('token');
+    const newUser = urlParams.get('new_user');
+    const error = urlParams.get('error');
+
+    if (googleAuth === 'success' && token) {
+      // Google OAuth callback successful
+      // Store token
+      setToken(token);
+      storeToken(token);
+      
+      // Fetch user data
+      apiFetch(ENDPOINTS.profile.me, { token })
+        .then((res: any) => {
+          const userData = res.user || res.data?.user;
+          if (userData) {
+            setUser(userData);
+            storeUser(userData);
+          }
+          
+          // Navigate based on new user status
+          if (newUser === 'true') {
+            navigateTo('setup_profile', true);
+          } else {
+            navigateTo('home', true);
+            setActiveTab('discover');
+          }
+          
+          // Clean up URL
+          window.history.replaceState({}, '', window.location.pathname);
+        })
+        .catch((err: any) => {
+          console.error('Failed to fetch user after Google auth:', err);
+          alert('Authentication successful but failed to load user data. Please try again.');
+        });
+    } else if (error) {
+      // Handle error from Google OAuth
+      console.error('Google OAuth error:', error);
+      alert(`Google authentication failed: ${error}`);
+      // Clean up URL
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [setToken, setUser, storeToken, storeUser]);
   
   // Track app visibility and closure to detect when app is minimized vs closed
   useEffect(() => {

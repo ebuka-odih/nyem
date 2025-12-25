@@ -356,6 +356,43 @@ class AuthController extends Controller
     }
 
     /**
+     * Redirect to Google OAuth authorization page
+     * Initiates the OAuth flow by redirecting user to Google
+     * 
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function googleRedirect()
+    {
+        try {
+            $clientId = config('services.google.client_id');
+            $redirectUri = config('services.google.redirect');
+            $scope = 'email profile';
+            $state = Str::random(40); // CSRF protection
+
+            // Store state in session for validation in callback
+            session(['google_oauth_state' => $state]);
+
+            $authUrl = 'https://accounts.google.com/o/oauth2/v2/auth?' . http_build_query([
+                'client_id' => $clientId,
+                'redirect_uri' => $redirectUri,
+                'response_type' => 'code',
+                'scope' => $scope,
+                'access_type' => 'offline',
+                'prompt' => 'consent',
+                'state' => $state,
+            ]);
+
+            return redirect($authUrl);
+        } catch (\Exception $e) {
+            Log::error('Google OAuth redirect error', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect($this->getFrontendUrl() . '?error=' . urlencode('Failed to initiate Google authentication'));
+        }
+    }
+
+    /**
      * Authenticate user with Google OAuth
      * Accepts Google ID token or access token from frontend and verifies it
      * 
@@ -387,6 +424,121 @@ class AuthController extends Controller
             'user' => $result['user'],
             'new_user' => $result['new_user'],
         ]);
+    }
+
+    /**
+     * Handle Google OAuth callback
+     * This route is called by Google after user authorization
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function googleCallback(Request $request)
+    {
+        try {
+            // Get authorization code from Google
+            $code = $request->get('code');
+            $error = $request->get('error');
+
+            if ($error) {
+                Log::warning('Google OAuth callback error', ['error' => $error]);
+                return redirect($this->getFrontendUrl() . '?error=' . urlencode($error));
+            }
+
+            if (!$code) {
+                Log::warning('Google OAuth callback missing code');
+                return redirect($this->getFrontendUrl() . '?error=' . urlencode('Missing authorization code'));
+            }
+
+            // Validate state (CSRF protection)
+            $storedState = session('google_oauth_state');
+            if ($state && $storedState && $state !== $storedState) {
+                Log::warning('Google OAuth state mismatch', [
+                    'received' => $state,
+                    'stored' => $storedState,
+                ]);
+                return redirect($this->getFrontendUrl() . '?error=' . urlencode('Invalid state parameter'));
+            }
+            
+            // Clear state from session
+            session()->forget('google_oauth_state');
+
+            // Exchange code for access token
+            $tokenResponse = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+                'code' => $code,
+                'client_id' => config('services.google.client_id'),
+                'client_secret' => config('services.google.client_secret'),
+                'redirect_uri' => config('services.google.redirect'),
+                'grant_type' => 'authorization_code',
+            ]);
+
+            if (!$tokenResponse->successful()) {
+                Log::error('Failed to exchange Google OAuth code', [
+                    'status' => $tokenResponse->status(),
+                    'body' => $tokenResponse->body(),
+                ]);
+                return redirect($this->getFrontendUrl() . '?error=' . urlencode('Failed to exchange authorization code'));
+            }
+
+            $tokenData = $tokenResponse->json();
+            $accessToken = $tokenData['access_token'] ?? null;
+            $idToken = $tokenData['id_token'] ?? null;
+
+            if (!$accessToken && !$idToken) {
+                Log::error('Google OAuth token response missing tokens', ['response' => $tokenData]);
+                return redirect($this->getFrontendUrl() . '?error=' . urlencode('Invalid token response'));
+            }
+
+            // Authenticate user using the service
+            $authData = [];
+            if ($idToken) {
+                $authData['id_token'] = $idToken;
+            }
+            if ($accessToken) {
+                $authData['access_token'] = $accessToken;
+            }
+
+            $result = $this->googleAuthService->authenticate($authData);
+
+            if (!$result['success']) {
+                Log::error('Google OAuth authentication failed in callback', [
+                    'message' => $result['message'] ?? 'Unknown error',
+                ]);
+                return redirect($this->getFrontendUrl() . '?error=' . urlencode($result['message'] ?? 'Authentication failed'));
+            }
+
+            // Redirect to frontend with token and user data
+            $frontendUrl = $this->getFrontendUrl();
+            $token = $result['token'];
+            $isNewUser = $result['new_user'] ? 'true' : 'false';
+
+            // Store token in session temporarily for frontend to pick up
+            // Or pass it as URL parameter (less secure but simpler)
+            // Better approach: use a one-time token or session
+            return redirect($frontendUrl . '?google_auth=success&token=' . urlencode($token) . '&new_user=' . $isNewUser);
+
+        } catch (\Exception $e) {
+            Log::error('Google OAuth callback exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect($this->getFrontendUrl() . '?error=' . urlencode('An error occurred during authentication'));
+        }
+    }
+
+    /**
+     * Get frontend URL for redirects
+     * 
+     * @return string
+     */
+    private function getFrontendUrl(): string
+    {
+        // Get from environment or use default
+        $frontendUrl = env('FRONTEND_URL', 'https://www.nyem.online');
+        
+        // Remove trailing slash
+        return rtrim($frontendUrl, '/');
     }
 
     /**
