@@ -9,6 +9,7 @@ import { UploadTabs } from './upload/UploadTabs';
 import { PhotoUpload } from './upload/PhotoUpload';
 import { UploadForm } from './upload/UploadForm';
 import { ServiceProfileForm } from './upload/ServiceProfileForm';
+import { ServiceProfileCard } from './upload/ServiceProfileCard';
 import { PhoneVerificationModal } from './PhoneVerificationModal';
 import { PreUploadProfileSetup } from './upload/PreUploadProfileSetup';
 import { SuccessModal } from './upload/SuccessModal';
@@ -83,6 +84,8 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
   const [bio, setBio] = useState('');
   const [workImages, setWorkImages] = useState<string[]>([]);
   const [loadingServiceProfile, setLoadingServiceProfile] = useState(false);
+  const [serviceProfile, setServiceProfile] = useState<any>(null); // Store full profile data
+  const [showProfileView, setShowProfileView] = useState(false); // Toggle between card and form
   
   // Refs for file inputs
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -150,19 +153,25 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
           const response = await apiFetch(ENDPOINTS.serviceProviders.me, { token });
           if (response.success && response.data) {
             const profile = response.data;
+            setServiceProfile(profile); // Store full profile
             setServiceCategory(profile.service_category_id?.toString() || '');
             setStartingPrice(profile.starting_price ? profile.starting_price.toString().replace(/,/g, '') : '');
             setServiceCity(profile.city || '');
             setBio(profile.bio || '');
             setWorkImages(profile.work_images || []);
+            setShowProfileView(true); // Show profile card by default if profile exists
           } else {
             // No existing profile - set default city from user
+            setServiceProfile(null);
+            setShowProfileView(false);
             if (user?.city) {
               setServiceCity(user.city);
             }
           }
         } catch (err) {
           // No existing profile, that's fine - set default city from user
+          setServiceProfile(null);
+          setShowProfileView(false);
           if (user?.city) {
             setServiceCity(user.city);
           }
@@ -210,7 +219,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
   };
 
   const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []) as File[];
     if (files.length > 0) {
       const readers = files.map(file => {
         return new Promise<string>((resolve) => {
@@ -350,6 +359,13 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
 
       setSuccess(true);
       setShowSuccessModal(true);
+      
+      // Reload service profile to show updated card
+      const updatedResponse = await apiFetch(ENDPOINTS.serviceProviders.me, { token });
+      if (updatedResponse.success && updatedResponse.data) {
+        setServiceProfile(updatedResponse.data);
+        setShowProfileView(true);
+      }
       
       // Refresh user to update profile
       await refreshUser();
@@ -608,37 +624,19 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
            </p>
         </div>
 
-        {/* Services Tab - Service Profile Form */}
+        {/* Services Tab - Coming Soon */}
         {activeTab === 'Services' && !isEditMode ? (
-          <>
-            {/* Work Images Upload */}
-            <PhotoUpload
-              photos={workImages}
-              activeTab={activeTab}
-              onCameraCapture={handleCameraCapture}
-              onGallerySelect={handleGallerySelect}
-              onRemovePhoto={(index) => setWorkImages(prev => prev.filter((_, i) => i !== index))}
-            />
-
-            {/* Service Profile Form */}
-            {!loadingServiceProfile && (
-              <ServiceProfileForm
-                serviceCategory={serviceCategory}
-                startingPrice={startingPrice}
-                city={serviceCity}
-                bio={bio}
-                workImages={workImages}
-                categories={categories}
-                loadingCategories={loadingCategories}
-                loading={loading}
-                onServiceCategoryChange={setServiceCategory}
-                onStartingPriceChange={setStartingPrice}
-                onCityChange={setServiceCity}
-                onBioChange={setBio}
-                onSubmit={handleServiceProfileSubmit}
-              />
-            )}
-          </>
+          <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+              <svg className="w-10 h-10 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Coming Soon</h3>
+            <p className="text-gray-500 text-sm max-w-sm">
+              Services feature is under development. Check back soon!
+            </p>
+          </div>
         ) : (
           <>
             {/* Photo Upload */}
@@ -697,7 +695,7 @@ export const UploadScreen: React.FC<UploadScreenProps> = ({
           }
         }}
         message={needsPhoneVerification 
-          ? `You've used your ${FREE_UPLOAD_LIMIT} free uploads! Verify your phone number to continue uploading items and build trust with buyers in our community.`
+          ? "Verify your phone number to continue uploading items and build trust with buyers in our community."
           : undefined
         }
       />

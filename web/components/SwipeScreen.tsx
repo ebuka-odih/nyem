@@ -8,6 +8,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 import { SwipeHeader } from './swipe/SwipeHeader';
 import { SwipeCardStack } from './swipe/SwipeCardStack';
 import { SwipeModals } from './swipe/SwipeModals';
+import { BuyRequestToast } from './swipe/BuyRequestToast';
 import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../constants/placeholders';
 
 interface Owner {
@@ -169,6 +170,9 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [showMarketplaceModal, setShowMarketplaceModal] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isSendingBuyRequest, setIsSendingBuyRequest] = useState(false);
+  const [showBuyRequestToast, setShowBuyRequestToast] = useState(false);
+  const [buyRequestSellerName, setBuyRequestSellerName] = useState('');
 
   // Dropdowns
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -489,6 +493,102 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     }
   };
 
+  // Handle direct buy request - sends message without modal
+  const handleDirectBuyRequest = async () => {
+    // Check if login is required
+    if (requiresLogin('buy_request')) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    const currentItem = items[currentIndex];
+    if (!currentItem || !token) {
+      return;
+    }
+
+    // Only for marketplace items
+    if (currentItem.type !== 'marketplace') {
+      return;
+    }
+
+    const sellerId = currentItem.owner?.id;
+    if (!sellerId) {
+      alert('Unable to find seller information');
+      return;
+    }
+
+    // Set loading state
+    setIsSendingBuyRequest(true);
+
+    // Default buy request message
+    const buyRequestMessage = "I'm interested in buying this item. Is it still available?";
+
+    try {
+      const response = await apiFetch(ENDPOINTS.conversations.start, {
+        method: 'POST',
+        token,
+        body: {
+          recipient_id: sellerId,
+          message_text: buyRequestMessage,
+          item_id: currentItem.id,
+        },
+      });
+
+      // Track as a swipe right (like) since sending buy request acknowledges interest
+      try {
+        await apiFetch(ENDPOINTS.swipes.create, {
+          method: 'POST',
+          token,
+          body: {
+            target_item_id: currentItem.id,
+            direction: 'right',
+          },
+        });
+
+        // Update liked items state
+        setLikedItems(prev => {
+          const newSet = new Set(prev);
+          newSet.add(currentItem.id);
+          return newSet;
+        });
+      } catch (swipeError) {
+        // Silently fail - swipe tracking is not critical for UX
+        console.debug('Failed to track swipe:', swipeError);
+      }
+
+      // Show success toast that auto-dismisses
+      setBuyRequestSellerName(currentItem.owner.name);
+      setShowBuyRequestToast(true);
+
+      // Advance to next item after a short delay to show the toast
+      // This acknowledges the action and moves to the next card
+      setTimeout(() => {
+        // Track swipe count for Marketplace and Swap tabs (for promo card)
+        if (activeTab === 'Marketplace' || activeTab === 'Swap') {
+          setSwipeCount(prevCount => {
+            const newCount = prevCount + 1;
+            // Show promo card every PROMO_CARD_INTERVAL swipes
+            if (newCount > 0 && newCount % PROMO_CARD_INTERVAL === 0) {
+              setShowPromoCard(true);
+              return prevCount; // Don't update count yet, promo card will be shown
+            }
+            // Only advance if not showing promo card
+            setCurrentIndex(prev => prev + 1);
+            return newCount;
+          });
+        } else {
+          // For other tabs, just advance
+          setCurrentIndex(prev => prev + 1);
+        }
+      }, 500); // Small delay to show toast before advancing
+    } catch (err: any) {
+      console.error('Failed to send buy request:', err);
+      alert(err.message || 'Failed to send buy request. Please try again.');
+    } finally {
+      setIsSendingBuyRequest(false);
+    }
+  };
+
   const handleLoginMethod = (method: 'google' | 'email') => {
     setShowLoginPrompt(false);
     if (onLoginRequest) {
@@ -701,6 +801,8 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           });
         }}
         onSwipeRight={handleRightSwipe}
+        onDirectBuyRequest={handleDirectBuyRequest}
+        isSendingBuyRequest={isSendingBuyRequest}
         onItemClick={(item) => onItemClick(item, activeTab, currentIndex)}
         onReset={resetStack}
         onViewCountUpdate={handleViewCountUpdate}
@@ -737,6 +839,14 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         onCloseOffer={() => setShowOfferModal(false)}
         onCloseMarketplace={() => setShowMarketplaceModal(false)}
         onComplete={completeRightSwipe}
+      />
+
+      {/* Buy Request Success Toast */}
+      <BuyRequestToast
+        isOpen={showBuyRequestToast}
+        onClose={() => setShowBuyRequestToast(false)}
+        sellerName={buyRequestSellerName}
+        duration={3000}
       />
     </div>
   );

@@ -46,9 +46,17 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
     
     const itemTitle = currentItem.title;
     const isMarketplace = currentItem.type === 'marketplace';
+    const isService = currentItem.type === 'services';
     const price = isMarketplace && 'price' in currentItem ? currentItem.price : null;
     
-    if (isMarketplace) {
+    if (isService) {
+      const serviceName = currentItem.category || itemTitle;
+      return [
+        `Hi! I'm interested in your ${serviceName} services. Are you available?`,
+        `Hello! I'd like to discuss a project. When are you free?`,
+        `Hi! Can you tell me more about your ${serviceName} services?`,
+      ];
+    } else if (isMarketplace) {
       return [
         `Hi! I'm interested in your ${itemTitle}. Is it still available?`,
         `Hello! I'd love to buy the ${itemTitle}. Can we arrange a meetup?`,
@@ -253,7 +261,9 @@ export const SwipeModals: React.FC<SwipeModalsProps> = ({
                       <MessageCircle size={20} className="text-brand" />
                     </div>
                     <div>
-                      <h2 className="text-base font-bold text-gray-900">Message Seller</h2>
+                      <h2 className="text-base font-bold text-gray-900">
+                        {currentItem?.type === 'services' ? 'Contact Provider' : 'Message Seller'}
+                      </h2>
                       <p className="text-xs text-gray-500">Start a conversation</p>
                     </div>
                   </div>

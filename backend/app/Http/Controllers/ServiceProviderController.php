@@ -202,11 +202,13 @@ class ServiceProviderController extends Controller
         $serviceProvider = $user->serviceProvider;
         
         if (!$serviceProvider) {
+            // Return 200 with success: false to distinguish from route not found (404)
+            // This allows frontend to handle "no profile" vs "route doesn't exist" differently
             return response()->json([
                 'success' => false,
                 'message' => 'No service profile found',
                 'data' => null,
-            ], 404);
+            ], 200);
         }
 
         $serviceProvider->load(['serviceCategory', 'user.cityLocation', 'user.areaLocation']);

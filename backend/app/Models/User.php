@@ -35,6 +35,9 @@ class User extends Authenticatable
         'latitude',
         'longitude',
         'location_updated_at',
+        'bank_name',
+        'account_number',
+        'account_name',
     ];
 
     protected $hidden = [

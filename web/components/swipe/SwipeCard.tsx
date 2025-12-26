@@ -1,24 +1,40 @@
 import React, { useState } from 'react';
-import { Info, MapPin, Share2, Heart, CheckCircle2, ArrowRight, ShoppingBag, Repeat, Eye } from 'lucide-react';
+import { Info, MapPin, Share2, Heart, CheckCircle2, ArrowRight, ShoppingBag, Repeat, Eye, Loader2 } from 'lucide-react';
 import { SwipeItem } from '../../types';
 import { PLACEHOLDER_AVATAR, generateInitialsAvatar } from '../../constants/placeholders';
 import { apiFetch } from '../../utils/api';
 import { ENDPOINTS } from '../../constants/endpoints';
+import { ServiceProviderCard } from './ServiceProviderCard';
 
 interface SwipeCardProps {
   item: SwipeItem;
   isLiked?: boolean;
   onLike?: () => void;
   onInfoClick?: () => void;
-  onBuyClick?: () => void;
+  onBuyClick?: () => void; // Handler for swipe right button (triggers modal)
+  onDirectBuyRequest?: () => void; // Handler for direct buy request button (no modal)
+  isSendingBuyRequest?: boolean; // Loading state for buy request
   isOwnItem?: boolean; // Whether this item belongs to the current user
 }
 
-export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp = false, onLike, onInfoClick, onBuyClick, isOwnItem = false }) => {
+export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp = false, onLike, onInfoClick, onBuyClick, onDirectBuyRequest, isSendingBuyRequest = false, isOwnItem = false }) => {
   const isMarketplace = item.type === 'marketplace';
+  const isService = item.type === 'services';
   const [imageLoaded, setImageLoaded] = useState(false);
   // Use prop if provided, otherwise fall back to local state (for backward compatibility)
   const isLiked = onLike ? isLikedProp : false;
+
+  // Use ServiceProviderCard for service items
+  if (isService) {
+    return (
+      <ServiceProviderCard
+        item={item}
+        onInfoClick={onInfoClick}
+        onContactClick={onBuyClick} // Use onBuyClick for contact action
+        onMessageClick={onBuyClick} // Use onBuyClick for message action
+      />
+    );
+  }
   
   // Get stats with defaults
   const views = item.views ?? 0;
@@ -88,6 +104,13 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
     e.stopPropagation();
     if (onBuyClick) {
       onBuyClick();
+    }
+  };
+
+  const handleDirectBuyRequest = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onDirectBuyRequest) {
+      onDirectBuyRequest();
     }
   };
 
@@ -227,22 +250,34 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
           </div>
         ) : isMarketplace ? (
           <button
-            onClick={handleBuyClick}
-            disabled={!onBuyClick}
-            className={`w-full bg-gradient-to-r from-brand to-brand-600 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg shadow-brand/15 hover:shadow-xl hover:shadow-brand/25 active:scale-[0.98] transition-all group ${!onBuyClick ? 'opacity-50 cursor-not-allowed' : ''}`}
-            title={!onBuyClick ? "You can't like your own item" : "Tap to express interest"}
+            onClick={handleDirectBuyRequest}
+            disabled={!onDirectBuyRequest || isSendingBuyRequest}
+            className={`w-full bg-gradient-to-r from-brand to-brand-600 rounded-xl px-4 py-2.5 flex items-center justify-between shadow-lg shadow-brand/15 hover:shadow-xl hover:shadow-brand/25 active:scale-[0.98] transition-all group ${!onDirectBuyRequest || isSendingBuyRequest ? 'opacity-50 cursor-not-allowed' : ''}`}
+            title={!onDirectBuyRequest ? "You can't send a buy request for your own item" : isSendingBuyRequest ? "Sending buy request..." : "Send buy request to seller"}
           >
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center">
-                <ShoppingBag size={14} className="text-white" />
+                {isSendingBuyRequest ? (
+                  <Loader2 size={14} className="text-white animate-spin" />
+                ) : (
+                  <ShoppingBag size={14} className="text-white" />
+                )}
               </div>
               <div className="text-left">
-                <span className="text-white text-sm font-bold block leading-tight">Ready to Buy</span>
-                <span className="text-white/60 text-[10px]">Tap to express interest</span>
+                <span className="text-white text-sm font-bold block leading-tight">
+                  {isSendingBuyRequest ? 'Sending...' : 'Send Buy Request'}
+                </span>
+                <span className="text-white/60 text-[10px]">
+                  {isSendingBuyRequest ? 'Please wait' : 'Direct message to seller'}
+                </span>
               </div>
             </div>
             <div className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center group-hover:bg-white/25 transition-colors">
-              <ArrowRight size={14} className="text-white group-hover:translate-x-0.5 transition-transform" />
+              {isSendingBuyRequest ? (
+                <Loader2 size={14} className="text-white animate-spin" />
+              ) : (
+                <ArrowRight size={14} className="text-white group-hover:translate-x-0.5 transition-transform" />
+              )}
             </div>
           </button>
         ) : (

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BuyRequestController;
 use App\Http\Controllers\CategoryLocationController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\ImageUploadController;
@@ -10,10 +11,12 @@ use App\Http\Controllers\MatchController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\MessageRequestController;
 use App\Http\Controllers\ModerationController;
+use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ServiceProviderController;
 use App\Http\Controllers\SwipeController;
 use App\Http\Controllers\TradeOfferController;
+use App\Http\Controllers\TransactionController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 

@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, RefreshCw, Flame, Loader2 } from 'lucide-react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { SwipeItem } from '../../types';
@@ -20,6 +21,8 @@ interface SwipeCardStackProps {
   onLike?: (itemId: number, isCurrentlyLiked: boolean) => void;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
+  onDirectBuyRequest?: () => void; // Handler for direct buy request (no modal)
+  isSendingBuyRequest?: boolean; // Loading state for buy request
   onItemClick: (item: SwipeItem) => void;
   onReset: () => void;
   onWelcomeCardDismiss?: () => void;
@@ -39,6 +42,8 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   onLike,
   onSwipeLeft,
   onSwipeRight,
+  onDirectBuyRequest,
+  isSendingBuyRequest = false,
   onItemClick,
   onReset,
   onWelcomeCardDismiss,
@@ -50,11 +55,57 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   const opacity = useTransform(x, [-200, -150, 0, 150, 200], [0.5, 1, 1, 1, 0.5]);
   const controls = useAnimation();
   const viewedItemsRef = useRef<Set<string | number>>(new Set()); // Track which items have been viewed
+  const [isScrolled, setIsScrolled] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
   React.useEffect(() => {
     controls.set({ scale: 0.9, y: 20, opacity: 0 });
     controls.start({ scale: 1, y: 0, opacity: 1, transition: { type: 'spring', stiffness: 260, damping: 20 } });
   }, [currentIndex, activeTab, controls]);
+
+  // Set mounted state for portal
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Track scroll position for floating buttons on desktop (for visual feedback)
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.innerWidth >= 768) { // Only on desktop (md breakpoint)
+        const scrollY = window.scrollY || document.documentElement.scrollTop;
+        setIsScrolled(scrollY > 20); // Track scroll for visual feedback
+      } else {
+        setIsScrolled(false); // Always false on mobile
+      }
+    };
+
+    // Also check scroll on the container if it's scrollable
+    const handleContainerScroll = () => {
+      if (containerRef.current && window.innerWidth >= 768) {
+        const scrollTop = containerRef.current.scrollTop;
+        setIsScrolled(scrollTop > 20);
+      }
+    };
+
+    // Check if we're on desktop and set initial state
+    if (window.innerWidth >= 768) {
+      setIsScrolled(true); // Always show buttons on desktop by default
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    if (containerRef.current) {
+      containerRef.current.addEventListener('scroll', handleContainerScroll, { passive: true });
+    }
+    handleScroll(); // Check initial scroll position
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (containerRef.current) {
+        containerRef.current.removeEventListener('scroll', handleContainerScroll);
+      }
+    };
+  }, []);
 
   const currentItem = items[currentIndex];
   const nextItem = items[currentIndex + 1];
@@ -127,33 +178,34 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col items-center px-4 pb-2 w-full min-h-0">
+    <div ref={containerRef} className="flex-1 flex flex-col items-center px-4 pb-2 w-full min-h-0">
       {/* Card Container - Maximize card height, minimal button space */}
       <div className="relative w-full h-[calc(100%-60px)] min-h-[440px]">
-        {/* Loading State */}
-        {loading && (
+        {/* Services Tab - Always show Coming Soon */}
+        {activeTab === 'Services' ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
             <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <Loader2 size={32} className="text-brand animate-spin" />
+              <Flame size={32} className="text-gray-300" />
             </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">Loading items...</h3>
-            <p className="text-gray-500 text-sm">Please wait while we fetch the latest listings.</p>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Coming Soon</h3>
+            <p className="text-gray-500 text-sm">Services feature is under development.</p>
           </div>
-        )}
-
-        {/* Empty State */}
-        {!loading && !currentItem && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
-            {activeTab === 'Services' ? (
-              <>
+        ) : (
+          <>
+            {/* Loading State */}
+            {loading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                  <Flame size={32} className="text-gray-300" />
+                  <Loader2 size={32} className="text-brand animate-spin" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-800 mb-2">Coming Soon</h3>
-                <p className="text-gray-500 text-sm">Services feature is under development.</p>
-              </>
-            ) : (
-              <>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Loading items...</h3>
+                <p className="text-gray-500 text-sm">Please wait while we fetch the latest listings.</p>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!loading && !currentItem && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 z-0 bg-white rounded-[24px] border border-gray-100 shadow-sm">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
                   <Flame size={32} className="text-gray-300" />
                 </div>
@@ -166,27 +218,27 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
                   <RefreshCw size={16} />
                   <span>Start Over</span>
                 </button>
-              </>
+              </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Next Card (Background) - Show current item if special card is displayed */}
-        {!loading && (showWelcomeCard || showPromoCard) && currentItem && (
+        {activeTab !== 'Services' && !loading && (showWelcomeCard || showPromoCard) && currentItem && (
           <div className="absolute inset-0 w-full h-full scale-[0.96] translate-y-2 opacity-50 z-0 pointer-events-none">
             <SwipeCard item={currentItem} />
           </div>
         )}
         
         {/* Next Card (Background) - Normal flow when no special card */}
-        {!loading && !showWelcomeCard && !showPromoCard && nextItem && (
+        {activeTab !== 'Services' && !loading && !showWelcomeCard && !showPromoCard && nextItem && (
           <div className="absolute inset-0 w-full h-full scale-[0.96] translate-y-2 opacity-50 z-0 pointer-events-none">
             <SwipeCard item={nextItem} />
           </div>
         )}
 
         {/* Welcome Card - Shown as first card when enabled */}
-        {!loading && showWelcomeCard && (
+        {activeTab !== 'Services' && !loading && showWelcomeCard && (
           <motion.div
             key="welcome-card"
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
@@ -212,7 +264,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         )}
 
         {/* Promo Card - Shown every N swipes on Marketplace tab */}
-        {!loading && !showWelcomeCard && showPromoCard && (
+        {activeTab !== 'Services' && !loading && !showWelcomeCard && showPromoCard && (
           <motion.div
             key="promo-card"
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
@@ -238,7 +290,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
         )}
 
         {/* Current Card - Only show when no special cards are displayed */}
-        {!loading && !showWelcomeCard && !showPromoCard && currentItem && (
+        {activeTab !== 'Services' && !loading && !showWelcomeCard && !showPromoCard && currentItem && (
           <motion.div
             key={currentItem.id}
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
@@ -256,55 +308,106 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
               onLike={onLike ? () => onLike(currentItem.id, likedItems.has(currentItem.id)) : undefined}
               onInfoClick={() => onItemClick(currentItem)}
               onBuyClick={isOwnItem ? undefined : onSwipeRight} // Disable buy button on own items
+              onDirectBuyRequest={isOwnItem ? undefined : onDirectBuyRequest} // Direct buy request handler (no modal)
+              isSendingBuyRequest={isSendingBuyRequest} // Loading state for buy request
               isOwnItem={isOwnItem} // Pass ownership status to show stats
             />
           </motion.div>
         )}
       </div>
 
-      {/* Swipe Buttons - Larger for better tap targets */}
-      {!loading && (
-        <div className="flex justify-center items-center space-x-8 mt-2 py-1 shrink-0 relative z-20">
-          <button
-            onClick={async () => {
-              if (showWelcomeCard) {
-                await controls.start({ x: -500, opacity: 0 });
-                x.set(0);
-                onWelcomeCardDismiss?.();
-              } else if (showPromoCard) {
-                await controls.start({ x: -500, opacity: 0 });
-                x.set(0);
-                onPromoCardDismiss?.();
-              } else if (currentItem) {
-                await swipe('left');
-              }
-            }}
-            disabled={!currentItem && !showWelcomeCard && !showPromoCard}
-            className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
-          >
-            <X size={32} strokeWidth={2.5} />
-          </button>
-          <button
-            onClick={async () => {
-              if (showWelcomeCard) {
-                await controls.start({ x: 500, opacity: 0 });
-                x.set(0);
-                onWelcomeCardDismiss?.();
-              } else if (showPromoCard) {
-                await controls.start({ x: 500, opacity: 0 });
-                x.set(0);
-                onPromoCardDismiss?.();
-              } else if (currentItem && !isOwnItem) {
-                onSwipeRight();
-              }
-            }}
-            disabled={(!currentItem && !showWelcomeCard && !showPromoCard) || (!showWelcomeCard && !showPromoCard && isOwnItem)}
-            className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none disabled:cursor-not-allowed"
-            title={(!showWelcomeCard && !showPromoCard && isOwnItem) ? "You can't like your own item" : "Swipe right"}
-          >
-            <Check size={32} strokeWidth={3} />
-          </button>
-        </div>
+      {/* Swipe Buttons - Floating on desktop when scrolling, normal on mobile */}
+      {activeTab !== 'Services' && !loading && (
+        <>
+          {/* Mobile/Default Position */}
+          <div className="flex justify-center items-center space-x-8 mt-2 py-1 shrink-0 relative z-20 md:hidden">
+            <button
+              onClick={async () => {
+                if (showWelcomeCard) {
+                  await controls.start({ x: -500, opacity: 0 });
+                  x.set(0);
+                  onWelcomeCardDismiss?.();
+                } else if (showPromoCard) {
+                  await controls.start({ x: -500, opacity: 0 });
+                  x.set(0);
+                  onPromoCardDismiss?.();
+                } else if (currentItem) {
+                  await swipe('left');
+                }
+              }}
+              disabled={!currentItem && !showWelcomeCard && !showPromoCard}
+              className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_4px_20px_rgba(239,68,68,0.15)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none"
+            >
+              <X size={32} strokeWidth={2.5} />
+            </button>
+            <button
+              onClick={async () => {
+                if (showWelcomeCard) {
+                  await controls.start({ x: 500, opacity: 0 });
+                  x.set(0);
+                  onWelcomeCardDismiss?.();
+                } else if (showPromoCard) {
+                  await controls.start({ x: 500, opacity: 0 });
+                  x.set(0);
+                  onPromoCardDismiss?.();
+                } else if (currentItem && !isOwnItem) {
+                  onSwipeRight();
+                }
+              }}
+              disabled={(!currentItem && !showWelcomeCard && !showPromoCard) || (!showWelcomeCard && !showPromoCard && isOwnItem)}
+              className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_4px_20px_rgba(34,197,94,0.15)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-xl hover:scale-105 disabled:opacity-40 disabled:scale-100 disabled:shadow-none disabled:cursor-not-allowed"
+              title={(!showWelcomeCard && !showPromoCard && isOwnItem) ? "You can't like your own item" : "Swipe right"}
+            >
+              <Check size={32} strokeWidth={3} />
+            </button>
+          </div>
+
+          {/* Desktop Floating Position - Always visible on desktop, rendered via portal */}
+          {mounted && typeof document !== 'undefined' && createPortal(
+            <div className="hidden md:flex fixed bottom-8 left-1/2 transform -translate-x-1/2 justify-center items-center space-x-6 z-[9999] transition-all duration-300 opacity-100 pointer-events-auto">
+              <button
+                onClick={async () => {
+                  if (showWelcomeCard) {
+                    await controls.start({ x: -500, opacity: 0 });
+                    x.set(0);
+                    onWelcomeCardDismiss?.();
+                  } else if (showPromoCard) {
+                    await controls.start({ x: -500, opacity: 0 });
+                    x.set(0);
+                    onPromoCardDismiss?.();
+                  } else if (currentItem) {
+                    await swipe('left');
+                  }
+                }}
+                disabled={!currentItem && !showWelcomeCard && !showPromoCard}
+                className="w-16 h-16 rounded-full bg-white border border-red-100 shadow-[0_8px_30px_rgba(239,68,68,0.3)] flex items-center justify-center text-red-500 active:scale-90 transition-all hover:shadow-2xl hover:scale-110 disabled:opacity-40 disabled:scale-100 disabled:shadow-none backdrop-blur-sm"
+              >
+                <X size={32} strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={async () => {
+                  if (showWelcomeCard) {
+                    await controls.start({ x: 500, opacity: 0 });
+                    x.set(0);
+                    onWelcomeCardDismiss?.();
+                  } else if (showPromoCard) {
+                    await controls.start({ x: 500, opacity: 0 });
+                    x.set(0);
+                    onPromoCardDismiss?.();
+                  } else if (currentItem && !isOwnItem) {
+                    onSwipeRight();
+                  }
+                }}
+                disabled={(!currentItem && !showWelcomeCard && !showPromoCard) || (!showWelcomeCard && !showPromoCard && isOwnItem)}
+                className="w-16 h-16 rounded-full bg-white border border-green-100 shadow-[0_8px_30px_rgba(34,197,94,0.3)] flex items-center justify-center text-green-500 active:scale-90 transition-all hover:shadow-2xl hover:scale-110 disabled:opacity-40 disabled:scale-100 disabled:shadow-none disabled:cursor-not-allowed backdrop-blur-sm"
+                title={(!showWelcomeCard && !showPromoCard && isOwnItem) ? "You can't like your own item" : "Swipe right"}
+              >
+                <Check size={32} strokeWidth={3} />
+              </button>
+            </div>,
+            document.body
+          )}
+        </>
       )}
     </div>
   );
