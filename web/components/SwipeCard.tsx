@@ -82,20 +82,11 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     }
 
     const absX = Math.abs(info.offset.x);
-    const absY = Math.abs(info.offset.y);
     const velocityX = Math.abs(info.velocity.x);
-    const velocityY = Math.abs(info.velocity.y);
 
-    // Check for up swipe first (priority over horizontal)
-    if ((absY > 150 && info.offset.y < 0) || (velocityY > 500 && info.offset.y < 0)) {
-      controls.start({ y: -1000, opacity: 0, transition: { duration: 0.3 } }).then(() => {
-        x.set(0);
-        y.set(0);
-        onSwipe('up');
-      });
-    }
+    // Only allow horizontal swipes (left/right), not up swipe
     // Check for right swipe
-    else if ((absX > 100 && info.offset.x > 0) || (velocityX > 500 && info.offset.x > 0)) {
+    if ((absX > 100 && info.offset.x > 0) || (velocityX > 500 && info.offset.x > 0)) {
       controls.start({ x: 800, opacity: 0, transition: { duration: 0.3 } }).then(() => {
         x.set(0);
         y.set(0);
@@ -140,8 +131,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
         height: '100%', 
         willChange: 'transform' 
       }}
-      drag={isTop}
-      dragDirectionLock={true}
+      drag={isTop ? "x" : false}
       dragElastic={0.2}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
