@@ -401,7 +401,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
           <div className="flex items-center gap-3">
             <button 
               onClick={closeChat}
-              className="p-2 -ml-1 text-neutral-900 active:scale-95 transition-all"
+              className="p-2 -ml-1 text-[#830e4c] active:scale-95 transition-all"
             >
               <ArrowLeft size={24} strokeWidth={2.5} />
             </button>
@@ -427,12 +427,12 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
             </div>
           </div>
           <div className="flex items-center gap-1 relative" ref={menuRef}>
-            <button className="p-2 text-neutral-400 hover:text-neutral-900 transition-colors active:scale-90">
+            <button className="p-2 text-neutral-400 hover:text-[#830e4c] transition-colors active:scale-90">
               <Phone size={20} />
             </button>
             <button 
               onClick={() => setShowActionMenu(!showActionMenu)}
-              className={`p-2 transition-all active:scale-90 ${showActionMenu ? 'text-indigo-600' : 'text-neutral-400 hover:text-neutral-900'}`}
+              className={`p-2 transition-all active:scale-90 ${showActionMenu ? 'text-[#830e4c]' : 'text-neutral-400 hover:text-[#830e4c]'}`}
             >
               <MoreVertical size={20} />
             </button>
@@ -450,7 +450,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                       setIsEscrowActive(!isEscrowActive);
                       setShowActionMenu(false);
                     }}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border-2 ${isEscrowActive ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : 'bg-white border-neutral-50 hover:border-indigo-100 text-neutral-700 active:scale-95'}`}
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border-2 ${isEscrowActive ? 'bg-[#830e4c] border-[#830e4c] text-white shadow-lg' : 'bg-white border-neutral-50 hover:border-[#830e4c33] text-neutral-700 active:scale-95'}`}
                   >
                     <div className={`p-1.5 rounded-lg transition-colors ${isEscrowActive ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
                       <ShieldCheck size={18} strokeWidth={2.5} />
@@ -459,7 +459,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                       <span className={`text-[11px] font-black uppercase tracking-widest leading-none ${isEscrowActive ? 'text-white' : 'text-neutral-900'}`}>
                         {isEscrowActive ? 'Escrow Enabled' : 'Use Escrow'}
                       </span>
-                      <span className={`text-[8px] font-bold mt-1 uppercase tracking-wider ${isEscrowActive ? 'text-indigo-100' : 'text-neutral-400'}`}>Secure Protection</span>
+                      <span className={`text-[8px] font-bold mt-1 uppercase tracking-wider ${isEscrowActive ? 'text-white/40' : 'text-neutral-400'}`}>Secure Protection</span>
                     </div>
                     {isEscrowActive ? (
                       <Check size={14} className="ml-auto text-white" strokeWidth={4} />
@@ -496,10 +496,10 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
               )}
               <div className="flex flex-col">
                 <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Regarding Item</span>
-                <span className="text-xs font-bold text-neutral-900 truncate max-w-[150px]">{chatListingInfo.title}</span>
+                <span className="text-xs font-bold text-[#830e4c] truncate max-w-[150px]">{chatListingInfo.title}</span>
               </div>
             </div>
-            <button className="px-3 py-1.5 bg-white border border-neutral-200 rounded-full text-[9px] font-black uppercase tracking-widest text-neutral-600 shadow-sm active:scale-95 transition-all">
+            <button className="px-3 py-1.5 bg-white border border-[#830e4c]/20 rounded-full text-[9px] font-black uppercase tracking-widest text-[#830e4c] shadow-sm active:scale-95 transition-all">
               View Post
             </button>
           </div>
@@ -512,12 +512,12 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden bg-white border-b border-indigo-100"
+              className="overflow-hidden bg-white border-b border-[#830e4c33]"
             >
               <div className="p-4">
                 <div 
                   onClick={() => setIsCheckingOut(true)}
-                  className="bg-indigo-600 rounded-[1.5rem] p-4 flex items-center justify-between shadow-lg shadow-indigo-100 cursor-pointer active:scale-[0.98] transition-all hover:bg-indigo-700"
+                  className="bg-[#830e4c] rounded-[1.5rem] p-4 flex items-center justify-between shadow-lg shadow-[#830e4c1a] cursor-pointer active:scale-[0.98] transition-all hover:bg-[#931e5c]"
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
@@ -525,7 +525,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                     </div>
                     <div className="flex flex-col">
                       <h4 className="text-xs font-black text-white uppercase tracking-widest leading-none">Complete Secure Purchase</h4>
-                      <p className="text-[9px] font-bold text-indigo-100 mt-1.5 uppercase tracking-wider">Tap to checkout using Escrow</p>
+                      <p className="text-[9px] font-bold text-white/50 mt-1.5 uppercase tracking-wider">Tap to checkout using Escrow</p>
                     </div>
                   </div>
                   <div className="bg-white/10 p-2 rounded-xl text-white">
@@ -544,12 +544,12 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
         >
           {loadingMessages ? (
             <div className="flex justify-center items-center h-full">
-              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-[#830e4c] border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
             <>
               <div className="flex justify-center mb-6">
-                <span className="px-4 py-1.5 bg-neutral-100 rounded-full text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em]">
+                <span className="px-4 py-1.5 bg-[#830e4c1a] rounded-full text-[9px] font-black text-[#830e4c] uppercase tracking-[0.2em]">
                   Deal Conversation
                 </span>
               </div>
@@ -568,7 +568,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                       <div className="flex flex-col max-w-[82%] gap-1">
                         <div className={`px-5 py-3 rounded-[1.5rem] text-sm font-medium shadow-sm border ${
                           senderIsMe 
-                            ? 'bg-neutral-900 text-white border-neutral-900 rounded-br-none' 
+                            ? 'bg-[#830e4c] text-white border-[#830e4c] rounded-br-none' 
                             : 'bg-neutral-50 text-neutral-900 border-neutral-100 rounded-bl-none'
                         }`}>
                           {msg.message_text}
@@ -578,7 +578,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                             {formatTime(msg.created_at)}
                           </span>
                           {senderIsMe && (
-                            <CheckCheck size={10} className="text-indigo-500" />
+                            <CheckCheck size={10} className="text-[#830e4c]" />
                           )}
                         </div>
                       </div>
@@ -616,12 +616,12 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
               >
                 <div className="w-12 h-1.5 bg-neutral-200 rounded-full mx-auto mb-8" />
                 <div className="flex items-center gap-4 mb-8">
-                  <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+                  <div className="w-16 h-16 rounded-2xl bg-[#830e4c1a] flex items-center justify-center text-[#830e4c]">
                     <ShoppingBag size={32} strokeWidth={1.5} />
                   </div>
                   <div>
                     <h3 className="text-xl font-black text-neutral-900 tracking-tighter uppercase leading-none">Checkout Securely</h3>
-                    <p className="text-xs font-bold text-neutral-400 mt-2 uppercase tracking-widest">Protected by Nyem Escrow</p>
+                    <p className="text-xs font-bold text-[#830e4c] mt-2 uppercase tracking-widest">Protected by Nyem Escrow</p>
                   </div>
                 </div>
 
@@ -636,11 +636,11 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                   </div>
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-base font-black text-neutral-900 uppercase tracking-widest">Total Payable</span>
-                    <span className="text-2xl font-black text-neutral-900">{chatListingInfo.price}</span>
+                    <span className="text-2xl font-black text-[#830e4c]">{chatListingInfo.price}</span>
                   </div>
                 </div>
 
-                <button className="w-full bg-neutral-900 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3">
+                <button className="w-full bg-[#830e4c] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3">
                   <Lock size={16} strokeWidth={2.5} />
                   Confirm & Pay Securely
                 </button>
@@ -657,8 +657,8 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
 
         {/* Input Area */}
         <div className="shrink-0 p-4 pb-10 bg-white border-t border-neutral-50">
-          <div className="flex items-center gap-2 bg-neutral-50 p-1.5 rounded-[2rem] border border-neutral-100 focus-within:border-neutral-200 focus-within:bg-white transition-all">
-            <button className="p-2.5 text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all">
+          <div className="flex items-center gap-2 bg-neutral-50 p-1.5 rounded-[2rem] border border-neutral-100 focus-within:border-[#830e4c]/30 focus-within:bg-white transition-all">
+            <button className="p-2.5 text-neutral-400 hover:text-[#830e4c] active:scale-95 transition-all">
               <Paperclip size={18} />
             </button>
             <input 
@@ -670,7 +670,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
               disabled={sendingMessage}
               className="flex-1 bg-transparent border-none py-2 text-sm font-medium text-neutral-900 focus:ring-0 focus:outline-none placeholder:text-neutral-300 disabled:opacity-50"
             />
-            <button className="p-2.5 text-neutral-400 hover:text-neutral-900 active:scale-95 transition-all">
+            <button className="p-2.5 text-neutral-400 hover:text-[#830e4c] active:scale-95 transition-all">
               <Smile size={18} />
             </button>
             <button 
@@ -678,7 +678,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
               disabled={!newMessage.trim() || sendingMessage}
               className={`p-2.5 rounded-full transition-all active:scale-95 ${
                 newMessage.trim() && !sendingMessage
-                  ? 'bg-neutral-900 text-white shadow-lg' 
+                  ? 'bg-[#830e4c] text-white shadow-lg' 
                   : 'bg-neutral-200 text-neutral-400'
               }`}
             >
@@ -701,17 +701,17 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
       <div className="flex px-4 gap-4 mb-6 mt-2">
         <button 
           onClick={() => setActiveTab('chats')}
-          className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'chats' ? 'bg-neutral-900 text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
+          className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'chats' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
         >
           Chats
         </button>
         <button 
           onClick={() => setActiveTab('requests')}
-          className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'requests' ? 'bg-neutral-900 text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
+          className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'requests' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
         >
           Requests
           {requests.length > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white text-[9px] flex items-center justify-center rounded-full border-2 border-white font-black">
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#830e4c] text-white text-[9px] flex items-center justify-center rounded-full border-2 border-white font-black">
               {requests.length}
             </span>
           )}
@@ -722,7 +722,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
       <div className="px-4">
         {loading ? (
           <div className="flex justify-center items-center py-24">
-            <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-8 h-8 border-4 border-[#830e4c] border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
           <AnimatePresence mode="wait">
@@ -744,8 +744,8 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                     <motion.div 
                       layout
                       key={chat.id} 
-                      onClick={() => openChat(chat)}
-                      className="flex items-center gap-4 p-4 hover:bg-neutral-50 rounded-[2rem] transition-colors cursor-pointer group"
+                  onClick={() => openChat(chat)}
+                  className="flex items-center gap-4 p-4 hover:bg-[#830e4c1a]/20 rounded-[2rem] transition-colors cursor-pointer group"
                     >
                       <div className="relative flex-shrink-0">
                         <img 
@@ -763,7 +763,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                           <h4 className="text-base font-black text-neutral-900 truncate tracking-tight">
                             {otherUser.name || otherUser.username}
                           </h4>
-                          <span className={`text-[10px] font-black uppercase tracking-widest ${unreadCount > 0 ? 'text-indigo-600' : 'text-neutral-300'}`}>
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${unreadCount > 0 ? 'text-[#830e4c]' : 'text-neutral-300'}`}>
                             {chat.updated_at ? formatRelativeTime(chat.updated_at) : 'Recently'}
                           </span>
                         </div>
@@ -772,7 +772,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                             {chat.last_message?.message_text || 'No messages yet'}
                           </p>
                           {unreadCount > 0 ? (
-                            <span className="bg-indigo-600 text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0 border-2 border-white shadow-sm">
+                            <span className="bg-[#830e4c] text-white text-[9px] font-black w-5 h-5 flex items-center justify-center rounded-full flex-shrink-0 border-2 border-white shadow-sm">
                               {unreadCount}
                             </span>
                           ) : (
@@ -815,7 +815,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.98 }}
                       transition={subtleTransition}
-                      className={`bg-white border rounded-[2rem] p-5 flex flex-col gap-4 shadow-sm transition-all ${acceptingRequestId === request.id ? 'border-indigo-600 ring-4 ring-indigo-50' : 'border-neutral-100'}`}
+                      className={`bg-white border rounded-[2rem] p-5 flex flex-col gap-4 shadow-sm transition-all ${acceptingRequestId === request.id ? 'border-[#830e4c] ring-4 ring-[#830e4c1a]' : 'border-neutral-100'}`}
                     >
                       <div className="flex items-center gap-4">
                         <div className="relative flex-shrink-0">
@@ -873,18 +873,18 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                                 value={replyMessage}
                                 onChange={(e) => setReplyMessage(e.target.value)}
                                 placeholder="Add a friendly reply..."
-                                className="w-full bg-white border border-neutral-200 rounded-2xl px-4 py-4 text-sm font-medium text-neutral-900 focus:outline-none focus:border-indigo-600 transition-all resize-none min-h-[110px] placeholder:text-neutral-300"
+                                className="w-full bg-white border border-neutral-200 rounded-2xl px-4 py-4 text-sm font-medium text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all resize-none min-h-[110px] placeholder:text-neutral-300"
                               />
                               <button 
                                 onClick={() => confirmAccept(request)}
-                                className="absolute bottom-3 right-3 p-3 bg-neutral-900 text-white rounded-xl shadow-lg active:scale-95 transition-all"
+                                className="absolute bottom-3 right-3 p-3 bg-[#830e4c] text-white rounded-xl shadow-lg active:scale-95 transition-all"
                               >
                                 <Send size={18} />
                               </button>
                             </div>
                             <button 
                               onClick={() => setAcceptingRequestId(null)}
-                              className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 hover:text-neutral-500 transition-colors"
+                              className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 hover:text-[#830e4c] transition-colors"
                             >
                               Cancel
                             </button>
@@ -900,9 +900,9 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
                             </button>
                             <button 
                               onClick={() => handleAccept(request)}
-                              className="flex-[2] bg-neutral-900 text-white py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all border border-neutral-900"
+                              className="flex-[2] bg-[#830e4c] text-white py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all border border-[#830e4c]"
                             >
-                              <Check size={16} strokeWidth={3} className="text-[#15D491]" />
+                              <Check size={16} strokeWidth={3} className="text-white/60" />
                               <span className="text-[10px] font-black uppercase tracking-widest">Accept Request</span>
                             </button>
                           </div>

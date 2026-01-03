@@ -53,7 +53,7 @@ interface ProfilePageProps {
 const CustomToggle: React.FC<{ active: boolean; onClick: () => void }> = ({ active, onClick }) => (
   <button 
     onClick={(e) => { e.stopPropagation(); onClick(); }}
-    className={`w-12 h-6 rounded-full relative flex items-center px-1 transition-colors duration-300 ${active ? 'bg-indigo-600' : 'bg-neutral-200'}`}
+    className={`w-12 h-6 rounded-full relative flex items-center px-1 transition-colors duration-300 ${active ? 'bg-[#830e4c]' : 'bg-neutral-200'}`}
   >
     <motion.div 
       animate={{ x: active ? 24 : 0 }}
@@ -384,8 +384,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   ];
 
   const menuItems = [
-    { id: 'edit', label: 'Edit Profile', icon: Edit3, color: 'text-indigo-600' },
-    { id: 'notifications', label: 'Notification Settings', icon: Bell, color: 'text-indigo-600' },
+    { id: 'edit', label: 'Edit Profile', icon: Edit3, color: 'text-[#830e4c]' },
+    { id: 'notifications', label: 'Notification Settings', icon: Bell, color: 'text-[#830e4c]' },
     { id: 'payments', label: 'Escrow & Payments', icon: CreditCard, color: 'text-emerald-600' },
     { id: 'security', label: 'Security & Password', icon: ShieldCheck, color: 'text-neutral-900' },
     { id: 'history', label: 'Trade History', icon: History, color: 'text-neutral-900' },
@@ -474,7 +474,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   onChange={handlePhotoChange}
                   className="hidden"
                 />
-                <div className="w-28 h-28 rounded-[2.5rem] bg-indigo-50 border-4 border-white shadow-xl overflow-hidden">
+                <div className="w-28 h-28 rounded-[2.5rem] bg-[#830e4c1a] border-4 border-white shadow-xl overflow-hidden">
                   {profilePhoto ? (
                     <img 
                       src={profilePhoto} 
@@ -505,7 +505,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 </div>
                 <button 
                   type="button"
-                  className="absolute -bottom-1 -right-1 bg-indigo-600 text-white p-2.5 rounded-2xl shadow-lg border border-white active:scale-90 transition-all"
+                  className="absolute -bottom-1 -right-1 bg-[#830e4c] text-white p-2.5 rounded-2xl shadow-lg border border-white active:scale-90 transition-all"
                   onClick={handlePhotoSelect}
                 >
                   <Camera size={16} strokeWidth={2.5} />
@@ -521,7 +521,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your display name"
-                className="w-full bg-white border border-neutral-200 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-indigo-600 transition-all shadow-sm placeholder:text-neutral-200"
+                className="w-full bg-white border border-neutral-200 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all shadow-sm placeholder:text-neutral-200"
               />
               <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest px-1">This is how your name appears to others</p>
             </div>
@@ -565,7 +565,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                     value={areaId}
                     onChange={(e) => setAreaId(e.target.value ? parseInt(e.target.value) : '')}
                     disabled={loadingAreas || areas.length === 0}
-                    className="w-full bg-white border border-neutral-200 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-indigo-600 transition-all shadow-sm appearance-none cursor-pointer disabled:opacity-50"
+                    className="w-full bg-white border border-neutral-200 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all shadow-sm appearance-none cursor-pointer disabled:opacity-50"
                   >
                     <option value="">Select your area (optional)</option>
                     {areas.map((area: any) => (
@@ -592,7 +592,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
                 placeholder="Tell us about yourself..." 
-                className="w-full bg-white border border-neutral-200 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-indigo-600 transition-all shadow-sm resize-none min-h-[120px] placeholder:text-neutral-200"
+                className="w-full bg-white border border-neutral-200 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all shadow-sm resize-none min-h-[120px] placeholder:text-neutral-200"
               />
             </div>
 
@@ -600,7 +600,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             <button 
               onClick={handleUpdateProfile}
               disabled={editLoading}
-              className="w-full bg-neutral-900 text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {editLoading ? 'Saving...' : 'Save Changes'}
             </button>
@@ -619,9 +619,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
               </div>
             </div>
             
-            <div className="p-5 bg-indigo-50 rounded-3xl border border-indigo-100 flex gap-4 items-start">
-              <Zap size={18} className="text-indigo-600 shrink-0 mt-0.5" />
-              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest leading-relaxed">
+            <div className="p-5 bg-[#830e4c1a] rounded-3xl border border-[#830e4c33] flex gap-4 items-start">
+              <Zap size={18} className="text-[#830e4c] shrink-0 mt-0.5" />
+              <p className="text-[10px] font-bold text-[#830e4c] uppercase tracking-widest leading-relaxed">
                 Stay updated on the latest drops in your area by enabling location-based alerts in your phone settings.
               </p>
             </div>
@@ -660,14 +660,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             <div className="space-y-4">
               <div className="flex items-center justify-between px-1">
                 <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Withdrawal Destination</label>
-                <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-1">
+                <button className="text-[10px] font-black text-[#830e4c] uppercase tracking-widest flex items-center gap-1">
                   <Edit3 size={12} /> Edit
                 </button>
               </div>
               
               <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-6 shadow-sm space-y-5">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-neutral-900 rounded-2xl flex items-center justify-center text-white">
+                  <div className="w-12 h-12 bg-[#830e4c] rounded-2xl flex items-center justify-center text-white">
                     <Building2 size={24} />
                   </div>
                   <div className="min-w-0">
@@ -696,7 +696,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
               </div>
             </div>
 
-            <button className="w-full bg-neutral-900 text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
+            <button className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
               <Banknote size={16} strokeWidth={2.5} />
               Save Payment Settings
             </button>
@@ -725,7 +725,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 <div className="h-px bg-neutral-50" />
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                    <div className="p-3 bg-[#830e4c1a] text-[#830e4c] rounded-2xl">
                       <Lock size={22} />
                     </div>
                     <div>
@@ -754,7 +754,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
               </div>
             </div>
             
-            <button className="w-full py-5 bg-neutral-900 text-white rounded-[2rem] font-black uppercase tracking-[0.25em] text-[10px] shadow-xl active:scale-95 transition-all">
+            <button className="w-full py-5 bg-[#830e4c] text-white rounded-[2rem] font-black uppercase tracking-[0.25em] text-[10px] shadow-xl active:scale-95 transition-all">
               Change Login Password
             </button>
           </div>
@@ -774,7 +774,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start">
                     <div className="flex flex-col">
-                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-full w-fit mb-1 ${order.type === 'SALE' ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-full w-fit mb-1 ${order.type === 'SALE' ? 'bg-[#830e4c1a] text-[#830e4c]' : 'bg-emerald-50 text-emerald-600'}`}>
                         {order.type}
                       </span>
                       <h4 className="text-sm font-black text-neutral-900 tracking-tight uppercase truncate">{order.item}</h4>
@@ -815,7 +815,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
         transition={subtleTransition}
         className="w-full max-w-2xl mx-auto flex flex-col items-center justify-center pb-48 px-4 min-h-[400px]"
       >
-        <div className="w-16 h-16 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-16 h-16 border-4 border-[#830e4c] border-t-transparent rounded-full animate-spin"></div>
         <p className="mt-4 text-sm font-black text-neutral-400 uppercase tracking-widest">Loading profile...</p>
       </motion.div>
     );
@@ -840,7 +840,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             {/* Profile Header */}
             <div className="flex flex-col items-center pt-8 pb-10">
               <div className="relative mb-6">
-                <div className="w-28 h-28 rounded-[2.5rem] bg-indigo-50 border-4 border-white shadow-xl overflow-hidden">
+                <div className="w-28 h-28 rounded-[2.5rem] bg-[#830e4c1a] border-4 border-white shadow-xl overflow-hidden">
                   {user?.profile_photo ? (
                     <img 
                       src={user.profile_photo} 
@@ -860,7 +860,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                     />
                   )}
                 </div>
-                <button className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-2xl shadow-lg border border-neutral-100 text-neutral-900 active:scale-90 transition-all">
+                <button className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-2xl shadow-lg border border-neutral-100 text-[#830e4c] active:scale-90 transition-all">
                   <Edit3 size={16} strokeWidth={2.5} />
                 </button>
               </div>
@@ -871,7 +871,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                     {loading ? 'Loading...' : (user?.name || user?.username || 'User')}
                   </h2>
                   {user?.email_verified_at && (
-                    <BadgeCheck size={20} className="text-indigo-600" fill="currentColor" />
+                    <BadgeCheck size={20} className="text-[#29B3F0]" fill="currentColor" />
                   )}
                 </div>
                 <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] flex items-center justify-center gap-1.5">
@@ -901,13 +901,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             <div className="flex gap-4 mb-6">
               <button 
                 onClick={() => setActiveTab('drops')}
-                className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'drops' ? 'bg-neutral-900 text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
+                className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'drops' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
               >
-                My Drops
+                My Listings
               </button>
               <button 
                 onClick={() => setActiveTab('settings')}
-                className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-neutral-900 text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
+                className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
               >
                 Account
               </button>
@@ -934,13 +934,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${drop.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-neutral-100 text-neutral-400'}`}>
+                              <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${drop.status === 'Active' ? 'bg-[#830e4c1a] text-[#830e4c]' : 'bg-neutral-100 text-neutral-400'}`}>
                                 {drop.status}
                               </span>
                               <span className="text-[8px] font-black text-neutral-300 uppercase tracking-widest">{drop.views} Views</span>
                             </div>
                             <h4 className="text-sm font-black text-neutral-900 truncate tracking-tight">{drop.name}</h4>
-                            <p className="text-xs font-black text-indigo-600 mt-0.5">{drop.price}</p>
+                            <p className="text-xs font-black text-[#830e4c] mt-0.5">{drop.price}</p>
                           </div>
                           <button className="p-3 text-neutral-300 hover:text-neutral-900 transition-colors">
                             <ChevronRight size={20} strokeWidth={3} />
@@ -953,7 +953,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                             onNavigateToUpload();
                           }
                         }}
-                        className="w-full py-6 border-2 border-dashed border-neutral-100 rounded-[2rem] flex flex-col items-center justify-center gap-2 text-neutral-300 hover:border-indigo-100 hover:text-indigo-400 transition-all group"
+                        className="w-full py-6 border-2 border-dashed border-neutral-100 rounded-[2rem] flex flex-col items-center justify-center gap-2 text-neutral-300 hover:border-[#830e4c1a] hover:text-[#830e4c] transition-all group"
                       >
                         <Zap size={24} className="group-hover:scale-110 transition-transform" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Post a new drop</span>
@@ -974,7 +974,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                             onNavigateToUpload();
                           }
                         }}
-                        className="w-full py-6 border-2 border-dashed border-neutral-100 rounded-[2rem] flex flex-col items-center justify-center gap-2 text-neutral-300 hover:border-indigo-100 hover:text-indigo-400 transition-all group"
+                        className="w-full py-6 border-2 border-dashed border-neutral-100 rounded-[2rem] flex flex-col items-center justify-center gap-2 text-neutral-300 hover:border-[#830e4c1a] hover:text-[#830e4c] transition-all group"
                       >
                         <Zap size={24} className="group-hover:scale-110 transition-transform" />
                         <span className="text-[10px] font-black uppercase tracking-widest">Post a new drop</span>
@@ -1041,7 +1041,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 <ArrowLeft size={20} strokeWidth={3} />
               </button>
               <div className="flex flex-col">
-                <span className="text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] leading-none mb-1">Account Setting</span>
+                <span className="text-[9px] font-black text-[#830e4c] uppercase tracking-[0.2em] leading-none mb-1">Account Setting</span>
                 <h3 className="text-xl font-black text-neutral-900 tracking-tighter uppercase italic">
                   {menuItems.find(i => i.id === currentView)?.label || 'Settings'}
                 </h3>

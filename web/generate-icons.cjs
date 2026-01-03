@@ -80,7 +80,7 @@ async function generateIcons() {
       let image = sharp(sourceIconPath)
         .resize(icon.size, icon.size, {
           fit: 'contain',
-          background: { r: 255, g: 0, b: 0, alpha: 1 } // Red background
+          background: { r: 131, g: 14, b: 76, alpha: 1 } // Brand red #830e4c
         })
         .png();
 
@@ -101,7 +101,7 @@ async function generateIcons() {
     const favicon32 = await sharp(sourceIconPath)
       .resize(32, 32, { 
         fit: 'contain',
-        background: { r: 255, g: 0, b: 0, alpha: 1 } // Red background
+        background: { r: 131, g: 14, b: 76, alpha: 1 } // Brand red #830e4c
       })
       .png()
       .toBuffer();

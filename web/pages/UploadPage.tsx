@@ -367,7 +367,7 @@ export const UploadPage: React.FC = () => {
 
             {loadingListings ? (
               <div className="col-span-2 flex justify-center items-center py-12">
-                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-[#830e4c] border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : (
               myListings.map((item) => (
@@ -388,14 +388,14 @@ export const UploadPage: React.FC = () => {
                     />
                   )}
                   <div className="absolute top-4 left-4">
-                    <span className="px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest backdrop-blur-md shadow-sm border bg-emerald-500/90 text-white border-white/20">
+                    <span className={`px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest backdrop-blur-md shadow-sm border ${item.status === 'active' ? 'bg-[#830e4c]/90' : 'bg-emerald-500/90'} text-white border-white/20`}>
                       {item.status === 'active' ? 'Active' : item.status}
                     </span>
                   </div>
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px] flex flex-col items-center justify-center gap-3 p-4 text-center">
                     <h4 className="text-white text-xs font-black uppercase tracking-widest truncate w-full px-2">{item.title}</h4>
                     <div className="flex gap-2">
-                      <button onClick={() => startEdit(item)} className="p-3 bg-white text-neutral-900 rounded-2xl active:scale-90 shadow-xl"><Edit3 size={18} strokeWidth={2.5} /></button>
+                      <button onClick={() => startEdit(item)} className="p-3 bg-white text-[#830e4c] rounded-2xl active:scale-90 shadow-xl"><Edit3 size={18} strokeWidth={2.5} /></button>
                       <button onClick={() => handleDelete(item.id)} className="p-3 bg-rose-500 text-white rounded-2xl active:scale-90 shadow-xl"><Trash2 size={18} strokeWidth={2.5} /></button>
                     </div>
                   </div>
@@ -594,9 +594,9 @@ export const UploadPage: React.FC = () => {
               {/* 5. Price */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Asking Price</label>
-                <div className="flex h-[62px] bg-white border border-neutral-300 rounded-[1.5rem] focus-within:border-neutral-900 focus-within:ring-4 focus-within:ring-neutral-900/5 transition-all overflow-hidden shadow-sm items-stretch">
+                <div className="flex h-[62px] bg-white border border-neutral-300 rounded-[1.5rem] focus-within:border-[#830e4c] focus-within:ring-4 focus-within:ring-[#830e4c]/5 transition-all overflow-hidden shadow-sm items-stretch">
                   <div className="flex items-center justify-center pl-6 pr-3 border-r border-neutral-100 bg-neutral-50/30 shrink-0">
-                    <span className="text-neutral-900 font-black text-lg">₦</span>
+                    <span className="text-[#830e4c] font-black text-lg">₦</span>
                   </div>
                   <input 
                     type="number" 
@@ -614,7 +614,7 @@ export const UploadPage: React.FC = () => {
             <button 
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full bg-neutral-900 text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -623,7 +623,7 @@ export const UploadPage: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <Send size={16} className="text-emerald-400" />
+                  <Send size={16} className="text-white/60" />
                   {editingItem ? 'Finalize Updates' : 'Publish to Marketplace'}
                 </>
               )}
