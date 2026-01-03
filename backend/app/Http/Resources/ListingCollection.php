@@ -24,3 +24,4 @@ class ListingCollection extends ResourceCollection
 
 
 
+

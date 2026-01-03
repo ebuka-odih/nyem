@@ -20,3 +20,4 @@ class TestModelCollection extends ResourceCollection
     }
 }
 
+

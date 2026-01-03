@@ -56,8 +56,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
       title: 'Swap',
       desc: 'Trade items — no cash needed',
       icon: RefreshCw,
-      color: 'bg-emerald-50',
-      iconColor: 'text-emerald-600'
+      color: 'bg-[#830e4c1a]',
+      iconColor: 'text-[#830e4c]'
     }
   ];
 

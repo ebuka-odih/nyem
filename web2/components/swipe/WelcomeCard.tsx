@@ -38,7 +38,7 @@ export const WelcomeCard: React.FC<WelcomeCardProps> = ({ onDismiss }) => {
             <span className="text-white/50 text-xs font-medium">Pass</span>
           </div>
           
-          <ArrowLeftRight size={24} className="text-white/30" />
+          <ArrowLeftRight size={24} className="text-brand" />
           
           <div className="flex flex-col items-center">
             <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center mb-2">

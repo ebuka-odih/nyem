@@ -80,7 +80,7 @@ async function generateIcons() {
       let image = sharp(sourceIconPath)
         .resize(icon.size, icon.size, {
           fit: 'contain',
-          background: { r: 131, g: 14, b: 76, alpha: 1 } // Brand red #830e4c
+          background: { r: 136, g: 14, b: 79, alpha: 1 } // Brand red #880e4f
         })
         .png();
 

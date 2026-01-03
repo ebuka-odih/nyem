@@ -269,3 +269,4 @@ const getWebSocketUrl = () => {
 - `app/src/contexts/WebSocketContext.tsx` - WebSocket connection management
 - `app/src/screens/ChatScreen.tsx` - Real-time message listener
 
+
