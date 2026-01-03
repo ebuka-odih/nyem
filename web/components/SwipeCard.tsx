@@ -25,11 +25,13 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
 }) => {
   const controls = useAnimation();
   const x = useMotionValue(0);
+  const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-10, 10]);
   const opacity = useTransform(x, [-150, 0, 150], [0.5, 1, 0.5]);
   
   const [currentImg, setCurrentImg] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
 
   React.useEffect(() => {
     if (isTop) {
@@ -54,12 +56,64 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   }, [isTop, index, triggerDirection, controls, onSwipe]);
 
   // Fix: info is typed as any because PanInfo is not exported in this environment
+  const handleDragStart = () => {
+    if (!isTop) return;
+    isDraggingRef.current = true;
+    // Disable scrolling when dragging starts
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.overflow = 'hidden';
+    }
+  };
+
+  const handleDrag = (_: any, info: any) => {
+    if (!isTop) return;
+    // Update x and y values during drag
+    x.set(info.offset.x);
+    y.set(info.offset.y);
+  };
+
   const handleDragEnd = (_: any, info: any) => {
     if (!isTop) return;
-    if (info.offset.x > 100) controls.start({ x: 800, opacity: 0 }).then(() => onSwipe('right'));
-    else if (info.offset.x < -100) controls.start({ x: -800, opacity: 0 }).then(() => onSwipe('left'));
-    else if (info.offset.y < -150) controls.start({ y: -1000, opacity: 0 }).then(() => onSwipe('up'));
-    else controls.start({ x: 0, y: 0, rotate: 0 });
+    isDraggingRef.current = false;
+    
+    // Re-enable scrolling
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.style.overflow = 'auto';
+    }
+
+    const absX = Math.abs(info.offset.x);
+    const absY = Math.abs(info.offset.y);
+    const velocityX = Math.abs(info.velocity.x);
+    const velocityY = Math.abs(info.velocity.y);
+
+    // Check for up swipe first (priority over horizontal)
+    if ((absY > 150 && info.offset.y < 0) || (velocityY > 500 && info.offset.y < 0)) {
+      controls.start({ y: -1000, opacity: 0, transition: { duration: 0.3 } }).then(() => {
+        x.set(0);
+        y.set(0);
+        onSwipe('up');
+      });
+    }
+    // Check for right swipe
+    else if ((absX > 100 && info.offset.x > 0) || (velocityX > 500 && info.offset.x > 0)) {
+      controls.start({ x: 800, opacity: 0, transition: { duration: 0.3 } }).then(() => {
+        x.set(0);
+        y.set(0);
+        onSwipe('right');
+      });
+    }
+    // Check for left swipe
+    else if ((absX > 100 && info.offset.x < 0) || (velocityX > 500 && info.offset.x < 0)) {
+      controls.start({ x: -800, opacity: 0, transition: { duration: 0.3 } }).then(() => {
+        x.set(0);
+        y.set(0);
+        onSwipe('left');
+      });
+    }
+    // Snap back if not enough movement
+    else {
+      controls.start({ x: 0, y: 0, rotate: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
+    }
   };
 
   const nextImage = (e: React.MouseEvent) => {
@@ -77,6 +131,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
       animate={controls}
       style={{ 
         x, 
+        y,
         rotate, 
         opacity: isTop ? opacity : undefined,
         zIndex: isTop ? 50 : 50 - index, 
@@ -85,10 +140,13 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
         height: '100%', 
         willChange: 'transform' 
       }}
-      drag={isTop ? true : false}
-      dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+      drag={isTop}
+      dragDirectionLock={true}
+      dragElastic={0.2}
+      onDragStart={handleDragStart}
+      onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      className={`touch-pan-y ${isTop ? 'cursor-grab active:cursor-grabbing' : 'pointer-events-none'}`}
+      className={`${isTop ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-none'}`}
     >
       <div className="relative w-full h-full bg-white rounded-[2.2rem] shadow-[0_10px_30px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col border border-neutral-100/50">
         
@@ -96,6 +154,12 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
         <div 
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto no-scrollbar pb-40"
+          onTouchMove={(e) => {
+            // Prevent scrolling when dragging horizontally
+            if (isDraggingRef.current) {
+              e.preventDefault();
+            }
+          }}
         >
           {/* Main Image Section */}
           <div className="relative w-full aspect-[4/5] bg-neutral-100 group overflow-hidden">

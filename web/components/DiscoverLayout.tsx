@@ -44,7 +44,7 @@ export const DiscoverLayout: React.FC<DiscoverLayoutProps> = ({
           )}
         </main>
 
-        <div className="shrink-0 z-[130] w-full">
+        <div className="shrink-0 z-[130] w-full relative">
           {bottomNav}
         </div>
       </div>

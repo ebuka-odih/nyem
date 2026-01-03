@@ -42,13 +42,15 @@ export const GeneralLayout: React.FC<GeneralLayoutProps> = ({
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-40">
+        <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-0">
           <div className="max-w-[390px] mx-auto">
             {children}
           </div>
         </main>
 
-        {bottomNav}
+        <div className="shrink-0 relative">
+          {bottomNav}
+        </div>
       </div>
     </div>
   );
