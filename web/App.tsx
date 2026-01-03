@@ -272,7 +272,7 @@ const App = () => {
     if (isChatOpen) return null;
     
     return (
-      <nav className="w-full bg-white border-t border-neutral-100 px-4 py-2.5 pb-[calc(env(safe-area-inset-bottom,0px)+10px)] flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.03)]">
+      <nav className="w-full bg-white border-t border-neutral-100 px-4 py-2.5 pb-[env(safe-area-inset-bottom,8px)] flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.03)]">
         {(['discover', 'upload', 'matches', 'profile'] as const).map((page) => {
           const isActive = activePage === page;
           const icons = { discover: Compass, upload: PlusCircle, matches: MessageSquare, profile: User };

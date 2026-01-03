@@ -24,9 +24,9 @@ export const DiscoverLayout: React.FC<DiscoverLayoutProps> = ({
   floatingControls 
 }) => {
   return (
-    <div className="h-[100svh] bg-slate-100 flex flex-col overflow-hidden relative items-center">
+    <div className="h-[100svh] bg-slate-100 flex flex-col overflow-hidden relative items-center pb-0">
       {/* App Container: phone width on mobile, iPad width on desktop */}
-      <div className="w-full max-w-full sm:max-w-[768px] h-full flex flex-col relative bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)]">
+      <div className="w-full max-w-full sm:max-w-[768px] h-full flex flex-col relative bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)] pb-0">
         <DiscoverHeader {...headerProps} />
         
         <main className="flex-1 relative overflow-hidden flex flex-col">
@@ -44,7 +44,7 @@ export const DiscoverLayout: React.FC<DiscoverLayoutProps> = ({
           )}
         </main>
 
-        <div className="shrink-0 z-[130] w-full relative">
+        <div className="shrink-0 z-[130] w-full">
           {bottomNav}
         </div>
       </div>

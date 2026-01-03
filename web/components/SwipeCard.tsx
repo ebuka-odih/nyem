@@ -70,19 +70,21 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     const deltaY = Math.abs(info.point.y - dragStartPointRef.current.y);
     
     // Only consider it a horizontal drag if horizontal movement is significantly more than vertical
-    // This prevents scroll from triggering card drag
-    if (deltaX > 10 && deltaX > deltaY * 1.5) {
-      isHorizontalDragRef.current = true;
-      // Only disable scrolling if it's clearly a horizontal drag
-      if (scrollContainerRef.current && !scrollContainerRef.current.style.overflow.includes('hidden')) {
-        scrollContainerRef.current.style.overflow = 'hidden';
-        scrollContainerRef.current.style.touchAction = 'none';
+    // This allows vertical scrolling to work naturally
+    if (deltaX > 10 && deltaX > deltaY * 1.3) {
+      if (!isHorizontalDragRef.current) {
+        isHorizontalDragRef.current = true;
+        // Disable scrolling only when horizontal drag is detected
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.style.overflowY = 'hidden';
+        }
       }
-    }
-    
-    // Only update x if it's a horizontal drag
-    if (isHorizontalDragRef.current) {
       x.set(info.offset.x);
+    }
+    // If vertical movement is dominant, allow scrolling (don't interfere)
+    else if (deltaY > deltaX) {
+      // Don't interfere with scrolling - let it happen naturally
+      return;
     }
   };
 
@@ -91,8 +93,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     
     // Always re-enable scrolling
     if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.overflow = 'auto';
-      scrollContainerRef.current.style.touchAction = 'auto';
+      scrollContainerRef.current.style.overflowY = 'auto';
+      scrollContainerRef.current.style.touchAction = '';
     }
 
     // Only trigger swipe if it was a horizontal drag
@@ -153,11 +155,12 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
         position: 'absolute', 
         width: '100%', 
         height: '100%', 
-        willChange: 'transform' 
+        willChange: 'transform'
       }}
       drag={isTop ? "x" : false}
       dragElastic={0.2}
       dragConstraints={{ left: -300, right: 300 }}
+      dragPropagation={false}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
@@ -180,19 +183,19 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
 
             {/* Restored Gallery Progress Indicators */}
             <div className="absolute top-2 left-4 right-4 flex gap-1 z-20">
-              {product.images.map((_, i) => (
+          {product.images.map((_, i) => (
                 <div 
                   key={i} 
                   className={`h-1 flex-1 rounded-full transition-all duration-300 ${i === currentImg ? 'bg-white shadow-[0_1px_2px_rgba(0,0,0,0.2)]' : 'bg-white/30'}`} 
                 />
-              ))}
-            </div>
+          ))}
+        </div>
 
             {/* Tap Areas for Gallery Cycling */}
             <div className="absolute inset-0 flex z-10">
               <div className="w-1/2 h-full cursor-pointer" onClick={prevImage} />
               <div className="w-1/2 h-full cursor-pointer" onClick={nextImage} />
-            </div>
+        </div>
 
             {/* Bottom Gradient for Text Legibility */}
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
@@ -200,11 +203,11 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
             {/* Top Bar: Verified Badge only */}
             <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none z-20">
               <div className="flex items-center gap-2">
-                {product.vendor.verified && (
+              {product.vendor.verified && (
                   <div className="bg-[#29B3F0] p-1 rounded-full text-white shadow-lg border border-white/20">
                     <ShieldCheck size={14} fill="currentColor" />
-                  </div>
-                )}
+                </div>
+              )}
               </div>
               <button className="text-white opacity-80 active:scale-90 transition-transform pointer-events-auto">
                 <MoreHorizontal size={24} strokeWidth={3} />
@@ -275,7 +278,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
                   </div>
                </div>
             </div>
-
+            
             <div className="space-y-3">
               <h5 className="text-[10px] font-black text-neutral-300 uppercase tracking-[0.2em]">Current location</h5>
               <div className="flex items-center gap-2">

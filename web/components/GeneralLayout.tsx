@@ -18,8 +18,8 @@ export const GeneralLayout: React.FC<GeneralLayoutProps> = ({
   bottomNav 
 }) => {
   return (
-    <div className="h-[100svh] bg-white flex flex-col overflow-hidden items-center">
-      <div className="w-full max-w-[768px] h-full flex flex-col">
+    <div className="h-[100svh] bg-white flex flex-col overflow-hidden items-center pb-0">
+      <div className="w-full max-w-[768px] h-full flex flex-col pb-0">
         <header className="shrink-0 bg-white pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-3 px-6 flex flex-col gap-2 border-b border-neutral-50">
           <div className="flex items-center gap-1.5 opacity-60">
             <div className="w-5 h-5 bg-neutral-900 rounded flex items-center justify-center text-white">
@@ -48,7 +48,7 @@ export const GeneralLayout: React.FC<GeneralLayoutProps> = ({
           </div>
         </main>
 
-        <div className="shrink-0 relative">
+        <div className="shrink-0">
           {bottomNav}
         </div>
       </div>
