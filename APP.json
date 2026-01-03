@@ -1,0 +1,323 @@
+{
+  "app_name": "Nyem",
+  "version": "MVP-1.0",
+  "design_language": {
+    "style": "Clean, modern, card-based UI inspired by Tinder",
+    "color_palette": {
+      "primary_color": "to-be-decided (suggestion: #FF4F5A or #FF6B3D for energy)",
+      "secondary_color": "#FFFFFF",
+      "background_color": "#F8F8F8",
+      "text_color_primary": "#222222",
+      "text_color_secondary": "#555555",
+      "accent_success": "#4CAF50",
+      "accent_warning": "#FFC107",
+      "accent_error": "#F44336"
+    },
+    "ui_notes": [
+      "Large item photos in swipe view",
+      "Rounded cards",
+      "Subtle shadows",
+      "Minimal text",
+      "Simple icons (heart, X, chat)"
+    ]
+  },
+
+  "platform": "Mobile app (React Native)",
+
+  "core_mvp_features": [
+    "User authentication (phone login)",
+    "Create/Edit Profile",
+    "Upload item to trade",
+    "Specify what item you want in exchange",
+    "Swipe interface (Tinder-style)",
+    "Matching system",
+    "1-to-1 chat",
+    "User profile view",
+    "City-based item filtering",
+    "Report/Block user"
+  ],
+
+  "user_roles": ["standard_user", "admin"],
+
+  "auth_flow": {
+    "method": "Phone number OTP",
+    "steps": [
+      "User enters phone number",
+      "Receive OTP",
+      "Submit OTP",
+      "If new user → profile setup",
+      "If existing user → go to home feed"
+    ]
+  },
+
+  "profile": {
+    "fields": {
+      "user_id": "string",
+      "username": "string",
+      "bio": "string (optional)",
+      "profile_photo": "url",
+      "city": "string",
+      "rating": "optional (future)",
+      "created_at": "iso_date"
+    },
+    "actions": [
+      "edit_profile",
+      "update_photo",
+      "change_city"
+    ]
+  },
+
+  "item_model": {
+    "fields": {
+      "item_id": "string",
+      "user_id": "string",
+      "title": "string",
+      "description": "string",
+      "category": "enum",
+      "condition": "enum (new, like_new, used)",
+      "photos": ["url"],
+      "looking_for": "string (item user wants in exchange)",
+      "city": "string",
+      "status": "active | swapped",
+      "created_at": "iso_date"
+    },
+    "actions": [
+      "create_item",
+      "edit_item",
+      "delete_item",
+      "mark_as_swapped"
+    ]
+  },
+
+  "categories": [
+    "Electronics",
+    "Fashion",
+    "Household",
+    "Food Items",
+    "Accessories",
+    "Beauty",
+    "Baby/Kids",
+    "Books",
+    "Sports",
+    "Other"
+  ],
+
+  "swipe_feed": {
+    "purpose": "Display items the user can swipe left/right on",
+    "card_contents": [
+      "Main photo",
+      "Title",
+      "Condition",
+      "Posted by username",
+      "What the user wants in return (looking_for)",
+      "City"
+    ],
+    "user_actions": [
+      "swipe_left → pass",
+      "swipe_right → interest",
+      "open_item_details"
+    ],
+    "ordering_logic": [
+      "items from same city first",
+      "items whose 'looking_for' matches what the user offers",
+      "items in categories the user interacts with",
+      "newest items"
+    ]
+  },
+
+  "swipe_history_model": {
+    "fields": {
+      "swipe_id": "string",
+      "from_user_id": "string",
+      "target_item_id": "string",
+      "direction": "right | left",
+      "created_at": "iso_date"
+    }
+  },
+
+  "matching_logic": {
+    "steps": [
+      "User A swipes right on User B's item",
+      "System checks if User B swiped right on User A's item earlier",
+      "If both swiped right → create match"
+    ],
+    "match_model": {
+      "match_id": "string",
+      "user1_id": "string",
+      "user2_id": "string",
+      "item1_id": "string",
+      "item2_id": "string",
+      "created_at": "iso_date"
+    }
+  },
+
+  "chat_system": {
+    "structure": "one-to-one messaging",
+    "fields": {
+      "message_id": "string",
+      "match_id": "string",
+      "sender_id": "string",
+      "receiver_id": "string",
+      "message_text": "string",
+      "timestamp": "iso_date"
+    },
+    "features": [
+      "send_message",
+      "receive_message (realtime via websockets)",
+      "chat_list_by_matches",
+      "block_user"
+    ]
+  },
+
+  "screens": {
+    "onboarding_screens": [
+      {
+        "name": "WelcomeScreen",
+        "elements": ["Logo", "Tagline", "Continue button"]
+      },
+      {
+        "name": "PhoneLoginScreen",
+        "elements": ["Phone input", "Send OTP"]
+      },
+      {
+        "name": "OTPVerificationScreen",
+        "elements": ["OTP input", "Verify button"]
+      },
+      {
+        "name": "ProfileSetupScreen",
+        "elements": ["Upload Photo", "Username", "City Select"]
+      }
+    ],
+
+    "main_screens": [
+      {
+        "name": "SwipeFeedScreen",
+        "elements": [
+          "Swipeable card",
+          "Item photo",
+          "Title",
+          "Owner username",
+          "Looking for field",
+          "Swipe left/right gestures"
+        ]
+      },
+      {
+        "name": "UploadItemScreen",
+        "elements": [
+          "Photo uploader",
+          "Title input",
+          "Description input",
+          "Category selector",
+          "Condition picker",
+          "Looking_for input",
+          "Post item button"
+        ]
+      },
+      {
+        "name": "MatchListScreen",
+        "elements": [
+          "List of users matched",
+          "Item thumbnails",
+          "Tap to open chat"
+        ]
+      },
+      {
+        "name": "ChatScreen",
+        "elements": [
+          "Message list",
+          "Text input",
+          "Send button"
+        ]
+      },
+      {
+        "name": "ProfileScreen",
+        "elements": [
+          "Profile photo",
+          "Username",
+          "City",
+          "My items",
+          "Edit profile"
+        ]
+      }
+    ]
+  },
+
+  "api_endpoints": {
+    "auth": [
+      "POST /auth/send-otp",
+      "POST /auth/verify-otp"
+    ],
+    "profile": [
+      "GET /profile/me",
+      "PUT /profile/update"
+    ],
+    "items": [
+      "POST /items",
+      "GET /items/feed",
+      "GET /items/:id",
+      "PUT /items/:id",
+      "DELETE /items/:id"
+    ],
+    "swipes": [
+      "POST /swipes"
+    ],
+    "matches": [
+      "GET /matches",
+      "GET /matches/:id"
+    ],
+    "chat": [
+      "GET /messages/:match_id",
+      "POST /messages"
+    ],
+    "moderation": [
+      "POST /report",
+      "POST /block"
+    ]
+  },
+
+  "city_filtering": {
+    "method": "city stored in profile",
+    "rules": [
+      "Swipe feed only shows items from user.city",
+      "User can change city in profile settings"
+    ]
+  },
+
+  "notifications": {
+    "triggered_on": [
+      "new_match",
+      "new_message"
+    ],
+    "type": "push_notifications"
+  },
+
+  "mvp_constraints": {
+    "exclude": [
+      "payments",
+      "delivery system",
+      "rating system",
+      "reviews",
+      "multi-item bundles",
+      "image moderation (optional future)",
+      "AI-based matching",
+      "filters beyond city/category"
+    ],
+    "focus": [
+      "Swipe experience",
+      "Matching",
+      "Chat",
+      "Fast item posting"
+    ]
+  },
+
+  "future_features": [
+    "Ratings & trust system",
+    "Delivery partners",
+    "Boost my item",
+    "AI item classification",
+    "AI matching suggestions",
+    "Search",
+    "Nearby map view",
+    "Premium membership"
+  ]
+}

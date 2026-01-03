@@ -1,0 +1,228 @@
+{
+  "app_flow": {
+    "welcome_screen": {
+      "title": "Discover. Trade. Book. All in One Swipe.",
+      "subtitle": "Find great deals, book trusted artisans, or swap items effortlessly — all with a single swipe.",
+      "bullets": [
+        "Shop: Buy and sell locally with ease",
+        "Services: Book trusted artisans instantly",
+        "Swap: Trade items the smart way"
+      ],
+      "cta": "Start Exploring",
+      "note": "No account needed to browse."
+    },
+    "discover_page": {
+      "tabs": ["Shop", "Services", "Swap"],
+      "browsing_mode": "preview_allowed",
+      "allowed_without_login": [
+        "swipe_left",
+        "browse_listings",
+        "switch_tabs",
+        "view_details",
+        "use_filters"
+      ],
+      "login_required_for": [
+        "swipe_right",
+        "buy_request",
+        "book_artisan",
+        "swap_request",
+        "send_message",
+        "upload_item",
+        "view_matches"
+      ],
+      "login_prompt_behavior": {
+        "title": "Sign In to Continue",
+        "subtitle": "Already have an account? Sign in to continue.",
+        "methods": ["phone_otp", "google", "email"],
+        "signup_option": "Create Account link available for new users",
+        "after_login": "return_to_previous_action"
+      }
+    },
+    "upload_flow": {
+      "pre_upload_profile": {
+        "trigger": "first_time_upload",
+        "fields": ["profile_photo", "username_auto", "city_auto", "short_bio_optional"]
+      },
+      "instant_upload": {
+        "steps": [
+          "snap_or_upload_photo",
+          "add_title",
+          "set_price",
+          "select_category",
+          "optional_description"
+        ],
+        "publish_behavior": "go_live_instantly"
+      }
+    },
+    "artisan_onboarding": {
+      "trigger": "become_artisan_button",
+      "fields": [
+        "profile_photo",
+        "service_category",
+        "starting_price",
+        "city",
+        "work_photos",
+        "short_bio",
+        "availability"
+      ],
+      "output": "artisan_profile_card"
+    }
+  },
+    "matching_model": {
+      "description": "Matching is now item-to-item specific. A match is created only when User A swipes right on User B's item AND explicitly selects the item they are offering in return. User B must then swipe right on that specific offered item for the match to form.",
+      "user_action_right_swipe": {
+        "endpoint": "POST /swipes",
+        "payload": {
+          "target_item_id": "item_b_id",
+          "offered_item_id": "item_a_id",
+          "direction": "right"
+        },
+        "flow": [
+          "User A swipes right on Item B.",
+          "App shows a modal: 'Which of your items do you want to offer for this?'",
+          "User selects one item they want to trade.",
+          "Swipe is stored with both item IDs.",
+          "Backend checks if User B previously swiped right on the offered_item_id.",
+          "If reciprocal swipe exists → create match."
+        ]
+      },
+      "reciprocal_check": {
+        "condition": "Match is created only if target_user has a right-swipe where target_item_id = offered_item_id AND offered_item_id = target_item_id.",
+        "query_logic": {
+          "from_user_id": "user_b",
+          "target_item_id": "item_a_id",
+          "offered_item_id": "item_b_id",
+          "direction": "right"
+        }
+      },
+      "match_creation": {
+        "model": "UserMatch",
+        "fields": {
+          "id": "uuid",
+          "user1_id": "lower_uuid",
+          "user2_id": "higher_uuid",
+          "item1_id": "uuid_of_user1_item",
+          "item2_id": "uuid_of_user2_item",
+          "created_at": "timestamp"
+        },
+        "flow": [
+          "When reciprocal swipe is detected, backend creates a UserMatch.",
+          "One match per unique item pair.",
+          "Multiple offers between same users do NOT create separate chats."
+        ]
+      },
+      "conversation_model": {
+        "description": "To avoid clutter, there is ONE chat per user pair, not per item match.",
+        "model": "UserConversation",
+        "fields": {
+          "id": "uuid",
+          "user1_id": "uuid",
+          "user2_id": "uuid",
+          "created_at": "timestamp"
+        },
+        "notes": [
+          "Every UserMatch is linked to the existing conversation.",
+          "Chat UI can display 'trade cards' inside the conversation for each matched pair."
+        ]
+      }
+    },
+  
+    "trade_offer_flow": {
+      "description": "A trade offer replaces the old 'match request'. User A's right swipe becomes a formal offer: 'I offer A1 for your B1.'",
+      "offer_model": {
+        "name": "TradeOffer",
+        "fields": {
+          "id": "uuid",
+          "from_user_id": "user_a",
+          "to_user_id": "user_b",
+          "offered_item_id": "item_a_id",
+          "target_item_id": "item_b_id",
+          "status": "pending | accepted | declined",
+          "created_at": "timestamp"
+        }
+      },
+      "creation_flow": [
+        "User A performs a right swipe and selects offered_item_id.",
+        "Create TradeOffer with status = 'pending'.",
+        "This offer appears in User B's request list."
+      ]
+    },
+  
+    "pending_request_flow": {
+      "endpoint": "GET /trade-offers/pending",
+      "description": "Returns grouped trade offers (not multiple items per swipe).",
+      "response_structure": {
+        "offers": [
+          {
+            "id": "offer_id",
+            "from_user": {
+              "id": "user_id",
+              "username": "string",
+              "photo": "url",
+              "city": "string"
+            },
+            "target_item": {
+              "id": "item_b_id",
+              "title": "string",
+              "photo": "url"
+            },
+            "offered_item": {
+              "id": "item_a_id",
+              "title": "string",
+              "photo": "url"
+            },
+            "status": "pending",
+            "created_at": "timestamp"
+          }
+        ]
+      },
+      "optimized_rules": [
+        "Requests are grouped by trade-offer, not swipe.",
+        "One TradeOffer per item-pair.",
+        "Only shows offers where to_user_id = current_user.",
+        "Eliminates duplicate requests."
+      ]
+    },
+  
+    "respond_to_request_flow": {
+      "endpoint": "POST /trade-offers/{id}/respond",
+      "payload": {
+        "decision": "accept | decline"
+      },
+      "logic": {
+        "accept": [
+          "System creates/uses existing swipe where User B right-swipes offered_item.",
+          "Reciprocal check runs again.",
+          "If both sides liked each other's specific items → create UserMatch.",
+          "Add match card to conversation."
+        ],
+        "decline": [
+          "Set TradeOffer.status = 'declined'.",
+          "Do not create swipe record.",
+          "Item is removed from pending list."
+        ]
+      }
+    },
+  
+    "swipe_model": {
+      "description": "Left/Right swipe with explicit offered item for right swipes.",
+      "fields": {
+        "id": "uuid",
+        "from_user_id": "uuid",
+        "target_item_id": "uuid",
+        "offered_item_id": "uuid or null (null when left swipe)",
+        "direction": "left | right",
+        "created_at": "timestamp"
+      }
+    },
+  
+    "match_modal_flow": {
+      "on_match_created": [
+        "Return match_created: true",
+        "Return match_id",
+        "Frontend shows match modal with both items displayed.",
+        "User can: 'Start Chat' or 'Keep Swiping'"
+      ]
+    }
+  }
+  

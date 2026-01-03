@@ -1,0 +1,12 @@
+{
+    "agents": [
+        "codex",
+        "cursor"
+    ],
+    "editors": [
+        "codex",
+        "cursor"
+    ],
+    "guidelines": [],
+    "herd_mcp": true
+}

@@ -1,0 +1,299 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Nyem - Your Local Marketplace</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Connect with your community to buy, sell, trade items, and find trusted artisans. Swipe through local listings and discover great deals, services, and swap opportunities in your city." />
+    <meta name="theme-color" content="#880e4f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Nyem" />
+    
+    <!-- iOS Safari PWA Support -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/icon-72x72.png" />
+    <link rel="apple-touch-icon" sizes="96x96" href="/icon-96x96.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/icon-128x128.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="384x384" href="/icon-384x384.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icon-512x512.png" />
+    
+    <!-- Android Chrome PWA Support -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+    
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/favicon.ico" />
+    
+    <!-- Tailwind CSS - Load synchronously for critical styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Use font-display: swap for non-blocking font loading -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"></noscript>
+    <!-- Google Identity Services - Load asynchronously, not needed for first render -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#fdf2f7',   // Lightest tint for backgrounds
+                100: '#fce7f0',  // Very light - subtle backgrounds
+                200: '#f9c3d9',  // Light - hover backgrounds
+                300: '#f299bc',  // Medium light
+                400: '#e8619a',  // Medium
+                500: '#880e4f',  // DEFAULT - deep burgundy from screenshot
+                DEFAULT: '#880e4f',
+                600: '#751043',  // Slightly darker
+                700: '#5c0d35',  // Dark for gradients
+                800: '#4a0a2a',  // Darker
+                900: '#3d0823',  // Darkest
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      :root {
+        /* Safe area insets for iOS devices */
+        --safe-area-inset-top: env(safe-area-inset-top, 0px);
+        --safe-area-inset-right: env(safe-area-inset-right, 0px);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-inset-left: env(safe-area-inset-left, 0px);
+      }
+
+      * {
+        /* Improve touch responsiveness */
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+      }
+
+      html {
+        /* Prevent browser UI from showing on drag */
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        /* Prevent pull-to-refresh and overscroll */
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+        background-color: #1a1a1a;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', sans-serif;
+        /* Dark background for better app view focus */
+        background-color: #1a1a1a;
+        /* Prevent browser UI from showing on drag */
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        /* Prevent pull-to-refresh on mobile */
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+        /* Prevent text selection on mobile for better UX */
+        -webkit-user-select: none;
+        user-select: none;
+        /* Prevent zoom on double tap */
+        touch-action: pan-x pan-y;
+      }
+      
+      /* Dark background for desktop only */
+      @media (min-width: 768px) {
+        body {
+          background-color: #1a1a1a;
+        }
+      }
+
+      /* Allow text selection in input fields and text areas */
+      input, textarea, [contenteditable] {
+        -webkit-user-select: text;
+        user-select: text;
+      }
+
+      /* Hide scrollbar for clean mobile look */
+      ::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+      }
+
+      /* Utility class to hide scrollbar while maintaining scroll functionality */
+      .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;  /* Chrome, Safari and Opera */
+      }
+
+      /* Safe area bottom padding utility */
+      .pb-safe-bottom {
+        padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));
+      }
+
+      .safe-area-bottom {
+        padding-bottom: var(--safe-area-inset-bottom);
+      }
+
+      /* Bottom nav safe area extension - extends footer bg into home indicator area */
+      .footer-safe-bottom {
+        padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));
+        margin-bottom: calc(-1 * var(--safe-area-inset-bottom));
+      }
+
+      /* For white footer - extends white background into safe area */
+      .footer-safe-bottom-white {
+        padding-bottom: calc(0.75rem + var(--safe-area-inset-bottom));
+        margin-bottom: calc(-1 * var(--safe-area-inset-bottom));
+        background-color: white !important;
+        /* Ensure background extends all the way down */
+        background-clip: padding-box;
+        /* Ensure content is not clipped */
+        overflow: visible;
+        /* Compact height for icon + text */
+        height: calc(56px + var(--safe-area-inset-bottom));
+        /* Prevent footer from shifting - sticky positioning */
+        position: sticky;
+        bottom: 0;
+        /* Ensure footer stays on top */
+        z-index: 50;
+        /* Prevent any layout shifts during scroll */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        /* Smooth rendering */
+        backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
+      }
+
+      .safe-area-container {
+        /* Remove top padding - headers will handle their own safe areas */
+        padding-left: var(--safe-area-inset-left);
+        padding-right: var(--safe-area-inset-right);
+        padding-top: 0;
+        /* Extend background to cover bottom safe area */
+        background-color: white !important;
+        /* Ensure full height coverage including safe areas - extend into bottom safe area */
+        height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+        min-height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+        /* Extend beyond viewport to cover safe area at bottom */
+        margin-bottom: 0;
+        padding-bottom: 0;
+        /* Ensure container respects safe areas */
+        margin-top: 0;
+        /* Ensure background extends all the way down */
+        background-clip: padding-box;
+      }
+
+      /* Header safe area extension - extends header bg into notch area */
+      .header-safe-top {
+        padding-top: calc(var(--safe-area-inset-top) + 1rem);
+        margin-top: calc(-1 * var(--safe-area-inset-top));
+      }
+
+      /* For brand-colored headers */
+      .header-safe-top-brand {
+        padding-top: calc(var(--safe-area-inset-top) + 1rem);
+        margin-top: calc(-1 * var(--safe-area-inset-top));
+        background-color: #880e4f !important;
+      }
+
+      /* For white headers - extends into notch (for auth pages) */
+      .header-safe-top-white {
+        padding-top: calc(var(--safe-area-inset-top) + 1rem);
+        margin-top: calc(-1 * var(--safe-area-inset-top));
+        background-color: white !important;
+      }
+
+      /* App header - starts below notch with proper spacing like native iOS apps */
+      .app-header-safe {
+        /* Safe area inset (accounts for notch) + spacing for header content */
+        /* On devices with notch: safe-area-inset-top is ~44-47px (includes status bar) */
+        /* We add 12px (0.75rem) for comfortable spacing below status bar content */
+        padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+        /* Ensure minimum spacing on devices without notch */
+        padding-top: max(calc(env(safe-area-inset-top, 0px) + 0.75rem), 0.75rem);
+        /* No negative margin - content starts below notch/status bar */
+      }
+      
+      /* Fallback using CSS custom property if env() not supported */
+      @supports not (padding: env(safe-area-inset-top)) {
+        .app-header-safe {
+          padding-top: calc(var(--safe-area-inset-top) + 0.75rem);
+        }
+      }
+
+      /* Touch-friendly button interactions */
+      .touch-manipulation {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      #root {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #1a1a1a !important;
+        /* Ensure root covers entire viewport including safe areas - extend into bottom safe area */
+        height: calc(100vh + env(safe-area-inset-bottom, 0px));
+        height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+        min-height: calc(100vh + env(safe-area-inset-bottom, 0px));
+        min-height: calc(100dvh + env(safe-area-inset-bottom, 0px));
+      }
+
+      /* Smooth scrolling */
+      * {
+        scroll-behavior: smooth;
+      }
+
+      /* Prevent footer shift during scroll in PWA */
+      @supports (position: sticky) {
+        .footer-safe-bottom-white {
+          /* Ensure sticky positioning works correctly */
+          position: -webkit-sticky;
+          position: sticky;
+        }
+      }
+
+      /* Prevent layout shift when scrolling */
+      [data-scrollable] {
+        /* Use hardware acceleration for smooth scrolling */
+        transform: translateZ(0);
+        -webkit-transform: translateZ(0);
+        /* Prevent scroll bounce that might affect footer */
+        overscroll-behavior-y: contain;
+      }
+
+      /* Better focus styles for accessibility */
+      button:focus-visible,
+      a:focus-visible {
+        outline: 2px solid #880e4f;
+        outline-offset: 2px;
+      }
+    </style>
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
