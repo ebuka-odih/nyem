@@ -31,7 +31,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   
   const [currentImg, setCurrentImg] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
+  const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
+  const isHorizontalDragRef = useRef(false);
 
   React.useEffect(() => {
     if (isTop) {
@@ -56,35 +57,55 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   }, [isTop, index, triggerDirection, controls, onSwipe]);
 
   // Fix: info is typed as any because PanInfo is not exported in this environment
-  const handleDragStart = () => {
+  const handleDragStart = (_: any, info: any) => {
     if (!isTop) return;
-    isDraggingRef.current = true;
-    // Disable scrolling when dragging starts
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.style.overflow = 'hidden';
-    }
+    dragStartPointRef.current = { x: info.point.x, y: info.point.y };
+    isHorizontalDragRef.current = false;
   };
 
   const handleDrag = (_: any, info: any) => {
-    if (!isTop) return;
-    // Update x and y values during drag
-    x.set(info.offset.x);
-    y.set(info.offset.y);
+    if (!isTop || !dragStartPointRef.current) return;
+    
+    const deltaX = Math.abs(info.point.x - dragStartPointRef.current.x);
+    const deltaY = Math.abs(info.point.y - dragStartPointRef.current.y);
+    
+    // Only consider it a horizontal drag if horizontal movement is significantly more than vertical
+    // This prevents scroll from triggering card drag
+    if (deltaX > 10 && deltaX > deltaY * 1.5) {
+      isHorizontalDragRef.current = true;
+      // Only disable scrolling if it's clearly a horizontal drag
+      if (scrollContainerRef.current && !scrollContainerRef.current.style.overflow.includes('hidden')) {
+        scrollContainerRef.current.style.overflow = 'hidden';
+        scrollContainerRef.current.style.touchAction = 'none';
+      }
+    }
+    
+    // Only update x if it's a horizontal drag
+    if (isHorizontalDragRef.current) {
+      x.set(info.offset.x);
+    }
   };
 
   const handleDragEnd = (_: any, info: any) => {
     if (!isTop) return;
-    isDraggingRef.current = false;
     
-    // Re-enable scrolling
+    // Always re-enable scrolling
     if (scrollContainerRef.current) {
       scrollContainerRef.current.style.overflow = 'auto';
+      scrollContainerRef.current.style.touchAction = 'auto';
+    }
+
+    // Only trigger swipe if it was a horizontal drag
+    if (!isHorizontalDragRef.current) {
+      dragStartPointRef.current = null;
+      isHorizontalDragRef.current = false;
+      controls.start({ x: 0, y: 0, rotate: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
+      return;
     }
 
     const absX = Math.abs(info.offset.x);
     const velocityX = Math.abs(info.velocity.x);
 
-    // Only allow horizontal swipes (left/right), not up swipe
     // Check for right swipe
     if ((absX > 100 && info.offset.x > 0) || (velocityX > 500 && info.offset.x > 0)) {
       controls.start({ x: 800, opacity: 0, transition: { duration: 0.3 } }).then(() => {
@@ -105,6 +126,9 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
     else {
       controls.start({ x: 0, y: 0, rotate: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
     }
+    
+    dragStartPointRef.current = null;
+    isHorizontalDragRef.current = false;
   };
 
   const nextImage = (e: React.MouseEvent) => {
@@ -133,10 +157,11 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
       }}
       drag={isTop ? "x" : false}
       dragElastic={0.2}
+      dragConstraints={{ left: -300, right: 300 }}
       onDragStart={handleDragStart}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
-      className={`${isTop ? 'cursor-grab active:cursor-grabbing touch-none' : 'pointer-events-none'}`}
+      className={`${isTop ? 'cursor-grab active:cursor-grabbing' : 'pointer-events-none'}`}
     >
       <div className="relative w-full h-full bg-white rounded-[2.2rem] shadow-[0_10px_30px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col border border-neutral-100/50">
         
@@ -144,12 +169,6 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
         <div 
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto no-scrollbar pb-40"
-          onTouchMove={(e) => {
-            // Prevent scrolling when dragging horizontally
-            if (isDraggingRef.current) {
-              e.preventDefault();
-            }
-          }}
         >
           {/* Main Image Section */}
           <div className="relative w-full aspect-[4/5] bg-neutral-100 group overflow-hidden">
