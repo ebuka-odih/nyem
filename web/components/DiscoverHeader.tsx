@@ -15,7 +15,7 @@ interface DiscoverHeaderProps {
 export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({ 
   onFilter, onLocation, onWishlist, activeCategory, setActiveTab, activeTab, wishlistCount 
 }) => (
-  <header className="shrink-0 z-[100] bg-white pt-2.5 pb-2 px-5 sm:px-8 border-b border-neutral-100">
+  <header className="shrink-0 z-[100] bg-white pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-2 px-5 sm:px-8 border-b border-neutral-100">
     <div className="max-w-4xl mx-auto flex flex-col gap-2.5">
       {/* Brand Logo Area - Balanced and spaced */}
       <div className="flex items-center gap-3">

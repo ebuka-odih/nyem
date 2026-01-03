@@ -15,7 +15,7 @@ export const ForgotPasswordPage: React.FC<ForgotPasswordPageProps> = ({ onBack, 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
-      className="flex flex-col px-8 pt-8 pb-12 w-full h-full overflow-y-auto no-scrollbar max-w-[768px] mx-auto"
+      className="flex flex-col px-8 pt-[calc(env(safe-area-inset-top,0px)+32px)] pb-12 w-full h-full overflow-y-auto no-scrollbar max-w-[768px] mx-auto"
     >
       <button 
         onClick={onBack}

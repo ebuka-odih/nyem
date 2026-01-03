@@ -138,7 +138,7 @@ export const OtpVerificationPage: React.FC<OtpVerificationPageProps> = ({ email,
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="flex flex-col px-8 pt-8 pb-12 w-full h-full overflow-y-auto no-scrollbar max-w-[768px] mx-auto"
+      className="flex flex-col px-8 pt-[calc(env(safe-area-inset-top,0px)+32px)] pb-12 w-full h-full overflow-y-auto no-scrollbar max-w-[768px] mx-auto"
     >
       <button 
         onClick={onBack}

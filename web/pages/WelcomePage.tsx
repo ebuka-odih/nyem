@@ -66,7 +66,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="relative w-full h-full bg-white flex flex-col items-center px-8 pt-12 pb-12 overflow-y-auto no-scrollbar"
+      className="relative w-full h-full bg-white flex flex-col items-center px-8 pt-[calc(env(safe-area-inset-top,0px)+48px)] pb-12 overflow-y-auto no-scrollbar"
     >
       {/* Branding Section */}
       <motion.div variants={itemVariants} className="flex flex-col items-center text-center mb-8 w-full">

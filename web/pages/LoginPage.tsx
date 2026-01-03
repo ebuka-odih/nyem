@@ -76,7 +76,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="flex flex-col px-8 pt-12 pb-12 w-full h-full overflow-y-auto no-scrollbar max-w-[768px] mx-auto"
+      className="flex flex-col px-8 pt-[calc(env(safe-area-inset-top,0px)+48px)] pb-12 w-full h-full overflow-y-auto no-scrollbar max-w-[768px] mx-auto"
     >
       <div className="flex flex-col items-center text-center mb-10">
         <div className="w-12 h-12 bg-[#830e4c] rounded-full flex items-center justify-center text-white shadow-xl mb-6">
