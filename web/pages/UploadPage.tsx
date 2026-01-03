@@ -331,14 +331,14 @@ export const UploadPage: React.FC = () => {
       <div className="flex bg-neutral-100 p-1 rounded-3xl shrink-0">
         <button 
           onClick={() => setActiveTab('collection')}
-          className={`relative flex-1 py-3.5 flex items-center justify-center gap-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'collection' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-400 hover:text-neutral-600'}`}
+          className={`relative flex-1 py-3.5 flex items-center justify-center gap-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'collection' ? 'bg-white text-[#830e4c] shadow-md' : 'text-neutral-400 hover:text-neutral-600'}`}
         >
           <LayoutGrid size={16} strokeWidth={activeTab === 'collection' ? 3 : 2} />
           Your Collection
         </button>
         <button 
           onClick={() => { setActiveTab('new'); if (!editingItem) resetForm(); }}
-          className={`relative flex-1 py-3.5 flex items-center justify-center gap-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'new' ? 'bg-white text-neutral-900 shadow-md' : 'text-neutral-400 hover:text-neutral-600'}`}
+          className={`relative flex-1 py-3.5 flex items-center justify-center gap-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'new' ? 'bg-white text-[#830e4c] shadow-md' : 'text-neutral-400 hover:text-neutral-600'}`}
         >
           <PlusSquare size={16} strokeWidth={activeTab === 'new' ? 3 : 2} />
           {editingItem ? 'Edit Drop' : 'New Drop'}
@@ -357,10 +357,10 @@ export const UploadPage: React.FC = () => {
           >
             <button 
               onClick={() => setActiveTab('new')}
-              className="aspect-square bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-neutral-400 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group shadow-sm"
+              className="aspect-square bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-neutral-400 hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all group shadow-sm"
             >
               <div className="p-4 bg-white rounded-3xl shadow-sm border border-neutral-100 group-hover:scale-110 group-hover:rotate-90 transition-all duration-500">
-                <Plus size={28} className="text-neutral-400 group-hover:text-indigo-600" strokeWidth={3} />
+                <Plus size={28} className="text-neutral-400 group-hover:text-[#830e4c]" strokeWidth={3} />
               </div>
               <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Add New Drop</span>
             </button>
@@ -421,7 +421,7 @@ export const UploadPage: React.FC = () => {
           >
             {/* Context Header */}
             {editingItem && (
-              <div className="flex items-center justify-between bg-neutral-900 rounded-[2rem] p-5 shadow-xl border border-white/10 shrink-0">
+              <div className="flex items-center justify-between bg-[#830e4c] rounded-[2rem] p-5 shadow-xl border border-white/10 shrink-0">
                 <div className="flex items-center gap-4 overflow-hidden">
                   {editingItem.photos && editingItem.photos.length > 0 && (
                     <img 
@@ -435,7 +435,7 @@ export const UploadPage: React.FC = () => {
                     />
                   )}
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-black text-indigo-400 uppercase tracking-[0.2em]">Editing Drop</span>
+                    <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em]">Editing Drop</span>
                     <h4 className="text-white text-xs font-black uppercase truncate tracking-tight">{editingItem.title}</h4>
                   </div>
                 </div>
@@ -473,7 +473,7 @@ export const UploadPage: React.FC = () => {
                 {images.length < 4 && (
                   <button 
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all active:scale-95 group shadow-sm"
+                    className="aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm"
                   >
                     <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
                   </button>
@@ -500,7 +500,7 @@ export const UploadPage: React.FC = () => {
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g., iPhone 15 Pro Max" 
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/5 transition-all shadow-sm placeholder:text-neutral-200"
+                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200"
                 />
               </div>
 
@@ -512,7 +512,7 @@ export const UploadPage: React.FC = () => {
                   onChange={(e) => setDesc(e.target.value)}
                   placeholder="Tell buyers why they need this..." 
                   rows={4}
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-medium text-neutral-900 focus:outline-none focus:border-neutral-900 focus:ring-4 focus:ring-neutral-900/5 transition-all shadow-sm placeholder:text-neutral-200 resize-none"
+                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-medium text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200 resize-none"
                 />
               </div>
 
@@ -524,7 +524,7 @@ export const UploadPage: React.FC = () => {
                   disabled={loadingCategories}
                   className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 flex items-center justify-between text-left transition-all hover:bg-neutral-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className={`text-[11px] font-black uppercase tracking-widest ${selectedCategory ? 'text-neutral-900' : 'text-neutral-300'}`}>
+                  <span className={`text-[11px] font-black uppercase tracking-widest ${selectedCategory ? 'text-[#830e4c]' : 'text-neutral-300'}`}>
                     {loadingCategories ? 'Loading...' : (selectedCategory?.name || "Select Category")}
                   </span>
                   <ChevronDown size={18} className={`text-neutral-400 transition-transform ${showCategoryList ? 'rotate-180' : ''}`} />
@@ -561,7 +561,7 @@ export const UploadPage: React.FC = () => {
                   onClick={() => { setShowConditionList(!showConditionList); setShowCategoryList(false); }}
                   className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 flex items-center justify-between text-left transition-all hover:bg-neutral-50 shadow-sm"
                 >
-                  <span className={`text-[11px] font-black uppercase tracking-widest ${selectedCondition ? 'text-neutral-900' : 'text-neutral-300'}`}>
+                  <span className={`text-[11px] font-black uppercase tracking-widest ${selectedCondition ? 'text-[#830e4c]' : 'text-neutral-300'}`}>
                     {selectedCondition ? conditions.find(c => c.value === selectedCondition)?.label : "Item Condition"}
                   </span>
                   <ChevronDown size={18} className={`text-neutral-400 transition-transform ${showConditionList ? 'rotate-180' : ''}`} />
