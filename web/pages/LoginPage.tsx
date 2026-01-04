@@ -17,6 +17,43 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Request and store user location after login
+  const requestAndStoreLocation = async (token: string) => {
+    if (!navigator.geolocation) {
+      console.warn('Geolocation is not supported by your browser');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          // Update user location on server
+          await apiFetch(ENDPOINTS.location.update, {
+            method: 'POST',
+            token,
+            body: {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            },
+          });
+          console.log('Location stored successfully');
+        } catch (err: any) {
+          // Don't block login flow if location storage fails
+          console.error('Failed to store location:', err);
+        }
+      },
+      (error) => {
+        // User denied location or error occurred - don't block login
+        console.warn('Location permission denied or error:', error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
   const handleLogin = async (e?: React.MouseEvent) => {
     e?.preventDefault();
     setError(null);
@@ -60,6 +97,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
 
       storeToken(token);
       storeUser(user);
+
+      // Request location permission and store location (non-blocking)
+      requestAndStoreLocation(token);
 
       // Call onLogin callback to update parent state
       onLogin();

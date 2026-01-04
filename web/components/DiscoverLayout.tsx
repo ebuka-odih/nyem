@@ -29,7 +29,7 @@ export const DiscoverLayout: React.FC<DiscoverLayoutProps> = ({
       <div className="w-full max-w-full sm:max-w-[768px] h-full flex flex-col relative bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)] pb-0">
         <DiscoverHeader {...headerProps} />
         
-        <main className="flex-1 relative overflow-hidden flex flex-col">
+        <main className="flex-1 relative overflow-hidden flex flex-col min-h-0">
           {/* Constrain the swiping area to mobile width even on iPad view to keep card UX "untouched" */}
           <div className="flex-1 relative w-full max-w-[400px] md:max-w-[480px] lg:max-w-[520px] mx-auto px-2 flex flex-col">
             {children}
@@ -44,7 +44,7 @@ export const DiscoverLayout: React.FC<DiscoverLayoutProps> = ({
           )}
         </main>
 
-        <div className="shrink-0 z-[130] w-full">
+        <div className="shrink-0 z-[130] w-full mt-auto">
           {bottomNav}
         </div>
       </div>

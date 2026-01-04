@@ -272,11 +272,13 @@ const App = () => {
     if (isChatOpen) return null;
 
     return (
-      <nav className="w-full bg-white border-t border-neutral-100 px-4 py-2.5 flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.03)]" style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+      <nav className="w-full bg-white border-t border-neutral-100 px-4 py-2.5 flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.03)]" style={{ paddingBottom: `calc(10px + env(safe-area-inset-bottom, 0px))` }}>
         {(['discover', 'upload', 'matches', 'profile'] as const).map((page) => {
           const isActive = activePage === page;
           const icons = { discover: Compass, upload: PlusCircle, matches: MessageSquare, profile: User };
+          const labels = { discover: 'discover', upload: 'New Listing', matches: 'matches', profile: 'profile' };
           const Icon = icons[page];
+          const label = labels[page];
           const isProtected = page !== 'discover';
 
           return (
@@ -296,7 +298,7 @@ const App = () => {
               className={`flex flex-col items-center gap-1 transition-all duration-300 relative min-w-[70px] ${isActive ? 'text-[#830e4c]' : 'text-neutral-400'}`}
             >
               <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[9px] font-black uppercase tracking-widest leading-none">{page}</span>
+              <span className="text-[9px] font-black uppercase tracking-widest leading-none">{label}</span>
               {isActive && <motion.div layoutId="navIndicator" className="absolute -bottom-2 w-1.5 h-1.5 rounded-full bg-[#830e4c]" />}
             </button>
           );

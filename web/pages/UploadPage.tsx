@@ -3,9 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Plus, 
-  ChevronDown, 
   X, 
-  ShieldCheck, 
   Edit3, 
   Trash2, 
   ImageIcon, 
@@ -49,9 +47,7 @@ export const UploadPage: React.FC = () => {
   const [title, setTitle] = useState("");
   const [desc, setDesc] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
-  const [showCategoryList, setShowCategoryList] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState("");
-  const [showConditionList, setShowConditionList] = useState(false);
   const [price, setPrice] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -312,8 +308,6 @@ export const UploadPage: React.FC = () => {
     }
   };
 
-  const selectedCategory = categories.find(c => c.id === selectedCategoryId);
-
   return (
     <motion.div 
       initial={{ opacity: 0 }} 
@@ -517,78 +511,38 @@ export const UploadPage: React.FC = () => {
               </div>
 
               {/* 3. Category */}
-              <div className="space-y-2 relative">
+              <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Category</label>
-                <button 
-                  onClick={() => { setShowCategoryList(!showCategoryList); setShowConditionList(false); }}
+                <select 
+                  value={selectedCategoryId === '' ? '' : String(selectedCategoryId)}
+                  onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : '')}
                   disabled={loadingCategories}
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 flex items-center justify-between text-left transition-all hover:bg-neutral-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <span className={`text-[11px] font-black uppercase tracking-widest ${selectedCategory ? 'text-[#830e4c]' : 'text-neutral-300'}`}>
-                    {loadingCategories ? 'Loading...' : (selectedCategory?.name || "Select Category")}
-                  </span>
-                  <ChevronDown size={18} className={`text-neutral-400 transition-transform ${showCategoryList ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {showCategoryList && !loadingCategories && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }} 
-                      animate={{ opacity: 1, y: 0 }} 
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute z-50 bottom-full left-0 right-0 mb-2 bg-white border border-neutral-200 rounded-[1.5rem] shadow-2xl max-h-60 overflow-y-auto p-3"
-                    >
-                      {categories.map((cat) => (
-                        <button
-                          key={cat.id}
-                          onClick={() => { setSelectedCategoryId(cat.id); setShowCategoryList(false); }}
-                          className="w-full text-left px-4 py-3.5 rounded-xl hover:bg-neutral-50 transition-colors group"
-                        >
-                          <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest">{cat.name}</span>
-                        </button>
-                      ))}
-                      {categories.length === 0 && (
-                        <div className="px-4 py-3.5 text-sm text-neutral-400">No categories available</div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  <option value="">Select Category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* 4. Condition */}
-              <div className="space-y-2 relative">
+              <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Condition</label>
-                <button 
-                  onClick={() => { setShowConditionList(!showConditionList); setShowCategoryList(false); }}
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 flex items-center justify-between text-left transition-all hover:bg-neutral-50 shadow-sm"
+                <select 
+                  value={selectedCondition}
+                  onChange={(e) => setSelectedCondition(e.target.value)}
+                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm"
                 >
-                  <span className={`text-[11px] font-black uppercase tracking-widest ${selectedCondition ? 'text-[#830e4c]' : 'text-neutral-300'}`}>
-                    {selectedCondition ? conditions.find(c => c.value === selectedCondition)?.label : "Item Condition"}
-                  </span>
-                  <ChevronDown size={18} className={`text-neutral-400 transition-transform ${showConditionList ? 'rotate-180' : ''}`} />
-                </button>
-                <AnimatePresence>
-                  {showConditionList && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }} 
-                      animate={{ opacity: 1, y: 0 }} 
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute z-50 bottom-full left-0 right-0 mb-2 bg-white border border-neutral-200 rounded-[1.5rem] shadow-2xl p-3"
-                    >
-                      {conditions.map((cond) => (
-                        <button
-                          key={cond.value}
-                          onClick={() => { setSelectedCondition(cond.value); setShowConditionList(false); }}
-                          className="w-full text-left px-4 py-4 rounded-xl hover:bg-neutral-50 flex items-center gap-4 transition-colors group"
-                        >
-                          <div className="p-2 bg-neutral-50 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                            <ShieldCheck size={16} />
-                          </div>
-                          <span className="text-[10px] font-black text-neutral-800 uppercase tracking-widest">{cond.label}</span>
-                        </button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                  <option value="">Item Condition</option>
+                  {conditions.map((cond) => (
+                    <option key={cond.value} value={cond.value}>
+                      {cond.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* 5. Price */}

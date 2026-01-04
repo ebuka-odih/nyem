@@ -43,14 +43,14 @@ export const GeneralLayout: React.FC<GeneralLayoutProps> = ({
           </div>
         </header>
 
-        <main className="flex-1 relative overflow-hidden flex flex-col">
+        <main className="flex-1 relative overflow-hidden flex flex-col min-h-0">
           {/* Constrain the content to mobile width even on iPad view to keep card UX "untouched" */}
           <div className="flex-1 relative w-full max-w-[400px] md:max-w-[480px] lg:max-w-[520px] mx-auto px-2 flex flex-col overflow-y-auto no-scrollbar pt-4 pb-0">
             {children}
           </div>
         </main>
 
-        <div className="shrink-0 z-[130] w-full">
+        <div className="shrink-0 z-[130] w-full mt-auto">
           {bottomNav}
         </div>
       </div>
