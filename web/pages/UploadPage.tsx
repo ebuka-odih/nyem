@@ -84,13 +84,22 @@ export const UploadPage: React.FC = () => {
     try {
       setLoadingCategories(true);
       const token = getStoredToken();
-      const response = await apiFetch<{ categories: Category[] }>(ENDPOINTS.categories, { token });
+      // Only fetch marketplace categories (Shop parent category)
+      const categoriesUrl = `${ENDPOINTS.categories}?parent=${encodeURIComponent('Shop')}`;
+      console.log('[UploadPage] Fetching marketplace categories from:', categoriesUrl);
+      const response = await apiFetch<{ categories: Category[] }>(categoriesUrl, { token });
+      console.log('[UploadPage] Categories response:', response);
       if (response.categories) {
+        console.log('[UploadPage] Setting categories:', response.categories.length, 'items');
         setCategories(response.categories);
+      } else {
+        console.warn('[UploadPage] No categories in response');
+        setCategories([]);
       }
     } catch (err) {
       console.error('Failed to fetch categories:', err);
       setError('Failed to load categories. Please refresh the page.');
+      setCategories([]);
     } finally {
       setLoadingCategories(false);
     }

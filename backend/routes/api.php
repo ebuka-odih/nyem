@@ -2,8 +2,9 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BuyRequestController;
-use App\Http\Controllers\CategoryLocationController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\GeographicController;
 use App\Http\Controllers\ImageUploadController;
 use App\Http\Controllers\ListingController;
 use App\Http\Controllers\LocationController;
@@ -25,12 +26,14 @@ Route::get('/', function () {
     return response()->json(['message' => 'Nyem API']);
 });
 
-// Public endpoints for categories and locations
-Route::get('/categories', [CategoryLocationController::class, 'categories']);
-Route::get('/locations', [CategoryLocationController::class, 'locations']); // Backward compatibility - returns cities
-Route::get('/locations/cities', [CategoryLocationController::class, 'cities']);
-Route::get('/locations/cities/{cityId}/areas', [CategoryLocationController::class, 'areas']);
-Route::get('/locations/areas', [CategoryLocationController::class, 'areas']); // Alternative: ?city_id=123
+// Public endpoints for categories
+Route::get('/categories', [CategoryController::class, 'index']);
+
+// Public endpoints for geographic reference data (cities, areas)
+Route::get('/locations', [GeographicController::class, 'locations']); // Backward compatibility - returns cities
+Route::get('/locations/cities', [GeographicController::class, 'cities']);
+Route::get('/locations/cities/{cityId}/areas', [GeographicController::class, 'areas']);
+Route::get('/locations/areas', [GeographicController::class, 'areas']); // Alternative: ?city_id=123
 
 // Public endpoint for username availability check
 Route::post('/profile/check-username', [ProfileController::class, 'checkUsername']);
