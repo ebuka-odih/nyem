@@ -47,6 +47,7 @@ import { ENDPOINTS } from './constants/endpoints';
 import { AuthLayout } from './components/AuthLayout';
 import { DiscoverLayout } from './components/DiscoverLayout';
 import { GeneralLayout } from './components/GeneralLayout';
+import { BottomNav } from './components/BottomNav';
 
 type AuthState = 'welcome' | 'login' | 'register' | 'otp' | 'forgot' | 'authenticated' | 'discover';
 
@@ -268,44 +269,6 @@ const App = () => {
   const hasValidToken = localStorage.getItem('auth_token') !== null;
   const isAuthenticated = authState === 'authenticated' && hasValidToken;
 
-  const renderBottomNav = () => {
-    if (isChatOpen) return null;
-
-    return (
-      <nav className="w-full bg-white border-t border-neutral-100 px-4 py-2.5 flex items-center justify-around shadow-[0_-8px_30px_rgba(0,0,0,0.03)]" style={{ paddingBottom: `calc(10px + env(safe-area-inset-bottom, 0px))` }}>
-        {(['discover', 'upload', 'matches', 'profile'] as const).map((page) => {
-          const isActive = activePage === page;
-          const icons = { discover: Compass, upload: PlusCircle, matches: MessageSquare, profile: User };
-          const labels = { discover: 'discover', upload: 'New Listing', matches: 'matches', profile: 'profile' };
-          const Icon = icons[page];
-          const label = labels[page];
-          const isProtected = page !== 'discover';
-
-          return (
-            <button
-              key={page}
-              onClick={() => {
-                if (isProtected && !hasValidToken) {
-                  // Show login prompt for protected pages
-                  setAuthState('login');
-                } else {
-                  setActivePage(page);
-                  if (authState === 'discover' && hasValidToken) {
-                    setAuthState('authenticated');
-                  }
-                }
-              }}
-              className={`flex flex-col items-center gap-1 transition-all duration-300 relative min-w-[70px] ${isActive ? 'text-[#830e4c]' : 'text-neutral-400'}`}
-            >
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[9px] font-black uppercase tracking-widest leading-none">{label}</span>
-              {isActive && <motion.div layoutId="navIndicator" className="absolute -bottom-2 w-1.5 h-1.5 rounded-full bg-[#830e4c]" />}
-            </button>
-          );
-        })}
-      </nav>
-    );
-  };
 
   // Show auth pages (welcome, login, register, etc.)
   if (authState === 'welcome' || authState === 'login' || authState === 'register' || authState === 'otp' || authState === 'forgot') {
@@ -425,7 +388,15 @@ const App = () => {
             activeTab,
             wishlistCount: likedItems.length
           }}
-          bottomNav={renderBottomNav()}
+          bottomNav={
+            <BottomNav
+              activePage={activePage}
+              setActivePage={setActivePage}
+              authState={authState}
+              setAuthState={setAuthState}
+              isChatOpen={isChatOpen}
+            />
+          }
           floatingControls={activeTab === 'marketplace' && items.length > 0 ? (
             <SwipeControls
               onUndo={undoLast}
@@ -683,7 +654,15 @@ const App = () => {
         <GeneralLayout
           title={pageTitles[activePage]}
           rightAction={rightActions[activePage]}
-          bottomNav={renderBottomNav()}
+          bottomNav={
+            <BottomNav
+              activePage={activePage}
+              setActivePage={setActivePage}
+              authState={authState}
+              setAuthState={setAuthState}
+              isChatOpen={isChatOpen}
+            />
+          }
         >
           <LoginPrompt
             onLogin={() => setAuthState('login')}
@@ -711,7 +690,15 @@ const App = () => {
       <GeneralLayout
         title={pageTitles[activePage]}
         rightAction={rightActions[activePage]}
-        bottomNav={renderBottomNav()}
+        bottomNav={
+          <BottomNav
+            activePage={activePage}
+            setActivePage={setActivePage}
+            authState={authState}
+            setAuthState={setAuthState}
+            isChatOpen={isChatOpen}
+          />
+        }
       >
         {activePage === 'upload' ? (
           <UploadPage />
