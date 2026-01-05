@@ -271,10 +271,13 @@ const App = () => {
       distance = listing.distance_display.toUpperCase();
     }
 
-    // Format vendor location - user object has 'city' and 'area' from ListingResource
-    const vendorLocation = user.city || listing.city || 'Unknown';
-    const vendorArea = user.area;
-    const fullLocation = vendorArea ? `${vendorLocation}, ${vendorArea}` : vendorLocation;
+    // Format vendor location - prioritize owner.location (formatted "Area, City") from ListingResource
+    // Fallback to constructing from user.area and user.city if owner.location is not available
+    const fullLocation = listing.owner?.location 
+      ? listing.owner.location 
+      : (user.area 
+          ? `${user.area}, ${user.city || listing.city || 'Unknown'}` 
+          : (user.city || listing.city || 'Unknown'));
 
     return {
       id: listing.id,
@@ -812,7 +815,8 @@ const App = () => {
                             <div className="flex items-center gap-1 text-neutral-400">
                               <MapPin size={10} strokeWidth={3} />
                               <span className="text-[10px] font-black uppercase tracking-tight">
-                                {selectedProduct.distance} {selectedProduct.vendor.location.split(',')[0]}
+                                {selectedProduct.distance !== 'Unknown' && selectedProduct.distance !== 'UNKNOWN' ? `${selectedProduct.distance} ` : ''}
+                                {selectedProduct.vendor.location}
                               </span>
                             </div>
                           </div>

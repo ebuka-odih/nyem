@@ -41,7 +41,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
   const likes = item.likes ?? 0;
   const shares = item.shares ?? 0;
 
-  // Format location display: "Wuse, Abuja [icon] 20km Away" or just "Abuja"
+  // Format location display: "2.1km Wuse, Abuja" or just "Wuse, Abuja" or "Abuja"
   const formatLocation = () => {
     const location = item.owner.location || '';
     const distance = item.owner.distance && item.owner.distance !== 'Unknown' ? item.owner.distance : null;
@@ -52,9 +52,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
     if (distance) {
       return (
         <>
+          <span>{distance} </span>
           <span>{cleanLocation}</span>
-          <MapPin size={9} className="mx-1 shrink-0 text-gray-400" />
-          <span>{distance} Away</span>
         </>
       );
     } else {

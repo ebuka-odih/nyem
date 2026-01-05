@@ -357,7 +357,22 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
                 );
                 return isGeneratedAvatar ? generateInitialsAvatar(userName) : profilePhoto;
               })(),
-              location: item.city || item.user?.city || item.owner?.location || 'Unknown',
+              location: (() => {
+                // Priority: owner.location (formatted "City, Area") > user.area + user.city > user.city > item.city
+                if (item.owner?.location && item.owner.location !== 'Unknown') {
+                  return item.owner.location;
+                }
+                if (item.user?.area && item.user?.city) {
+                  return `${item.user.city}, ${item.user.area}`;
+                }
+                if (item.user?.city) {
+                  return item.user.city;
+                }
+                if (item.city) {
+                  return item.city;
+                }
+                return 'Unknown';
+              })(),
               distance: (() => {
                 const distanceKm = item.distance_km ?? item.distance;
                 if (distanceKm !== null && distanceKm !== undefined) {

@@ -144,7 +144,8 @@ class ListingResource extends JsonResource
     }
 
     /**
-     * Format user location as "City, Area" or just "City"
+     * Format user location as "Area, City" or just "City"
+     * Example: "Wuse, Abuja" or just "Abuja" if no area
      */
     private function formatUserLocation(): string
     {
@@ -156,7 +157,7 @@ class ListingResource extends JsonResource
             : null;
         
         if ($area) {
-            return "{$city}, {$area}";
+            return "{$area}, {$city}";
         }
         
         return $city;

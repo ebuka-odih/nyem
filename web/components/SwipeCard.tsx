@@ -284,7 +284,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
               <div className="flex items-center gap-2">
                 <MapPin size={16} className="text-[#830e4c]" />
                 <p className="text-lg font-black text-neutral-900 tracking-tight">
-                  {product.distance} {product.vendor.location.split(',')[0]}
+                  {product.distance !== 'Unknown' && product.distance !== 'UNKNOWN' ? `${product.distance} ` : ''}
+                  {product.vendor.location}
                 </p>
               </div>
             </div>
