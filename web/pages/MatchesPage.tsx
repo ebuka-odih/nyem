@@ -171,6 +171,35 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     }
   };
 
+  const showBrowserNotification = (title: string, message: string) => {
+    if (!('Notification' in window)) {
+      console.warn('Browser does not support notifications');
+      return;
+    }
+
+    if (Notification.permission === 'granted') {
+      new Notification(title, {
+        body: message,
+        icon: '/icon-192x192.png',
+        badge: '/icon-72x72.png',
+        tag: 'nyem-test-notification',
+        requireInteraction: false,
+      });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then((permission) => {
+        if (permission === 'granted') {
+          new Notification(title, {
+            body: message,
+            icon: '/icon-192x192.png',
+            badge: '/icon-72x72.png',
+            tag: 'nyem-test-notification',
+            requireInteraction: false,
+          });
+        }
+      });
+    }
+  };
+
   const handleTestNotification = async () => {
     try {
       setIsSendingTestNotification(true);
@@ -193,7 +222,10 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
         });
 
         if (response.success) {
-          alert('✅ Test notification sent successfully! Check your device.');
+          // Show browser notification immediately so user can see it
+          showBrowserNotification('Test Notification', 'This is a test notification from Nyem! 🎉');
+          // Also show alert as backup
+          alert('✅ Test notification sent successfully! Check your device for the browser notification.');
           return;
         } else {
           // If it failed for a reason other than missing player ID, show error
@@ -242,6 +274,9 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
       });
 
       if (response.success) {
+        // Show browser notification immediately
+        showBrowserNotification('Test Notification', 'This is a test notification from Nyem! 🎉');
+        // Also show alert as backup
         alert('✅ Test notification sent successfully! Check your device.');
       } else {
         alert(`❌ Failed to send notification: ${response.message || 'Unknown error'}`);
