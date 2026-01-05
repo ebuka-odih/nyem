@@ -1,8 +1,8 @@
 // Service Worker for Nyem PWA
 // Import OneSignal service worker first (must be before other imports)
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
-// Import PushAlert service worker
-importScripts("https://cdn.pushalert.co/sw-86989.js");
+// Import PushAlert service worker - COMMENTED OUT FOR TESTING
+// importScripts("https://cdn.pushalert.co/sw-86989.js");
 
 // Versioned cache names for easy updates
 const STATIC_CACHE = 'nyem-static-v2';
