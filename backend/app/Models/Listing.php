@@ -103,11 +103,15 @@ class Listing extends Model
         'status',
         'type',
         'price',
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [
         'photos' => 'array',
         'price' => 'decimal:2',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
     ];
 
     public function user()

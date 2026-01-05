@@ -367,6 +367,31 @@ class ProfileController extends Controller
                 'areaLocation' => $user->areaLocation ? $user->areaLocation->name : null,
             ]);
             
+            // Capture coordinates from area or city location if user doesn't have GPS coordinates
+            // Priority: Keep existing GPS if available, otherwise use area coordinates, then city coordinates
+            if (!$user->hasLocation()) {
+                $location = null;
+                if ($user->area_id && $user->areaLocation) {
+                    $location = $user->areaLocation;
+                } elseif ($user->city_id && $user->cityLocation) {
+                    $location = $user->cityLocation;
+                }
+                
+                if ($location && $location->latitude && $location->longitude) {
+                    $user->latitude = $location->latitude;
+                    $user->longitude = $location->longitude;
+                    $user->location_updated_at = now();
+                    $user->save();
+                    Log::info('Profile update: Set user coordinates from location', [
+                        'user_id' => $user->id,
+                        'location_type' => $location->type,
+                        'location_name' => $location->name,
+                        'latitude' => $user->latitude,
+                        'longitude' => $user->longitude,
+                    ]);
+                }
+            }
+            
             // Update city string field from relationship for backward compatibility
             // Always sync city field when city_id is set
             // IMPORTANT: Preserve area_id during this save

@@ -20,6 +20,8 @@ class Location extends Model
         'is_popular',
         'sort_order',
         'order', // Keep for backward compatibility
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [
@@ -27,6 +29,8 @@ class Location extends Model
         'is_popular' => 'boolean',
         'sort_order' => 'integer',
         'order' => 'integer',
+        'latitude' => 'decimal:7',
+        'longitude' => 'decimal:7',
     ];
 
     /**

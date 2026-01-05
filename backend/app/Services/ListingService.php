@@ -44,12 +44,33 @@ class ListingService
             throw new \Exception('Verify your account to upload more listings. You can upload up to 2 listings without verification.', 403);
         }
 
+        // Get coordinates from seller's area or city location
+        $latitude = null;
+        $longitude = null;
+        
+        // Priority: User's GPS coordinates > Area coordinates > City coordinates
+        if ($user->hasLocation()) {
+            $latitude = $user->latitude;
+            $longitude = $user->longitude;
+        } else {
+            $user->load(['areaLocation', 'cityLocation']);
+            if ($user->area_id && $user->areaLocation && $user->areaLocation->latitude && $user->areaLocation->longitude) {
+                $latitude = $user->areaLocation->latitude;
+                $longitude = $user->areaLocation->longitude;
+            } elseif ($user->city_id && $user->cityLocation && $user->cityLocation->latitude && $user->cityLocation->longitude) {
+                $latitude = $user->cityLocation->latitude;
+                $longitude = $user->cityLocation->longitude;
+            }
+        }
+
         $listing = Listing::create([
             ...$data,
             'type' => $type,
             'user_id' => $user->id,
             'city' => $data['city'] ?? $user->city,
             'status' => Listing::STATUS_ACTIVE,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
         ]);
 
         $listing->load(['user.cityLocation', 'user.areaLocation']);
@@ -186,6 +207,9 @@ class ListingService
             }
         }
 
+        // Note: Distance filtering will be done after fetching to avoid complex joins
+        // that might break existing functionality. We'll calculate distances in memory.
+
         try {
             $listings = $query->get();
         } catch (\Exception $e) {
@@ -198,10 +222,31 @@ class ListingService
                 ->get();
         }
 
-        // Calculate distances and sort if user has location
+        // Calculate distances and filter by distance if user has location
+        // Priority: Use item coordinates > seller's user coordinates
         if ($user && $user->hasLocation()) {
+            $maxDistanceKm = 100; // Default 100km radius, can be made configurable
+            
             $listings = $listings->map(function ($listing) use ($user) {
-                if ($listing->user && $listing->user->hasLocation()) {
+                $distanceKm = null;
+                
+                // Priority 1: Use item's own coordinates if available
+                if ($listing->latitude && $listing->longitude) {
+                    try {
+                        $distanceKm = $this->locationService->calculateDistance(
+                            $user->latitude,
+                            $user->longitude,
+                            $listing->latitude,
+                            $listing->longitude,
+                            'km'
+                        );
+                    } catch (\Exception $e) {
+                        \Log::warning('Distance calculation failed for listing ' . $listing->id . ' using item coordinates: ' . $e->getMessage());
+                    }
+                }
+                
+                // Priority 2: Fall back to seller's user coordinates if item has no coordinates
+                if ($distanceKm === null && $listing->user && $listing->user->hasLocation()) {
                     try {
                         $distanceKm = $this->locationService->calculateDistance(
                             $user->latitude,
@@ -210,16 +255,23 @@ class ListingService
                             $listing->user->longitude,
                             'km'
                         );
-                        $listing->distance_km = $distanceKm;
                     } catch (\Exception $e) {
-                        \Log::warning('Distance calculation failed for listing ' . $listing->id . ': ' . $e->getMessage());
-                        $listing->distance_km = null;
+                        \Log::warning('Distance calculation failed for listing ' . $listing->id . ' using seller coordinates: ' . $e->getMessage());
                     }
-                } else {
-                    $listing->distance_km = null;
                 }
+                
+                $listing->distance_km = $distanceKm;
                 return $listing;
-            })->sortByDesc('created_at')->values();
+            })
+            // Filter out listings beyond max distance (keep null distances for now)
+            ->filter(function ($listing) use ($maxDistanceKm) {
+                return $listing->distance_km === null || $listing->distance_km <= $maxDistanceKm;
+            })
+            // Sort by distance (closest first), then by created_at (newest first)
+            ->sortBy(function ($listing) {
+                return [$listing->distance_km ?? 999999, -$listing->created_at->timestamp];
+            })
+            ->values();
         }
 
         return $listings;
