@@ -1,4 +1,7 @@
 // Service Worker for Nyem PWA
+// Import PushAlert service worker
+importScripts("https://cdn.pushalert.co/sw-86989.js");
+
 // Versioned cache names for easy updates
 const STATIC_CACHE = 'nyem-static-v2';
 const RUNTIME_CACHE = 'nyem-runtime-v2';
