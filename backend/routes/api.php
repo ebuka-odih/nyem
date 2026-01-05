@@ -19,6 +19,7 @@ use App\Http\Controllers\SwipeController;
 use App\Http\Controllers\TradeOfferController;
 use App\Http\Controllers\TestModelController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\NotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -142,4 +143,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Test Model endpoints (for testing Laravel Boost MCP)
     Route::apiResource('test-models', TestModelController::class);
+
+    // Notification endpoints
+    Route::prefix('notifications')->group(function () {
+        Route::post('/test', [NotificationController::class, 'sendTestNotification']);
+        Route::post('/test/me', [NotificationController::class, 'sendToMe']);
+    });
 });

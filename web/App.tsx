@@ -76,10 +76,10 @@ const App = () => {
   const [authState, setAuthState] = useState<AuthState>(() => {
     const token = localStorage.getItem('auth_token');
     const user = localStorage.getItem('auth_user');
-    // If we have both token and user, assume authenticated (optimistic)
-    // We'll validate it in the background
+    // If we have both token and user, set to 'discover' (same as after login)
+    // We'll validate the token in the background
     if (token && user) {
-      return 'authenticated';
+      return 'discover';
     }
     return 'welcome';
   });
@@ -123,8 +123,8 @@ const App = () => {
           const { ENDPOINTS } = await import('./constants/endpoints');
           const response = await apiFetch(ENDPOINTS.profile.me, { token });
           if (response.user || response.data?.user) {
-            // Token is valid, ensure we're in authenticated state
-            setAuthState('authenticated');
+            // Token is valid, ensure we're in discover state (same as after login)
+            setAuthState('discover');
           } else {
             // Token invalid, clear it and redirect to welcome
             localStorage.removeItem('auth_token');
@@ -174,14 +174,15 @@ const App = () => {
             const errorType = isServerError ? 'server error' : (isNetworkError ? 'network error' : 'unknown error');
             console.warn(`[App] Token validation failed (${errorType}), keeping auth state. Error:`, errorMessage);
             // Keep the user logged in - don't clear token or change auth state
-            // The authState should remain 'authenticated' from the initial state
+            // The authState should remain 'discover' from the initial state
           }
         }
       };
       validateToken();
     } else {
       // No token found, ensure we're in welcome state
-      if (authState === 'authenticated') {
+      // If we're in an authenticated state (discover or authenticated) but no token, reset to welcome
+      if (authState === 'authenticated' || authState === 'discover') {
         setAuthState('welcome');
       }
     }
