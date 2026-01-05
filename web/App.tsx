@@ -72,7 +72,17 @@ const App = () => {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'services' | 'barter'>('marketplace');
   const [activePage, setActivePage] = useState<'discover' | 'upload' | 'matches' | 'profile'>('discover');
 
-  const [authState, setAuthState] = useState<AuthState>('welcome');
+  // Initialize authState from localStorage synchronously to prevent showing login on refresh
+  const [authState, setAuthState] = useState<AuthState>(() => {
+    const token = localStorage.getItem('auth_token');
+    const user = localStorage.getItem('auth_user');
+    // If we have both token and user, assume authenticated (optimistic)
+    // We'll validate it in the background
+    if (token && user) {
+      return 'authenticated';
+    }
+    return 'welcome';
+  });
   const [tempUserEmail, setTempUserEmail] = useState("");
   const [tempRegisterData, setTempRegisterData] = useState<{ name: string; password: string } | null>(null);
   const [forceProfileSettings, setForceProfileSettings] = useState(0);
@@ -101,7 +111,7 @@ const App = () => {
     }
   };
 
-  // Check for existing auth token on mount
+  // Validate existing auth token on mount (runs in background)
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     const user = localStorage.getItem('auth_user');
@@ -113,19 +123,28 @@ const App = () => {
           const { ENDPOINTS } = await import('./constants/endpoints');
           const response = await apiFetch(ENDPOINTS.profile.me, { token });
           if (response.user || response.data?.user) {
+            // Token is valid, ensure we're in authenticated state
             setAuthState('authenticated');
           } else {
-            // Token invalid, clear it
+            // Token invalid, clear it and redirect to welcome
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_user');
+            setAuthState('welcome');
           }
         } catch (error) {
-          // Token invalid, clear it
+          // Token invalid, clear it and redirect to welcome
+          console.warn('[App] Token validation failed, clearing auth state:', error);
           localStorage.removeItem('auth_token');
           localStorage.removeItem('auth_user');
+          setAuthState('welcome');
         }
       };
       validateToken();
+    } else {
+      // No token found, ensure we're in welcome state
+      if (authState === 'authenticated') {
+        setAuthState('welcome');
+      }
     }
   }, []);
 
