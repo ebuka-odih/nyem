@@ -26,13 +26,28 @@ export const ServiceProviderCard: React.FC<ServiceProviderCardProps> = ({
   const primaryImage = workImages[0] || item.image || 'https://via.placeholder.com/800';
   const hasMultipleImages = workImages.length > 1;
 
-  // Format price
-  const priceDisplay = item.price || item.starting_price
-    ? `₦${typeof (item.price || item.starting_price) === 'string' 
-        ? parseFloat((item.price || item.starting_price).toString().replace(/,/g, ''))
-        : (item.price || item.starting_price)
-      }`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-    : 'Price on request';
+  // Format price with thousand separators
+  const priceDisplay = (() => {
+    const priceValue = item.price || item.starting_price;
+    if (!priceValue) return 'Price on request';
+    
+    // If it's already a string with commas, use it as is (backend formatted)
+    if (typeof priceValue === 'string' && priceValue.includes(',')) {
+      return priceValue.includes('₦') ? priceValue : `₦${priceValue}`;
+    }
+    
+    // If it's a string without commas, parse and format it
+    if (typeof priceValue === 'string') {
+      const numValue = parseFloat(priceValue.replace(/[₦,]/g, ''));
+      if (!isNaN(numValue)) {
+        return `₦${numValue.toLocaleString('en-US')}`;
+      }
+      return `₦${priceValue}`;
+    }
+    
+    // If it's a number, format it with commas
+    return `₦${priceValue.toLocaleString('en-US')}`;
+  })();
 
   // Availability badge
   const availability = item.availability || 'available';

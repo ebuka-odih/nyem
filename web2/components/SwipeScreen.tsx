@@ -329,11 +329,27 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
               ? (item.description || item.bio || '')
               : (item.description || ''),
             lookingFor: item.looking_for || item.lookingFor || '',
-            price: item.price || item.starting_price 
-              ? (typeof (item.price || item.starting_price) === 'string' 
-                  ? `₦${item.price || item.starting_price}` 
-                  : `₦${item.price || item.starting_price}`) 
-              : undefined,
+            price: (() => {
+              const priceValue = item.price || item.starting_price;
+              if (!priceValue) return undefined;
+              
+              // If it's already a string with commas, use it as is (backend formatted)
+              if (typeof priceValue === 'string' && priceValue.includes(',')) {
+                return priceValue.includes('₦') ? priceValue : `₦${priceValue}`;
+              }
+              
+              // If it's a string without commas, parse and format it
+              if (typeof priceValue === 'string') {
+                const numValue = parseFloat(priceValue.replace(/[₦,]/g, ''));
+                if (!isNaN(numValue)) {
+                  return `₦${numValue.toLocaleString('en-US')}`;
+                }
+                return `₦${priceValue}`;
+              }
+              
+              // If it's a number, format it with commas
+              return `₦${priceValue.toLocaleString('en-US')}`;
+            })(),
             category: item.category || item.serviceCategory?.name || undefined,
             owner: {
               id: item.user?.id || item.owner?.id,

@@ -246,15 +246,21 @@ const App = () => {
     // Format price - ListingResource formats price with commas for marketplace type
     let price = 'Price on request';
     if (listing.price) {
-      // Price might already be formatted with commas from backend, or might be a number
-      const priceValue = typeof listing.price === 'string' 
-        ? listing.price.replace(/,/g, '') 
-        : listing.price;
-      // Format with commas for display
-      const formattedPrice = typeof priceValue === 'number' 
-        ? priceValue.toLocaleString('en-US')
-        : priceValue;
-      price = `₦${formattedPrice}`;
+      // If it's already a string with commas, use it as is (backend formatted)
+      if (typeof listing.price === 'string' && listing.price.includes(',')) {
+        price = listing.price.includes('₦') ? listing.price : `₦${listing.price}`;
+      } else {
+        // If it's a string without commas, parse and format it
+        const priceValue = typeof listing.price === 'string' 
+          ? parseFloat(listing.price.replace(/[₦,]/g, ''))
+          : listing.price;
+        // Format with commas for display
+        if (!isNaN(priceValue)) {
+          price = `₦${priceValue.toLocaleString('en-US')}`;
+        } else {
+          price = `₦${listing.price}`;
+        }
+      }
     } else if (listing.looking_for) {
       price = 'Trade';
     }
@@ -293,7 +299,7 @@ const App = () => {
         name: user.username || user.name || 'Unknown Seller',
         avatar: user.profile_photo || user.image || 'https://i.pravatar.cc/150?u=default',
         location: fullLocation,
-        rating: 4.5, // Default rating if not available
+        rating: 0, // No default rating - show 0 if user has no reviews
         reviewCount: 0,
         followers: 0,
         joinedDate: '2024',

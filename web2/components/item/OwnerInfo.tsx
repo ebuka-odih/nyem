@@ -17,8 +17,8 @@ interface OwnerInfoProps {
 
 export const OwnerInfo: React.FC<OwnerInfoProps> = ({
   owner,
-  rating = 4.9,
-  reviewCount = 12
+  rating = 0,
+  reviewCount = 0
 }) => {
   return (
     <div>
@@ -78,9 +78,9 @@ export const OwnerInfo: React.FC<OwnerInfoProps> = ({
         <div className="text-right">
           <div className="flex items-center text-yellow-500 font-bold text-sm">
             <Star size={14} fill="currentColor" className="mr-1" />
-            {rating}
+            {rating > 0 ? rating.toFixed(1) : '0.0'}
           </div>
-          <span className="text-xs text-gray-400">{reviewCount} Reviews</span>
+          <span className="text-xs text-gray-400">{reviewCount} {reviewCount === 1 ? 'Review' : 'Reviews'}</span>
         </div>
       </div>
     </div>

@@ -51,7 +51,15 @@ export const ItemCard: React.FC<ItemCardProps> = ({
             <h3 className="font-bold text-gray-900 text-sm truncate mb-1">{item.title}</h3>
             {item.price && (
               <p className="text-xs text-gray-600 font-semibold">
-                ₦{item.price.toLocaleString()}
+                {(() => {
+                  // If it's already a string with commas, use it as is
+                  if (typeof item.price === 'string' && item.price.includes(',')) {
+                    return item.price.includes('₦') ? item.price : `₦${item.price}`;
+                  }
+                  // If it's a number or string without commas, format it
+                  const numValue = typeof item.price === 'number' ? item.price : parseFloat(String(item.price).replace(/[₦,]/g, ''));
+                  return isNaN(numValue) ? `₦${item.price}` : `₦${numValue.toLocaleString('en-US')}`;
+                })()}
               </p>
             )}
             {item.type && (
