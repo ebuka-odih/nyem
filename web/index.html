@@ -46,12 +46,28 @@
           console.log('Service Worker registered successfully:', registration.scope);
           // Store registration globally for PushAlert
           window.serviceWorkerRegistration = registration;
+          
+          // Also make it available via navigator.serviceWorker.ready for PushAlert compatibility
+          // PushAlert may try to access it via navigator.serviceWorker.getRegistration()
+          navigator.serviceWorker.ready.then(function(reg) {
+            console.log('Service Worker ready:', reg.scope);
+          });
+          
           return registration;
         })
         .catch(function(error) {
           console.warn('Service Worker registration failed:', error);
           return null;
         });
+      
+      // Also expose via getRegistration for PushAlert
+      navigator.serviceWorker.getRegistration().then(function(registration) {
+        if (registration) {
+          window.serviceWorkerRegistration = registration;
+        }
+      }).catch(function() {
+        // Ignore errors
+      });
     }
   </script>
   
@@ -78,7 +94,7 @@
   </script>
   
   <!-- PushAlert Unified Code -->
-  <!-- Load PushAlert after service worker registration -->
+  <!-- Load PushAlert after service worker is ready -->
   <script type="text/javascript">
     (function() {
       var loadPushAlert = function() {
@@ -89,20 +105,44 @@
         s.parentNode.insertBefore(g, s);
       };
       
-      // Wait for service worker registration if it exists
-      if (window.serviceWorkerRegistrationPromise) {
-        window.serviceWorkerRegistrationPromise.then(function(registration) {
-          if (registration) {
-            // Wait a bit for service worker to be fully ready
-            setTimeout(loadPushAlert, 300);
-          } else {
-            // Registration failed, still try to load PushAlert
-            setTimeout(loadPushAlert, 500);
-          }
-        }).catch(function() {
-          // If promise fails, still try to load PushAlert
-          setTimeout(loadPushAlert, 500);
-        });
+      // Wait for service worker to be ready before loading PushAlert
+      if ('serviceWorker' in navigator) {
+        // Wait for service worker registration promise
+        if (window.serviceWorkerRegistrationPromise) {
+          window.serviceWorkerRegistrationPromise.then(function(registration) {
+            if (registration) {
+              // Wait for service worker to be ready (active state)
+              return navigator.serviceWorker.ready.then(function(reg) {
+                console.log('Service Worker ready for PushAlert:', reg.scope);
+                // Additional delay to ensure service worker is fully initialized
+                setTimeout(loadPushAlert, 500);
+                return reg;
+              });
+            } else {
+              // Registration failed, still try to load PushAlert
+              setTimeout(loadPushAlert, 1000);
+            }
+          }).catch(function(error) {
+            console.warn('Service Worker registration error:', error);
+            // If promise fails, still try to load PushAlert after delay
+            setTimeout(loadPushAlert, 1000);
+          });
+        } else {
+          // No promise yet, wait a bit and try to get registration
+          setTimeout(function() {
+            navigator.serviceWorker.getRegistration().then(function(registration) {
+              if (registration) {
+                window.serviceWorkerRegistration = registration;
+                setTimeout(loadPushAlert, 500);
+              } else {
+                // No registration found, load PushAlert anyway
+                setTimeout(loadPushAlert, 1000);
+              }
+            }).catch(function() {
+              setTimeout(loadPushAlert, 1000);
+            });
+          }, 1000);
+        }
       } else {
         // No service worker support, load PushAlert anyway
         setTimeout(loadPushAlert, 500);

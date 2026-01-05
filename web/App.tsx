@@ -131,12 +131,51 @@ const App = () => {
             localStorage.removeItem('auth_user');
             setAuthState('welcome');
           }
-        } catch (error) {
-          // Token invalid, clear it and redirect to welcome
-          console.warn('[App] Token validation failed, clearing auth state:', error);
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('auth_user');
-          setAuthState('welcome');
+        } catch (error: any) {
+          // Check if this is an authentication error (401, 403) vs server/network error
+          const errorMessage = error?.message || String(error || '');
+          
+          // Explicitly check for authentication errors
+          const isAuthError = 
+            errorMessage.includes('401') || 
+            errorMessage.includes('403') ||
+            errorMessage.includes('Unauthorized') ||
+            errorMessage.includes('Unauthenticated') ||
+            errorMessage.includes('Invalid credentials');
+          
+          // Explicitly check for server errors (500, 502, 503, 504, etc.)
+          const isServerError = 
+            errorMessage.includes('500') ||
+            errorMessage.includes('502') ||
+            errorMessage.includes('503') ||
+            errorMessage.includes('504') ||
+            errorMessage.includes('Server error') ||
+            errorMessage.includes('Internal Server Error') ||
+            errorMessage.includes('Service temporarily unavailable');
+          
+          // Check if it's a network error (shouldn't clear token)
+          const isNetworkError = 
+            errorMessage.includes('Network error') ||
+            errorMessage.includes('Cannot connect') ||
+            errorMessage.includes('Failed to fetch') ||
+            errorMessage.includes('Cannot reach API') ||
+            error?.name === 'TypeError';
+          
+          // Only clear token on authentication errors, not server errors or network errors
+          if (isAuthError && !isServerError && !isNetworkError) {
+            // Token invalid, clear it and redirect to welcome
+            console.warn('[App] Token validation failed (auth error), clearing auth state:', errorMessage);
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+            setAuthState('welcome');
+          } else {
+            // Server error (500, 503, etc.) or network error - keep token, just log warning
+            // The token might still be valid, it's just the server having issues or network problems
+            const errorType = isServerError ? 'server error' : (isNetworkError ? 'network error' : 'unknown error');
+            console.warn(`[App] Token validation failed (${errorType}), keeping auth state. Error:`, errorMessage);
+            // Keep the user logged in - don't clear token or change auth state
+            // The authState should remain 'authenticated' from the initial state
+          }
         }
       };
       validateToken();
