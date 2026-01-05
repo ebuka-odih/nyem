@@ -26,14 +26,19 @@ class CategorySeeder extends Seeder
         // Sub-categories organized by main category (keyed by lowercase main category name)
         $subCategories = [
             'Shop' => [
+                'Electronics',
+                'Accessories',
                 'Fashion & Clothing',
                 'Wigs & Hair',
-                'Beauty & Perfume',
+                'Beauty & Care',
                 'Phones & Gadgets',
-                'Home & Lifestyle',
                 'Shoes & Bags',
                 'Baby & Kids',
                 'Food & Groceries',
+                'Garden & Outdoor',
+                'Household',
+                'Books & Media',
+                'Sports',
             ],
             'Services' => [
                 'Plumbing',
