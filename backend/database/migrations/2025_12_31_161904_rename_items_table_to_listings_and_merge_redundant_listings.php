@@ -10,48 +10,26 @@ return new class extends Migration
     /**
      * Run the migrations.
      * 
-     * Consolidates Item model into Listing model:
-     * 1. Drops redundant listings table (empty)
-     * 2. Renames items table to listings
-     * 3. Converts enum fields to string (for MySQL/PostgreSQL)
-     * 4. Renames all item_id columns to listing_id across related tables
-     * 5. Renames item_stats table to listing_stats
+     * Updates schema to use Listing model:
+     * 1. Renames all item_id columns to listing_id across related tables
+     * 2. Renames item_stats table to listing_stats (if it exists)
+     * 
+     * Note: Listings table is kept as a separate table, items table is not renamed.
      */
     public function up(): void
     {
         $driverName = DB::getDriverName();
         
-        // Step 1: Drop redundant listings table (empty)
-        Schema::dropIfExists('listings');
-        
-        // Step 2: Rename items table to listings
-        if ($driverName === 'sqlite') {
-            DB::statement('ALTER TABLE items RENAME TO listings');
-        } else {
-            DB::statement('RENAME TABLE items TO listings');
-        }
-        
-        // Step 3: Convert enum fields to string (for MySQL/PostgreSQL only, SQLite stores as text anyway)
-        if ($driverName !== 'sqlite') {
-            if (Schema::hasColumn('listings', 'condition')) {
-                DB::statement('ALTER TABLE listings MODIFY COLUMN `condition` VARCHAR(255) NOT NULL');
-            }
-            if (Schema::hasColumn('listings', 'status')) {
-                DB::statement('ALTER TABLE listings MODIFY COLUMN `status` VARCHAR(255) NOT NULL DEFAULT "active"');
-            }
-            if (Schema::hasColumn('listings', 'type')) {
-                DB::statement('ALTER TABLE listings MODIFY COLUMN `type` VARCHAR(255) NOT NULL DEFAULT "barter"');
-            }
-        }
-        
-        // Step 4: Rename foreign key columns in related tables
+        // Step 1: Rename foreign key columns in related tables
         $this->renameForeignKeyColumns($driverName);
         
-        // Step 5: Rename item_stats table to listing_stats
-        if ($driverName === 'sqlite') {
-            DB::statement('ALTER TABLE item_stats RENAME TO listing_stats');
-        } else {
-            DB::statement('RENAME TABLE item_stats TO listing_stats');
+        // Step 2: Rename item_stats table to listing_stats (if it exists)
+        if (Schema::hasTable('item_stats')) {
+            if ($driverName === 'sqlite') {
+                DB::statement('ALTER TABLE item_stats RENAME TO listing_stats');
+            } else {
+                DB::statement('RENAME TABLE item_stats TO listing_stats');
+            }
         }
     }
 
@@ -169,26 +147,18 @@ return new class extends Migration
     {
         $driverName = DB::getDriverName();
         
-        // Reverse Step 5: Rename listing_stats back to item_stats
-        if ($driverName === 'sqlite') {
-            DB::statement('ALTER TABLE listing_stats RENAME TO item_stats');
-        } else {
-            DB::statement('RENAME TABLE listing_stats TO item_stats');
+        // Reverse Step 2: Rename listing_stats back to item_stats (if it exists)
+        if (Schema::hasTable('listing_stats')) {
+            if ($driverName === 'sqlite') {
+                DB::statement('ALTER TABLE listing_stats RENAME TO item_stats');
+            } else {
+                DB::statement('RENAME TABLE listing_stats TO item_stats');
+            }
         }
         
-        // Reverse Step 4: Rename foreign key columns back (simplified - would need full implementation)
+        // Reverse Step 1: Rename foreign key columns back
         // Note: Full rollback would require restoring all foreign keys and columns
         // This is a simplified rollback - full implementation would be complex
-        
-        // Reverse Step 3: Convert strings back to enum (would require hardcoding values - skipped)
-        
-        // Reverse Step 2: Rename listings back to items
-        if ($driverName === 'sqlite') {
-            DB::statement('ALTER TABLE listings RENAME TO items');
-        } else {
-            DB::statement('RENAME TABLE listings TO items');
-        }
-        
-        // Reverse Step 1: Original listings table was empty, so no recreation needed
+        // For now, we'll skip the reverse of foreign key renames as it's complex
     }
 };
