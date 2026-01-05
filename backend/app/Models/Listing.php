@@ -42,6 +42,8 @@ class Listing extends Model
     public const TYPE_BARTER = 'barter';
     public const TYPE_MARKETPLACE = 'marketplace';
     public const TYPE_SERVICES = 'services';
+    public const TYPE_SHOP = 'shop';
+    public const TYPE_SWAP = 'swap';
 
     /**
      * Get all available condition options
