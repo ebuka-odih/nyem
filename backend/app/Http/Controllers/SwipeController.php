@@ -10,6 +10,7 @@ use App\Models\Swipe;
 use App\Models\TradeOffer;
 use App\Models\UserMatch;
 use App\Models\UserConversation;
+use App\Services\OneSignalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +21,7 @@ class SwipeController extends Controller
         $data = $request->validate([
             'target_listing_id' => 'required|exists:listings,id',
             'target_item_id' => 'sometimes|exists:listings,id', // Backward compatibility alias
-            'direction' => 'required|in:left,right',
+            'direction' => 'required|in:left,right,up',
             'offered_listing_id' => 'nullable|exists:listings,id',
             'offered_item_id' => 'nullable|exists:listings,id', // Backward compatibility alias
         ]);
@@ -114,11 +115,11 @@ class SwipeController extends Controller
                 ]
             );
 
-            // Track like in ListingStat when swiping right
-            if ($data['direction'] === 'right') {
+            // Track like in ListingStat when swiping right or up (star)
+            if ($data['direction'] === 'right' || $data['direction'] === 'up') {
                 // Check if like already exists for this swipe
                 $existingLike = ListingStat::where('listing_id', $targetListing->id)
-                    ->where('type', 'like')
+                    ->where('type', $data['direction'] === 'up' ? 'star' : 'like')
                     ->where('user_id', $user->id)
                     ->where('swipe_id', $swipe->id)
                     ->first();
@@ -127,7 +128,7 @@ class SwipeController extends Controller
                     ListingStat::create([
                         'listing_id' => $targetListing->id,
                         'user_id' => $user->id,
-                        'type' => 'like',
+                        'type' => $data['direction'] === 'up' ? 'star' : 'like',
                         'swipe_id' => $swipe->id,
                     ]);
                 }
@@ -138,6 +139,22 @@ class SwipeController extends Controller
                     ->where('user_id', $user->id)
                     ->where('swipe_id', $swipe->id)
                     ->delete();
+            }
+
+            // Handle 'up' direction (star action) - send notification to seller
+            if ($data['direction'] === 'up') {
+                // Send OneSignal push notification to seller
+                DB::afterCommit(function () use ($targetListing, $user) {
+                    try {
+                        $seller = $targetListing->user;
+                        if ($seller) {
+                            $oneSignalService = new OneSignalService();
+                            $oneSignalService->sendStarNotification($seller, $targetListing, $user);
+                        }
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to send star notification: ' . $e->getMessage());
+                    }
+                });
             }
 
             if ($data['direction'] === 'right') {

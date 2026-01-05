@@ -39,6 +39,7 @@ class User extends Authenticatable
         'account_number',
         'account_name',
         'escrow_enabled',
+        'onesignal_player_id',
     ];
 
     protected $hidden = [

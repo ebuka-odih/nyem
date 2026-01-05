@@ -91,6 +91,8 @@ export const UploadPage: React.FC = () => {
       console.log('[UploadPage] Categories response:', response);
       if (response.categories) {
         console.log('[UploadPage] Setting categories:', response.categories.length, 'items');
+        console.log('[UploadPage] Category names:', response.categories.map(c => c.name));
+        console.log('[UploadPage] Full categories data:', JSON.stringify(response.categories, null, 2));
         setCategories(response.categories);
       } else {
         console.warn('[UploadPage] No categories in response');

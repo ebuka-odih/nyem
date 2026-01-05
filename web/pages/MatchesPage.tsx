@@ -1,9 +1,23 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Heart, Zap, ChevronRight, Search, MoreHorizontal, CheckCheck, X, Check, Star, Send, ArrowLeft, MoreVertical, Phone, Video, Paperclip, Smile, ShieldCheck, Lock, CreditCard, ShoppingBag, ShieldAlert } from 'lucide-react';
+import { MessageSquare, Heart, Zap, ChevronRight, Search, MoreHorizontal, CheckCheck, X, Check, Star, Send, ArrowLeft, MoreVertical, Phone, Video, Paperclip, Smile, ShieldCheck, Lock, CreditCard, ShoppingBag, ShieldAlert, Bell } from 'lucide-react';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+
+// OneSignal TypeScript declarations
+declare global {
+  interface Window {
+    OneSignal?: {
+      isPushNotificationsEnabled: () => Promise<boolean>;
+      getUserId: () => Promise<string | null>;
+      Slidedown: {
+        promptPush: () => Promise<void>;
+      };
+    };
+    OneSignalDeferred?: Array<(OneSignal: any) => void | Promise<void>>;
+  }
+}
 
 const subtleTransition = {
   type: "spring" as const,
@@ -132,6 +146,8 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   const [isEscrowActive, setIsEscrowActive] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -159,7 +175,96 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   useEffect(() => {
     fetchConversations();
     fetchMessageRequests();
+    checkOneSignalSubscription();
   }, []);
+
+  // Check OneSignal subscription status
+  const checkOneSignalSubscription = async () => {
+    try {
+      // Wait for OneSignal to be ready if using deferred loading
+      if (window.OneSignalDeferred) {
+        await new Promise<void>((resolve) => {
+          window.OneSignalDeferred.push(async (OneSignal: any) => {
+            try {
+              const isOptedIn = await OneSignal.isPushNotificationsEnabled();
+              setIsSubscribed(isOptedIn);
+            } catch (err) {
+              console.error('Failed to check OneSignal subscription:', err);
+            } finally {
+              resolve();
+            }
+          });
+        });
+      } else if (window.OneSignal) {
+        // If OneSignal is already loaded
+        const isOptedIn = await window.OneSignal.isPushNotificationsEnabled();
+        setIsSubscribed(isOptedIn);
+      }
+    } catch (err) {
+      console.error('Failed to check OneSignal subscription:', err);
+    }
+  };
+
+  // Handle OneSignal subscription
+  const handleSubscribeToNotifications = async () => {
+    try {
+      setIsSubscribing(true);
+      
+      let oneSignalInstance: any = null;
+      
+      // Wait for OneSignal to be ready
+      if (window.OneSignalDeferred) {
+        await new Promise<void>((resolve) => {
+          window.OneSignalDeferred.push(async (OneSignal: any) => {
+            oneSignalInstance = OneSignal;
+            resolve();
+          });
+        });
+      } else if (window.OneSignal) {
+        oneSignalInstance = window.OneSignal;
+      } else {
+        console.error('OneSignal is not available');
+        setIsSubscribing(false);
+        return;
+      }
+
+      // Request permission and subscribe
+      await oneSignalInstance.Slidedown.promptPush();
+      const isOptedIn = await oneSignalInstance.isPushNotificationsEnabled();
+      setIsSubscribed(isOptedIn);
+      
+      if (isOptedIn) {
+        console.log('Successfully subscribed to OneSignal notifications');
+        
+        // Get the player ID and send it to the backend
+        try {
+          const playerId = await oneSignalInstance.getUserId();
+          if (playerId) {
+            const token = getStoredToken();
+            if (token) {
+              await apiFetch(ENDPOINTS.profile.updateOneSignalPlayerId, {
+                method: 'POST',
+                token,
+                body: {
+                  onesignal_player_id: playerId,
+                },
+              });
+              console.log('OneSignal player ID saved to backend');
+            }
+          }
+        } catch (err) {
+          console.error('Failed to save OneSignal player ID:', err);
+          // Don't fail the subscription if saving player ID fails
+        }
+      } else {
+        console.log('User declined OneSignal notifications');
+      }
+    } catch (err) {
+      console.error('Failed to subscribe to notifications:', err);
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
 
   const fetchConversations = async () => {
     try {
@@ -715,6 +820,25 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
               {requests.length}
             </span>
           )}
+        </button>
+      </div>
+
+      {/* OneSignal Subscribe Button */}
+      <div className="px-4 mb-4">
+        <button
+          onClick={handleSubscribeToNotifications}
+          disabled={isSubscribing || isSubscribed}
+          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
+            isSubscribed
+              ? 'bg-emerald-500 text-white shadow-lg cursor-not-allowed'
+              : isSubscribing
+              ? 'bg-neutral-300 text-neutral-500 cursor-wait'
+              : 'bg-[#830e4c] text-white shadow-lg active:scale-95 hover:bg-[#931e5c]'
+          }`}
+        >
+          <Bell size={18} strokeWidth={2.5} />
+          {isSubscribed ? 'Subscribed to Notifications' : isSubscribing ? 'Subscribing...' : 'Subscribe to Notifications'}
+          {isSubscribed && <Check size={16} strokeWidth={3} />}
         </button>
       </div>
 

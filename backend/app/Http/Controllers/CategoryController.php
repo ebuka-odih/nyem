@@ -54,7 +54,13 @@ class CategoryController extends Controller
         }
         
         $categories = $query->orderBy('order')->get(['id', 'name', 'order']);
-        \Log::info('[CategoryController] Returning categories:', ['count' => $categories->count()]);
+        \Log::info('[CategoryController] Returning categories:', [
+            'count' => $categories->count(),
+            'ids' => $categories->pluck('id')->toArray(),
+            'names' => $categories->pluck('name')->toArray(),
+            'sql' => $query->toSql(),
+            'bindings' => $query->getBindings()
+        ]);
         return response()->json(['categories' => $categories]);
     }
 }

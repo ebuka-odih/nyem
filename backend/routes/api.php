@@ -69,6 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile/me', [ProfileController::class, 'me']);
     Route::put('/profile/update', [ProfileController::class, 'update']);
     Route::put('/profile/update-password', [ProfileController::class, 'updatePassword']);
+    Route::post('/profile/onesignal-player-id', [ProfileController::class, 'updateOneSignalPlayerId']);
     
     // Notification settings
     Route::get('/profile/notifications', [ProfileController::class, 'getNotificationSettings']);

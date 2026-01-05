@@ -114,6 +114,7 @@ class ProfileController extends Controller
                     $query->where('type', 'area');
                 }),
             ],
+            'onesignal_player_id' => 'sometimes|nullable|string|max:255',
         ]);
 
         // Explicitly handle area_id - ensure it's always in $data if it was in the request
@@ -569,6 +570,25 @@ class ProfileController extends Controller
                 'account_name' => $user->account_name,
             ],
             'message' => 'Payment settings updated successfully',
+        ]);
+    }
+
+    /**
+     * Update OneSignal player ID for push notifications
+     */
+    public function updateOneSignalPlayerId(Request $request)
+    {
+        $data = $request->validate([
+            'onesignal_player_id' => 'required|string|max:255',
+        ]);
+
+        $user = $request->user();
+        $user->onesignal_player_id = $data['onesignal_player_id'];
+        $user->save();
+
+        return response()->json([
+            'message' => 'OneSignal player ID updated successfully',
+            'onesignal_player_id' => $user->onesignal_player_id,
         ]);
     }
 

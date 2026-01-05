@@ -40,7 +40,7 @@ import { RatingStars } from './components/RatingStars';
 import { SellerProfileView } from './components/SellerProfileView';
 import { LoginPrompt } from './components/LoginPrompt';
 import { LocationPermissionModal } from './components/LocationPermissionModal';
-import { removeToken, getStoredToken } from './utils/api';
+import { removeToken, getStoredToken, apiFetch } from './utils/api';
 import { ENDPOINTS } from './constants/endpoints';
 
 // New Layouts
@@ -158,7 +158,7 @@ const App = () => {
 
   const activeIndex = items.length - 1;
 
-  const handleSwipe = useCallback((direction: 'left' | 'right' | 'up') => {
+  const handleSwipe = useCallback(async (direction: 'left' | 'right' | 'up') => {
     const swipedItem = items[activeIndex];
     if (!swipedItem) return;
 
@@ -178,6 +178,28 @@ const App = () => {
       // Show login page
       setAuthState('login');
       return;
+    }
+
+    // Send swipe to backend API
+    if (direction === 'right' || direction === 'up') {
+      try {
+        const token = getStoredToken();
+        if (token) {
+          // Send swipe request to backend
+          // For 'up' direction (star), we'll send it as 'right' with a special flag, or handle it separately
+          await apiFetch(ENDPOINTS.swipes.create, {
+            method: 'POST',
+            token,
+            body: {
+              target_listing_id: swipedItem.id,
+              direction: direction === 'up' ? 'up' : 'right', // Send 'up' for star action
+            },
+          });
+        }
+      } catch (err) {
+        console.error('Failed to send swipe:', err);
+        // Continue with UI update even if API call fails
+      }
     }
 
     if (direction === 'up') {
