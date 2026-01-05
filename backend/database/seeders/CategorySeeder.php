@@ -36,7 +36,7 @@ class CategorySeeder extends Seeder
                 'Baby & Kids',
                 'Food & Groceries',
                 'Garden & Outdoor',
-                'Household',
+                'Home & Lifestyle',
                 'Books & Media',
                 'Sports',
             ],
@@ -88,6 +88,28 @@ class CategorySeeder extends Seeder
             $subCategoryList = $subCategories[$mainCategory['name']] ?? [];
 
             foreach ($subCategoryList as $index => $subCategoryName) {
+                // Check if category already exists
+                $existingCategory = Category::where('name', $subCategoryName)
+                    ->where('parent_id', $category->id)
+                    ->first();
+                
+                // Generate slug - use existing slug if category exists, otherwise create new one
+                if ($existingCategory && $existingCategory->slug) {
+                    $slug = $existingCategory->slug;
+                } else {
+                    $baseSlug = Str::slug($subCategoryName);
+                    $slug = $baseSlug;
+                    
+                    // If slug already exists for a different category, prefix with parent name
+                    $existingSlugCategory = Category::where('slug', $slug)
+                        ->where('id', '!=', $existingCategory?->id)
+                        ->first();
+                    
+                    if ($existingSlugCategory) {
+                        $slug = Str::slug($category->name) . '-' . $baseSlug;
+                    }
+                }
+                
                 Category::updateOrCreate(
                     [
                         'name' => $subCategoryName,
@@ -95,7 +117,7 @@ class CategorySeeder extends Seeder
                     ],
                     [
                         'type' => 'sub',
-                        'slug' => Str::slug($subCategoryName),
+                        'slug' => $slug,
                         'parent_id' => $category->id,
                         'order' => $index + 1,
                     ]
