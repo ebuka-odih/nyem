@@ -180,32 +180,43 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
         return;
       }
 
-      // Check if user already has player ID registered
+      // Try to send notification directly first
+      // If user doesn't have player ID, the API will return an error and we'll show the modal
       try {
-        const userResponse = await apiFetch(ENDPOINTS.profile.me, { token });
-        if (userResponse?.user?.onesignal_player_id) {
-          // User already has player ID, send test notification directly
-          const response = await apiFetch(ENDPOINTS.notifications.testMe, {
-            method: 'POST',
-            token,
-            body: {
-              title: 'Test Notification',
-              message: 'This is a test notification from Nyem! 🎉',
-            },
-          });
+        const response = await apiFetch(ENDPOINTS.notifications.testMe, {
+          method: 'POST',
+          token,
+          body: {
+            title: 'Test Notification',
+            message: 'This is a test notification from Nyem! 🎉',
+          },
+        });
 
-          if (response.success) {
-            alert('✅ Test notification sent successfully! Check your device.');
-          } else {
+        if (response.success) {
+          alert('✅ Test notification sent successfully! Check your device.');
+          return;
+        } else {
+          // If it failed for a reason other than missing player ID, show error
+          if (!response.message?.includes('OneSignal player ID') && !response.message?.includes('player ID')) {
             alert(`❌ Failed to send notification: ${response.message || 'Unknown error'}`);
+            return;
           }
+          // Otherwise, fall through to show modal
+        }
+      } catch (error: any) {
+        // Check if error is about missing player ID
+        if (error.message?.includes('OneSignal player ID') || error.message?.includes('player ID')) {
+          // User doesn't have player ID, show modal to register
+          setShowNotificationModal(true);
           return;
         }
-      } catch (err) {
-        console.warn('Failed to check user profile:', err);
+        // Other errors - show error message
+        console.error('Failed to send test notification:', error);
+        alert(`❌ Error: ${error.message || 'Failed to send test notification'}`);
+        return;
       }
 
-      // User doesn't have player ID, show modal to register
+      // If we get here, user doesn't have player ID, show modal
       setShowNotificationModal(true);
     } catch (error: any) {
       console.error('Failed to send test notification:', error);
