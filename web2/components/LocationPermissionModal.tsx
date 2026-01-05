@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, X } from 'lucide-react';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { getCurrentLocation, updateLocationOnBackend } from '../utils/location';
 
 interface LocationPermissionModalProps {
   onAllow: () => void;
@@ -22,45 +23,35 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
     setLoading(true);
     setError(null);
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const token = getStoredToken();
-          if (!token) {
-            setError('Please login first');
-            setLoading(false);
-            return;
-          }
-
-          // Update user location on server
-          await apiFetch(ENDPOINTS.location.update, {
-            method: 'POST',
-            token,
-            body: {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-            },
-          });
-
-          // Success - close modal
-          onAllow();
-        } catch (err: any) {
-          console.error('Failed to update location:', err);
-          setError(err.message || 'Failed to save your location. Please try again.');
-          setLoading(false);
-        }
-      },
-      (error) => {
-        console.error('Geolocation error:', error);
-        setError('Unable to access your location. Please enable location services in your browser settings.');
+    try {
+      const token = getStoredToken();
+      if (!token) {
+        setError('Please login first');
         setLoading(false);
-      },
-      {
+        return;
+      }
+
+      // Get current location
+      const location = await getCurrentLocation({
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
-      }
-    );
+      });
+
+      // Update user location on server
+      await updateLocationOnBackend(location.latitude, location.longitude, token);
+
+      // Refresh user data to get updated location
+      // The backend will automatically update area coordinates if area_id is set
+
+      // Success - close modal
+      onAllow();
+    } catch (err: any) {
+      console.error('Failed to update location:', err);
+      setError(err.message || 'Failed to save your location. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -98,7 +89,7 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
             Enable Location Access
           </h2>
           <p className="text-sm text-neutral-600 leading-relaxed mb-6">
-            We'll show you listings closer to you first! This helps you discover items nearby and see the distance between you and sellers.
+            We'll show you listings closer to you first! This helps you discover items nearby and see distances between you and sellers.
           </p>
 
           {error && (

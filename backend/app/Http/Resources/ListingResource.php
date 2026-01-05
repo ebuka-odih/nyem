@@ -104,10 +104,11 @@ class ListingResource extends JsonResource
 
     /**
      * Calculate distance between current user and listing owner
+     * Priority: Use item coordinates > seller's user coordinates
      */
     private function calculateDistance($user): ?float
     {
-        if (!$user || !$user->hasLocation() || !$this->user || !$this->user->hasLocation()) {
+        if (!$user || !$user->hasLocation()) {
             return null;
         }
 
@@ -116,19 +117,42 @@ class ListingResource extends JsonResource
             $distanceKm = $this->distance_km;
         } else {
             // Calculate distance using LocationService
+            // Priority: Use item coordinates > seller's user coordinates
+            $sellerLat = null;
+            $sellerLon = null;
+            
+            // Priority 1: Use item's own coordinates if available
+            if ($this->latitude && $this->longitude) {
+                $sellerLat = $this->latitude;
+                $sellerLon = $this->longitude;
+            }
+            // Priority 2: Fall back to seller's user coordinates
+            elseif ($this->user && $this->user->hasLocation()) {
+                $sellerLat = $this->user->latitude;
+                $sellerLon = $this->user->longitude;
+            }
+            
+            if (!$sellerLat || !$sellerLon) {
+                return null;
+            }
+            
             try {
                 $locationService = app(\App\Services\LocationService::class);
                 $distanceKm = $locationService->calculateDistance(
                     $user->latitude,
                     $user->longitude,
-                    $this->user->latitude,
-                    $this->user->longitude,
+                    $sellerLat,
+                    $sellerLon,
                     'km'
                 );
             } catch (\Exception $e) {
                 \Log::warning('Resource distance calculation failed: ' . $e->getMessage());
                 $distanceKm = null;
             }
+        }
+        
+        if ($distanceKm === null) {
+            return null;
         }
         
         // Format distance based on size

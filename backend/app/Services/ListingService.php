@@ -140,40 +140,41 @@ class ListingService
 
         // City filtering
         // Only apply city filter if ignore_city is not true
-        if (!($filters['ignore_city'] ?? false)) {
-            if (isset($filters['city']) && $filters['city'] !== null) {
+        $ignoreCity = $filters['ignore_city'] ?? false;
+        \Log::info('ListingService: City filter', [
+            'ignore_city' => $ignoreCity,
+            'city_filter' => $filters['city'] ?? null,
+            'user_city' => $user ? ($user->city ?? 'none') : 'no_user'
+        ]);
+        
+        if (!$ignoreCity) {
+            if (isset($filters['city']) && $filters['city'] !== null && $filters['city'] !== '') {
                 $filterCity = trim((string) $filters['city']);
                 
                 // If city is 'all', don't filter by city
-                if (strtolower($filterCity) !== 'all' && $filterCity !== '') {
-                    // Get available columns to avoid SQL errors
-                    $tableName = $query->getModel()->getTable();
-                    $columns = Schema::getColumnListing($tableName);
-                    $query->where(function($q) use ($filterCity, $columns) {
-                        if (in_array('city', $columns)) {
-                            $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity]);
-                        }
-                        if (in_array('location', $columns)) {
-                            $q->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$filterCity]);
-                        }
-                    });
+                if (strtolower($filterCity) !== 'all') {
+                    // Filter by listing's city field (case-insensitive)
+                    // Listings store city name directly (e.g., "Abuja", "Lagos")
+                    // Match against the city field in listings table
+                    \Log::info('ListingService: Applying city filter', ['city' => $filterCity]);
+                    $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity]);
+                } else {
+                    \Log::info('ListingService: City filter is "all", skipping city filter');
                 }
             } else {
                 // If no city filter provided and user has a city, filter by user's city
                 // Only in production environment (not local)
-                if (config('app.env') !== 'local' && $user && ($user->city || $user->city_id)) {
-                    $userCity = $user->city ? trim($user->city) : null;
+                if (config('app.env') !== 'local' && $user) {
+                    // Get user's city name from cityLocation relationship or city field
+                    $userCity = null;
+                    if ($user->relationLoaded('cityLocation') && $user->cityLocation && $user->cityLocation->name) {
+                        $userCity = trim($user->cityLocation->name);
+                    } elseif ($user->city) {
+                        $userCity = trim($user->city);
+                    }
+                    
                     if ($userCity) {
-                        $tableName = $query->getModel()->getTable();
-                        $columns = Schema::getColumnListing($tableName);
-                        $query->where(function($q) use ($userCity, $columns) {
-                            if (in_array('city', $columns)) {
-                                $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
-                            }
-                            if (in_array('location', $columns)) {
-                                $q->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$userCity]);
-                            }
-                        });
+                        $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
                     }
                 }
             }

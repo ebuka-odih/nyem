@@ -319,6 +319,20 @@ const App = () => {
     try {
       const token = getStoredToken();
       
+      // Check if user has location set, if not show modal
+      if (token && isAuthenticated) {
+        try {
+          const { apiFetch } = await import('./utils/api');
+          const response = await apiFetch<{ data?: { has_location?: boolean } }>(ENDPOINTS.location.status, { token });
+          if (!response.data?.has_location) {
+            setShowLocationModal(true);
+          }
+        } catch (err) {
+          // If check fails, continue anyway
+          console.error('Failed to check location status:', err);
+        }
+      }
+      
       // Build query parameters - same approach as other parts of the app
       const params: string[] = [];
       
@@ -331,13 +345,16 @@ const App = () => {
         params.push(`category=${encodeURIComponent(activeCategory)}`);
       }
       
-      // Add city filter - send 'all' to show all cities, or specific city
+      // Add city filter - send 'all' to show all cities, or specific city name
       if (currentCity === "All Locations") {
         params.push('city=all');
         // Also add ignore_city to ensure all listings are shown regardless of environment
         params.push('ignore_city=true');
       } else {
+        // Send the city name exactly as it appears in the database
+        // The city name should match what's stored in listings.city field
         params.push(`city=${encodeURIComponent(currentCity)}`);
+        // Don't send ignore_city when filtering by specific city
       }
       
       // Build feed URL
@@ -544,8 +561,12 @@ const App = () => {
       <>
         {showLocationModal && (
           <LocationPermissionModal
-            onAllow={() => {
+            onAllow={async () => {
               setShowLocationModal(false);
+              // Refresh items to get distance after location is set (if on discover page)
+              if (activePage === 'discover' && activeTab === 'marketplace') {
+                await fetchItems();
+              }
             }}
             onSkip={() => {
               setShowLocationModal(false);
@@ -638,8 +659,12 @@ const App = () => {
       <>
         {showLocationModal && (
           <LocationPermissionModal
-            onAllow={() => {
+            onAllow={async () => {
               setShowLocationModal(false);
+              // Refresh items to get distance after location is set
+              if (activeTab === 'marketplace') {
+                await fetchItems();
+              }
             }}
             onSkip={() => {
               setShowLocationModal(false);
@@ -821,8 +846,9 @@ const App = () => {
                             <div className="flex items-center gap-1 text-neutral-400">
                               <MapPin size={10} strokeWidth={3} />
                               <span className="text-[10px] font-black uppercase tracking-tight">
-                                {selectedProduct.distance !== 'Unknown' && selectedProduct.distance !== 'UNKNOWN' ? `${selectedProduct.distance} ` : ''}
-                                {selectedProduct.vendor.location}
+                                {selectedProduct.distance && selectedProduct.distance !== 'Unknown' && selectedProduct.distance !== 'UNKNOWN' 
+                                  ? `${selectedProduct.distance} ${selectedProduct.vendor.location}`
+                                  : selectedProduct.vendor.location}
                               </span>
                             </div>
                           </div>
@@ -886,12 +912,91 @@ const App = () => {
           </Modal>
 
           <Modal isOpen={showLocationDialog} onClose={() => setShowLocationDialog(false)} title="SELECT CITY">
-            <div className="space-y-2">{NIGERIA_CITIES.map(cityObj => (
-              <button key={cityObj.city} onClick={() => { setCurrentCity(cityObj.city); setShowLocationDialog(false); }} className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === cityObj.city ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' : 'bg-white border-neutral-50 hover:border-neutral-100'}`}>
-                <div className="flex items-center gap-3.5"><div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${currentCity === cityObj.city ? 'bg-[#830e4c] text-white' : 'bg-neutral-50 text-neutral-400'}`}>{cityObj.city === "All Locations" ? <Globe size={20} /> : <MapPin size={20} />}</div><div className="text-left"><h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${currentCity === cityObj.city ? 'text-[#830e4c]' : 'text-neutral-900'}`}>{cityObj.city}</h4><p className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.15em] mt-0.5">{cityObj.city === "All Locations" ? "NATIONWIDE COVERAGE" : "CITY-WIDE SEARCH"}</p></div></div>
-                <div className="flex items-center justify-center">{currentCity === cityObj.city ? <div className="w-7 h-7 bg-[#830e4c] rounded-full flex items-center justify-center shadow-sm"><Check size={14} strokeWidth={4} className="text-white" /></div> : <ChevronRight size={18} className="text-neutral-200" />}</div>
+            <div className="space-y-2">
+              {/* "All Locations" option */}
+              <button 
+                key="all" 
+                onClick={() => { setCurrentCity("All Locations"); setShowLocationDialog(false); }} 
+                className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === "All Locations" ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' : 'bg-white border-neutral-50 hover:border-neutral-100'}`}
+              >
+                <div className="flex items-center gap-3.5">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${currentCity === "All Locations" ? 'bg-[#830e4c] text-white' : 'bg-neutral-50 text-neutral-400'}`}>
+                    <Globe size={20} />
+                  </div>
+                  <div className="text-left">
+                    <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${currentCity === "All Locations" ? 'text-[#830e4c]' : 'text-neutral-900'}`}>All Locations</h4>
+                    <p className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.15em] mt-0.5">NATIONWIDE COVERAGE</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center">
+                  {currentCity === "All Locations" ? (
+                    <div className="w-7 h-7 bg-[#830e4c] rounded-full flex items-center justify-center shadow-sm">
+                      <Check size={14} strokeWidth={4} className="text-white" />
+                    </div>
+                  ) : (
+                    <ChevronRight size={18} className="text-neutral-200" />
+                  )}
+                </div>
               </button>
-            ))}</div>
+              
+              {/* Cities from backend */}
+              {cities.length > 0 ? (
+                cities.map(city => (
+                  <button 
+                    key={city.id} 
+                    onClick={() => { setCurrentCity(city.name); setShowLocationDialog(false); }} 
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === city.name ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' : 'bg-white border-neutral-50 hover:border-neutral-100'}`}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${currentCity === city.name ? 'bg-[#830e4c] text-white' : 'bg-neutral-50 text-neutral-400'}`}>
+                        <MapPin size={20} />
+                      </div>
+                      <div className="text-left">
+                        <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${currentCity === city.name ? 'text-[#830e4c]' : 'text-neutral-900'}`}>{city.name}</h4>
+                        <p className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.15em] mt-0.5">CITY-WIDE SEARCH</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      {currentCity === city.name ? (
+                        <div className="w-7 h-7 bg-[#830e4c] rounded-full flex items-center justify-center shadow-sm">
+                          <Check size={14} strokeWidth={4} className="text-white" />
+                        </div>
+                      ) : (
+                        <ChevronRight size={18} className="text-neutral-200" />
+                      )}
+                    </div>
+                  </button>
+                ))
+              ) : (
+                // Fallback to hardcoded cities if backend fetch failed
+                NIGERIA_CITIES.filter(c => c.city !== "All Locations").map(cityObj => (
+                  <button 
+                    key={cityObj.city} 
+                    onClick={() => { setCurrentCity(cityObj.city); setShowLocationDialog(false); }} 
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === cityObj.city ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' : 'bg-white border-neutral-50 hover:border-neutral-100'}`}
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${currentCity === cityObj.city ? 'bg-[#830e4c] text-white' : 'bg-neutral-50 text-neutral-400'}`}>
+                        <MapPin size={20} />
+                      </div>
+                      <div className="text-left">
+                        <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${currentCity === cityObj.city ? 'text-[#830e4c]' : 'text-neutral-900'}`}>{cityObj.city}</h4>
+                        <p className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.15em] mt-0.5">CITY-WIDE SEARCH</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center">
+                      {currentCity === cityObj.city ? (
+                        <div className="w-7 h-7 bg-[#830e4c] rounded-full flex items-center justify-center shadow-sm">
+                          <Check size={14} strokeWidth={4} className="text-white" />
+                        </div>
+                      ) : (
+                        <ChevronRight size={18} className="text-neutral-200" />
+                      )}
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
           </Modal>
 
           <AnimatePresence>
@@ -920,8 +1025,12 @@ const App = () => {
       <>
         {showLocationModal && (
           <LocationPermissionModal
-            onAllow={() => {
+            onAllow={async () => {
               setShowLocationModal(false);
+              // Refresh items to get distance after location is set (if on discover page)
+              if (activePage === 'discover' && activeTab === 'marketplace') {
+                await fetchItems();
+              }
             }}
             onSkip={() => {
               setShowLocationModal(false);
@@ -956,8 +1065,12 @@ const App = () => {
     <>
       {showLocationModal && (
         <LocationPermissionModal
-          onAllow={() => {
+          onAllow={async () => {
             setShowLocationModal(false);
+            // Refresh items to get distance after location is set (if on discover page)
+            if (activePage === 'discover' && activeTab === 'marketplace') {
+              await fetchItems();
+            }
           }}
           onSkip={() => {
             setShowLocationModal(false);

@@ -93,11 +93,24 @@ class LocationController extends Controller
         $user->location_updated_at = now();
         $user->save();
 
+        // If user has area_id set, also update the area's coordinates
+        // This allows items to use area coordinates for distance calculation
+        if ($user->area_id) {
+            $area = \App\Models\Location::find($user->area_id);
+            if ($area && (!$area->latitude || !$area->longitude)) {
+                // Only update if area doesn't have coordinates yet
+                // This preserves manually set coordinates if they exist
+                $area->latitude = $coords['latitude'];
+                $area->longitude = $coords['longitude'];
+                $area->save();
+            }
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Location updated successfully',
             'data' => [
-                'user' => $user->fresh(),
+                'user' => $user->fresh(['cityLocation', 'areaLocation']),
                 'location_updated_at' => $user->location_updated_at->toIso8601String(),
             ],
         ], 200);
