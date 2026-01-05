@@ -219,9 +219,7 @@ class ListingService
                     $listing->distance_km = null;
                 }
                 return $listing;
-            })->sortBy(function ($listing) {
-                return $listing->distance_km ?? PHP_FLOAT_MAX;
-            })->values();
+            })->sortByDesc('created_at')->values();
         }
 
         return $listings;
