@@ -204,20 +204,39 @@ const App = () => {
     }
   };
 
-  // Transform API listing to Product type
+  // Transform API listing to Product type - matches ListingResource structure
   const transformListingToProduct = (listing: any): Product => {
+    // Handle user/owner data (ListingResource provides both 'user' and 'owner')
     const user = listing.user || listing.owner || {};
-    const images = listing.images || listing.gallery || (listing.image ? [listing.image] : []);
     
-    // Format price
+    // Handle images - ListingResource provides 'images' array and 'gallery' array (both same)
+    // Also check for 'image' (singular) as fallback
+    let images: string[] = [];
+    if (Array.isArray(listing.images) && listing.images.length > 0) {
+      images = listing.images;
+    } else if (Array.isArray(listing.gallery) && listing.gallery.length > 0) {
+      images = listing.gallery;
+    } else if (listing.image) {
+      images = [listing.image];
+    }
+    
+    // Format price - ListingResource formats price with commas for marketplace type
     let price = 'Price on request';
     if (listing.price) {
-      price = `₦${listing.price}`;
+      // Price might already be formatted with commas from backend, or might be a number
+      const priceValue = typeof listing.price === 'string' 
+        ? listing.price.replace(/,/g, '') 
+        : listing.price;
+      // Format with commas for display
+      const formattedPrice = typeof priceValue === 'number' 
+        ? priceValue.toLocaleString('en-US')
+        : priceValue;
+      price = `₦${formattedPrice}`;
     } else if (listing.looking_for) {
       price = 'Trade';
     }
 
-    // Format distance
+    // Format distance - ListingResource provides 'distance_km' and 'distance_display'
     let distance = 'Unknown';
     if (listing.distance_km !== null && listing.distance_km !== undefined) {
       if (listing.distance_km < 1) {
@@ -229,7 +248,7 @@ const App = () => {
       distance = listing.distance_display.toUpperCase();
     }
 
-    // Format vendor location
+    // Format vendor location - user object has 'city' and 'area' from ListingResource
     const vendorLocation = user.city || listing.city || 'Unknown';
     const vendorArea = user.area;
     const fullLocation = vendorArea ? `${vendorLocation}, ${vendorArea}` : vendorLocation;
@@ -238,7 +257,7 @@ const App = () => {
       id: listing.id,
       name: listing.title || 'Untitled Item',
       price: price,
-      category: listing.category || 'UNCATEGORIZED',
+      category: listing.category || 'UNCATEGORIZED', // ListingResource provides category name
       description: listing.description || '',
       longDescription: listing.description || '',
       images: images.length > 0 ? images : ['https://via.placeholder.com/800'],
@@ -260,7 +279,7 @@ const App = () => {
     };
   };
 
-  // Fetch items from API
+  // Fetch items from API - matches the approach used in UploadPage
   const fetchItems = useCallback(async () => {
     if (activeTab !== 'marketplace') return; // Only fetch for marketplace tab
     
@@ -268,8 +287,12 @@ const App = () => {
     try {
       const token = getStoredToken();
       
-      // Build query parameters
+      // Build query parameters - same approach as other parts of the app
       const params: string[] = [];
+      
+      // Add type filter for marketplace (matches UploadPage which creates with type='marketplace')
+      // Note: We filter for 'marketplace' type to match listings created via UploadPage
+      params.push('type=marketplace');
       
       // Add category filter
       if (activeCategory !== "All") {
@@ -283,11 +306,7 @@ const App = () => {
         params.push(`city=${encodeURIComponent(currentCity)}`);
       }
       
-      // Note: We don't filter by type on the backend to catch both 'marketplace' and 'shop' types
-      // (some older listings might have type 'shop' instead of 'marketplace')
-      // We filter client-side to only show marketplace/shop types (exclude barter and services)
-      
-      // For local development, we can ignore city filter to see all listings
+      // For local development, allow ignoring city filter to see all listings
       // This helps when testing with listings from different cities
       if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && currentCity === "All Locations") {
         params.push('ignore_city=true');
@@ -300,32 +319,49 @@ const App = () => {
       }
       
       console.log('[Discover] Fetching items from:', feedUrl);
+      console.log('[Discover] Filters:', { activeCategory, currentCity, activeTab });
       
-      // Fetch items from API
+      // Fetch items from API - same endpoint used by UploadPage to fetch user listings
       const response = await apiFetch(feedUrl, { token: token || undefined });
       const apiItems = response.listings || response.items || response.data || [];
       
-      console.log('[Discover] Received items:', apiItems.length, apiItems);
+      console.log('[Discover] Received items from API:', apiItems.length);
+      if (apiItems.length > 0) {
+        console.log('[Discover] First item sample:', {
+          id: apiItems[0].id,
+          title: apiItems[0].title,
+          type: apiItems[0].type,
+          status: apiItems[0].status,
+          city: apiItems[0].city,
+          price: apiItems[0].price
+        });
+      }
       
       // Transform API items to Product format
-      // Filter for active items and marketplace/shop types (exclude barter and services)
+      // Backend already filters by status='active', but we double-check here
       const transformedItems = apiItems
         .filter((item: any) => {
-          // Only show active items (or items without status field)
-          if (item.status && item.status !== 'active') return false;
-          // Only show marketplace or shop types (not barter or services)
-          // Handle both 'marketplace' and 'shop' types (some older listings use 'shop')
+          // Only show active items
+          if (item.status && item.status !== 'active') {
+            console.log('[Discover] Filtered out inactive item:', item.id, item.status);
+            return false;
+          }
+          // Only show marketplace type (matching UploadPage which creates with type='marketplace')
           const itemType = item.type?.toLowerCase();
-          return itemType === 'marketplace' || itemType === 'shop' || (!itemType && item.price); // Fallback: if no type but has price, assume marketplace
+          if (itemType !== 'marketplace' && itemType !== 'shop') {
+            console.log('[Discover] Filtered out non-marketplace item:', item.id, itemType);
+            return false;
+          }
+          return true;
         })
         .map(transformListingToProduct);
       
-      console.log('[Discover] Transformed items:', transformedItems.length);
+      console.log('[Discover] Transformed items for display:', transformedItems.length);
       
       setItems(transformedItems);
       setHistory([]);
     } catch (error) {
-      console.error('Failed to fetch items:', error);
+      console.error('[Discover] Failed to fetch items:', error);
       setItems([]);
     } finally {
       setLoadingItems(false);

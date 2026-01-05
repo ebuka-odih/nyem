@@ -37,6 +37,23 @@ class ListingResource extends JsonResource
             ? ($distanceKm < 1 ? round($distanceKm * 1000) . 'm' : $distanceKm . 'km')
             : 'Unknown';
         
+        // Safety check for user relationship (should always be loaded via eager loading)
+        if (!$this->user) {
+            \Log::warning('Listing #' . $this->id . ' is missing user relationship');
+            // Return minimal data if user is missing (shouldn't happen in normal operation)
+            return [
+                'id' => $this->id,
+                'type' => $this->type ?? \App\Models\Listing::TYPE_BARTER,
+                'title' => $this->title,
+                'condition' => ucfirst(str_replace('_', ' ', $this->condition)),
+                'image' => $primaryImage,
+                'images' => $photos,
+                'description' => $this->description ?? '',
+                'gallery' => $photos,
+                'error' => 'User relationship missing',
+            ];
+        }
+        
         return [
             'id' => $this->id,
             'type' => $this->type ?? \App\Models\Listing::TYPE_BARTER,
@@ -53,8 +70,8 @@ class ListingResource extends JsonResource
                 'id' => $this->user->id,
                 'username' => $this->user->username,
                 'profile_photo' => $this->user->profile_photo ?? null,
-                'city' => $this->user->cityLocation->name ?? $this->user->city ?? 'Unknown',
-                'area' => $this->user->areaLocation->name ?? null,
+                'city' => ($this->user->cityLocation && $this->user->cityLocation->name) ? $this->user->cityLocation->name : ($this->user->city ?? 'Unknown'),
+                'area' => ($this->user->areaLocation && $this->user->areaLocation->name) ? $this->user->areaLocation->name : null,
                 'city_id' => $this->user->city_id,
                 'area_id' => $this->user->area_id,
                 'phone_verified_at' => $this->user->phone_verified_at?->toIso8601String() ?? null,
@@ -72,7 +89,7 @@ class ListingResource extends JsonResource
             'looking_for' => $this->type !== \App\Models\Listing::TYPE_MARKETPLACE ? ($this->looking_for ?? '') : null,
             'lookingFor' => $this->type !== \App\Models\Listing::TYPE_MARKETPLACE ? ($this->looking_for ?? '') : null,
             // Additional fields
-            'category' => $this->category->name ?? null,
+            'category' => ($this->category && $this->category->name) ? $this->category->name : null,
             'category_id' => $this->category_id,
             'city' => $this->city,
             'status' => $this->status,
@@ -126,8 +143,12 @@ class ListingResource extends JsonResource
      */
     private function formatUserLocation(): string
     {
-        $city = $this->user->cityLocation->name ?? $this->user->city ?? 'Unknown';
-        $area = $this->user->areaLocation->name ?? null;
+        $city = ($this->user->cityLocation && $this->user->cityLocation->name) 
+            ? $this->user->cityLocation->name 
+            : ($this->user->city ?? 'Unknown');
+        $area = ($this->user->areaLocation && $this->user->areaLocation->name) 
+            ? $this->user->areaLocation->name 
+            : null;
         
         if ($area) {
             return "{$city}, {$area}";
