@@ -77,6 +77,10 @@ export const ENDPOINTS = {
     create: '/service-providers',
     me: '/service-providers/me',
   },
+  notifications: {
+    test: '/notifications/test',
+    testMe: '/notifications/test/me',
+  },
 };
 
 

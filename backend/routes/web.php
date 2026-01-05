@@ -7,10 +7,15 @@ use App\Http\Controllers\Admin\AdminUsersController;
 use App\Http\Controllers\Admin\AdminMatchesController;
 use App\Http\Controllers\Admin\AdminListingsController;
 use App\Http\Controllers\Admin\AdminCategoriesController;
+use App\Http\Controllers\NotificationController;
 
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+// OneSignal notification test page (public for easy testing)
+Route::get('/notifications/test', [NotificationController::class, 'showTestPage'])->name('notifications.test');
+Route::post('/notifications/test/send', [NotificationController::class, 'sendTestNotificationWeb'])->name('notifications.test.send');
 
 // Admin login routes
 Route::get('/login', [AdminAuthController::class, 'showLoginForm'])->name('login');

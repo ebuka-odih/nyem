@@ -2,10 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
-import { PushNotificationSubscription } from '../components/PushNotificationSubscription';
 import { ChatView } from '../components/ChatView';
 import { ChatsList } from '../components/ChatsList';
 import { RequestsList } from '../components/RequestsList';
+import { Bell } from 'lucide-react';
+
+// OneSignal TypeScript declarations
+declare global {
+  interface Window {
+    OneSignal?: any;
+    OneSignalDeferred?: Array<(OneSignal: any) => void | Promise<void>>;
+    OneSignalReady?: Promise<any>;
+  }
+}
 
 const subtleTransition = {
   type: "spring" as const,
@@ -68,6 +77,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   const [chats, setChats] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedChat, setSelectedChat] = useState<ChatMessage | null>(null);
+  const [isSendingTestNotification, setIsSendingTestNotification] = useState(false);
   
   const currentUserId = useRef<string | null>(null);
 
@@ -168,6 +178,140 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     }
   };
 
+  const handleTestNotification = async () => {
+    try {
+      setIsSendingTestNotification(true);
+      const token = getStoredToken();
+      if (!token) {
+        alert('Please log in to test notifications');
+        return;
+      }
+
+      // Step 1: Get OneSignal instance and ensure user is subscribed
+      let OneSignal: any = null;
+      
+      if (window.OneSignalReady) {
+        OneSignal = await window.OneSignalReady;
+      } else if (window.OneSignal) {
+        OneSignal = window.OneSignal;
+      } else if (window.OneSignalDeferred) {
+        OneSignal = await new Promise<any>((resolve) => {
+          window.OneSignalDeferred!.push((instance: any) => {
+            resolve(instance);
+          });
+        });
+      }
+
+      if (!OneSignal) {
+        alert('OneSignal is not loaded. Please refresh the page and try again.');
+        return;
+      }
+
+      // Step 2: Check if user is subscribed, if not, prompt them
+      let isOptedIn = false;
+      let playerId: string | null = null;
+
+      if (OneSignal.User?.PushSubscription) {
+        isOptedIn = OneSignal.User.PushSubscription.optedIn ?? false;
+        playerId = OneSignal.User.PushSubscription.id ?? null;
+      } else if (typeof OneSignal.isPushNotificationsEnabled === 'function') {
+        isOptedIn = await OneSignal.isPushNotificationsEnabled();
+        if (typeof OneSignal.getUserId === 'function') {
+          playerId = await OneSignal.getUserId();
+        }
+      }
+
+      // Step 3: If not subscribed, prompt for subscription
+      if (!isOptedIn || !playerId) {
+        const shouldSubscribe = confirm(
+          'You need to subscribe to push notifications first. Click OK to subscribe, or Cancel to skip.'
+        );
+        
+        if (!shouldSubscribe) {
+          return;
+        }
+
+        // Prompt for subscription
+        try {
+          if (OneSignal.Slidedown && typeof OneSignal.Slidedown.promptPush === 'function') {
+            await OneSignal.Slidedown.promptPush();
+          } else if (OneSignal.Notifications && typeof OneSignal.Notifications.requestPermission === 'function') {
+            const permission = await OneSignal.Notifications.requestPermission();
+            if (permission === 'granted' && OneSignal.User?.PushSubscription?.optIn) {
+              await OneSignal.User.PushSubscription.optIn();
+            }
+          } else if (typeof OneSignal.registerForPushNotifications === 'function') {
+            await OneSignal.registerForPushNotifications();
+          }
+
+          // Wait a moment for subscription to complete
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Get player ID after subscription
+          if (OneSignal.User?.PushSubscription) {
+            isOptedIn = OneSignal.User.PushSubscription.optedIn ?? false;
+            playerId = OneSignal.User.PushSubscription.id ?? null;
+          } else if (typeof OneSignal.getUserId === 'function') {
+            playerId = await OneSignal.getUserId();
+          }
+
+          if (!isOptedIn || !playerId) {
+            alert('Failed to subscribe to notifications. Please try again.');
+            return;
+          }
+        } catch (err: any) {
+          console.error('Failed to subscribe:', err);
+          alert('Failed to subscribe to notifications: ' + (err?.message || 'Unknown error'));
+          return;
+        }
+      }
+
+      // Step 4: Register player ID with backend if we have it
+      if (playerId) {
+        try {
+          await apiFetch(ENDPOINTS.profile.updateOneSignalPlayerId, {
+            method: 'POST',
+            token,
+            body: {
+              onesignal_player_id: playerId,
+            },
+          });
+          console.log('OneSignal player ID registered:', playerId);
+        } catch (err) {
+          console.warn('Failed to register player ID (may already be registered):', err);
+          // Continue anyway - player ID might already be registered
+        }
+      }
+
+      // Step 5: Send test notification
+      const response = await apiFetch(ENDPOINTS.notifications.testMe, {
+        method: 'POST',
+        token,
+        body: {
+          title: 'Test Notification',
+          message: 'This is a test notification from Nyem! 🎉',
+        },
+      });
+
+      if (response.success) {
+        alert('✅ Test notification sent successfully! Check your device.');
+      } else {
+        alert(`❌ Failed to send notification: ${response.message || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Failed to send test notification:', error);
+      
+      // Handle specific error messages
+      if (error.message?.includes('OneSignal player ID')) {
+        alert('❌ ' + error.message + '\n\nPlease make sure you have subscribed to push notifications.');
+      } else {
+        alert(`❌ Error: ${error.message || 'Failed to send test notification'}`);
+      }
+    } finally {
+      setIsSendingTestNotification(false);
+    }
+  };
+
   // Show chat view if a chat is selected
   if (selectedChat) {
     return (
@@ -208,9 +352,20 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
         </button>
       </div>
 
-      {/* Push Notification Subscription */}
+      {/* Test OneSignal Notification Button */}
       <div className="px-4 mb-4">
-        <PushNotificationSubscription />
+        <button
+          onClick={handleTestNotification}
+          disabled={isSendingTestNotification}
+          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
+            isSendingTestNotification
+              ? 'bg-neutral-300 text-neutral-500 cursor-wait'
+              : 'bg-[#830e4c] text-white shadow-lg active:scale-95 hover:bg-[#931e5c]'
+          }`}
+        >
+          <Bell size={18} strokeWidth={2.5} />
+          {isSendingTestNotification ? 'Sending...' : 'Test Push Notification'}
+        </button>
       </div>
 
       {/* Content */}
