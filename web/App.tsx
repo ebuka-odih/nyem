@@ -276,13 +276,22 @@ const App = () => {
         params.push(`category=${encodeURIComponent(activeCategory)}`);
       }
       
-      // Add city filter
-      if (currentCity !== "All Locations") {
+      // Add city filter - send 'all' to show all cities, or specific city
+      if (currentCity === "All Locations") {
+        params.push('city=all');
+      } else {
         params.push(`city=${encodeURIComponent(currentCity)}`);
       }
       
-      // Add type filter for marketplace
-      params.push('type=marketplace');
+      // Note: We don't filter by type on the backend to catch both 'marketplace' and 'shop' types
+      // (some older listings might have type 'shop' instead of 'marketplace')
+      // We filter client-side to only show marketplace/shop types (exclude barter and services)
+      
+      // For local development, we can ignore city filter to see all listings
+      // This helps when testing with listings from different cities
+      if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && currentCity === "All Locations") {
+        params.push('ignore_city=true');
+      }
       
       // Build feed URL
       let feedUrl = ENDPOINTS.items.feed;
@@ -290,14 +299,28 @@ const App = () => {
         feedUrl += `?${params.join('&')}`;
       }
       
+      console.log('[Discover] Fetching items from:', feedUrl);
+      
       // Fetch items from API
       const response = await apiFetch(feedUrl, { token: token || undefined });
       const apiItems = response.listings || response.items || response.data || [];
       
+      console.log('[Discover] Received items:', apiItems.length, apiItems);
+      
       // Transform API items to Product format
+      // Filter for active items and marketplace/shop types (exclude barter and services)
       const transformedItems = apiItems
-        .filter((item: any) => item.status === 'active') // Only show active items
+        .filter((item: any) => {
+          // Only show active items (or items without status field)
+          if (item.status && item.status !== 'active') return false;
+          // Only show marketplace or shop types (not barter or services)
+          // Handle both 'marketplace' and 'shop' types (some older listings use 'shop')
+          const itemType = item.type?.toLowerCase();
+          return itemType === 'marketplace' || itemType === 'shop' || (!itemType && item.price); // Fallback: if no type but has price, assume marketplace
+        })
         .map(transformListingToProduct);
+      
+      console.log('[Discover] Transformed items:', transformedItems.length);
       
       setItems(transformedItems);
       setHistory([]);
