@@ -24,7 +24,7 @@ export interface Vendor {
 }
 
 export interface Product {
-  id: number;
+  id: number | string; // Can be number (legacy) or string (UUID from API)
   name: string;
   price: string;
   category: string;

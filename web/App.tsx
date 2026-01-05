@@ -23,7 +23,7 @@ import {
   ChevronLeft
 } from 'lucide-react';
 import { Product, Vendor } from './types';
-import { PRODUCTS, CATEGORIES_DATA, NIGERIA_CITIES } from './data';
+import { CATEGORIES_DATA, NIGERIA_CITIES } from './data';
 import { SwipeCard } from './components/SwipeCard';
 import { SwipeControls } from './components/SwipeControls';
 import { Modal } from './components/Modal';
@@ -52,7 +52,7 @@ import { BottomNav } from './components/BottomNav';
 type AuthState = 'welcome' | 'login' | 'register' | 'otp' | 'forgot' | 'authenticated' | 'discover';
 
 const App = () => {
-  const [items, setItems] = useState<Product[]>(PRODUCTS);
+  const [items, setItems] = useState<Product[]>([]);
   const [history, setHistory] = useState<Product[]>([]);
   const [likedItems, setLikedItems] = useState<Product[]>([]);
   const [showWishlist, setShowWishlist] = useState(false);
@@ -63,6 +63,7 @@ const App = () => {
   const [showSellerToast, setShowSellerToast] = useState(false);
   const [lastSparkedItem, setLastSparkedItem] = useState<Product | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [loadingItems, setLoadingItems] = useState(false);
 
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
@@ -203,17 +204,117 @@ const App = () => {
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    let result = PRODUCTS;
-    if (activeCategory !== "All") result = result.filter(p => p.category.toUpperCase() === activeCategory.toUpperCase());
-    if (currentCity !== "All Locations") result = result.filter(p => p.vendor.location.toLowerCase().includes(currentCity.toLowerCase()));
-    return result;
-  }, [activeCategory, currentCity]);
+  // Transform API listing to Product type
+  const transformListingToProduct = (listing: any): Product => {
+    const user = listing.user || listing.owner || {};
+    const images = listing.images || listing.gallery || (listing.image ? [listing.image] : []);
+    
+    // Format price
+    let price = 'Price on request';
+    if (listing.price) {
+      price = `₦${listing.price}`;
+    } else if (listing.looking_for) {
+      price = 'Trade';
+    }
 
+    // Format distance
+    let distance = 'Unknown';
+    if (listing.distance_km !== null && listing.distance_km !== undefined) {
+      if (listing.distance_km < 1) {
+        distance = `${Math.round(listing.distance_km * 1000)}M`;
+      } else {
+        distance = `${listing.distance_km.toFixed(1)}KM`;
+      }
+    } else if (listing.distance_display) {
+      distance = listing.distance_display.toUpperCase();
+    }
+
+    // Format vendor location
+    const vendorLocation = user.city || listing.city || 'Unknown';
+    const vendorArea = user.area;
+    const fullLocation = vendorArea ? `${vendorLocation}, ${vendorArea}` : vendorLocation;
+
+    return {
+      id: listing.id,
+      name: listing.title || 'Untitled Item',
+      price: price,
+      category: listing.category || 'UNCATEGORIZED',
+      description: listing.description || '',
+      longDescription: listing.description || '',
+      images: images.length > 0 ? images : ['https://via.placeholder.com/800'],
+      color: '#f3f4f6',
+      distance: distance,
+      vendor: {
+        name: user.username || user.name || 'Unknown Seller',
+        avatar: user.profile_photo || user.image || 'https://i.pravatar.cc/150?u=default',
+        location: fullLocation,
+        rating: 4.5, // Default rating if not available
+        reviewCount: 0,
+        followers: 0,
+        joinedDate: '2024',
+        bio: '',
+        verified: !!user.phone_verified_at,
+        reviews: []
+      },
+      isSuper: false
+    };
+  };
+
+  // Fetch items from API
+  const fetchItems = useCallback(async () => {
+    if (activeTab !== 'marketplace') return; // Only fetch for marketplace tab
+    
+    setLoadingItems(true);
+    try {
+      const token = getStoredToken();
+      
+      // Build query parameters
+      const params: string[] = [];
+      
+      // Add category filter
+      if (activeCategory !== "All") {
+        params.push(`category=${encodeURIComponent(activeCategory)}`);
+      }
+      
+      // Add city filter
+      if (currentCity !== "All Locations") {
+        params.push(`city=${encodeURIComponent(currentCity)}`);
+      }
+      
+      // Add type filter for marketplace
+      params.push('type=marketplace');
+      
+      // Build feed URL
+      let feedUrl = ENDPOINTS.items.feed;
+      if (params.length > 0) {
+        feedUrl += `?${params.join('&')}`;
+      }
+      
+      // Fetch items from API
+      const response = await apiFetch(feedUrl, { token: token || undefined });
+      const apiItems = response.listings || response.items || response.data || [];
+      
+      // Transform API items to Product format
+      const transformedItems = apiItems
+        .filter((item: any) => item.status === 'active') // Only show active items
+        .map(transformListingToProduct);
+      
+      setItems(transformedItems);
+      setHistory([]);
+    } catch (error) {
+      console.error('Failed to fetch items:', error);
+      setItems([]);
+    } finally {
+      setLoadingItems(false);
+    }
+  }, [activeTab, activeCategory, currentCity]);
+
+  // Fetch items when discover page is active and filters change
   useEffect(() => {
-    setItems([...filteredProducts]);
-    setHistory([]);
-  }, [filteredProducts]);
+    if (activePage === 'discover' || authState === 'discover') {
+      fetchItems();
+    }
+  }, [activePage, authState, fetchItems]);
 
   const activeIndex = items.length - 1;
 
@@ -326,8 +427,7 @@ const App = () => {
 
   const refreshDrops = () => {
     if (activeCategory === "All" && currentCity === "All Locations") {
-      setItems([...PRODUCTS]);
-      setHistory([]);
+      fetchItems();
     } else {
       setActiveCategory("All");
       setCurrentCity("All Locations");
@@ -513,7 +613,15 @@ const App = () => {
           <div className="relative flex-1 w-full mt-1 mb-[2px]">
             <AnimatePresence mode="popLayout">
               {activeTab === 'marketplace' ? (
-                items.length > 0 ? (
+                loadingItems ? (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center px-8">
+                    <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-6 border border-neutral-100 shadow-inner animate-pulse">
+                      <Compass size={32} className="text-[#830e4c]" />
+                    </div>
+                    <h3 className="text-xl font-black text-neutral-900 uppercase tracking-tighter">Loading drops...</h3>
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-2">Discovering amazing items</p>
+                  </motion.div>
+                ) : items.length > 0 ? (
                   items.map((product: Product, idx: number) => (
                     <SwipeCard
                       key={`${product.id}-${items.length}`} product={product} index={activeIndex - idx} isTop={idx === activeIndex}
