@@ -123,21 +123,30 @@ class ListingService
                 $filterCity = trim((string) $filters['city']);
                 
                 // If city is 'all', don't filter by city
-                if (strtolower($filterCity) !== 'all') {
-                    $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity]);
+                if (strtolower($filterCity) !== 'all' && $filterCity !== '') {
+                    // Handle both 'city' and 'location' column names for backward compatibility
+                    $query->where(function($q) use ($filterCity) {
+                        $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity])
+                          ->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$filterCity]);
+                    });
                 }
             } else {
                 // If no city filter provided and user has a city, filter by user's city
                 // Only in production environment (not local)
-                if (config('app.env') !== 'local' && $user && $user->city) {
-                    $userCity = trim($user->city);
-                    $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
+                if (config('app.env') !== 'local' && $user && ($user->city || $user->city_id)) {
+                    $userCity = $user->city ? trim($user->city) : null;
+                    if ($userCity) {
+                        $query->where(function($q) use ($userCity) {
+                            $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity])
+                              ->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$userCity]);
+                        });
+                    }
                 }
             }
         }
 
         // Filter by category
-        if (isset($filters['category']) && $filters['category'] !== null) {
+        if (isset($filters['category']) && $filters['category'] !== null && $filters['category'] !== '' && strtolower($filters['category']) !== 'all') {
             $categoryName = $filters['category'];
             if (is_numeric($categoryName)) {
                 $query->where('category_id', $categoryName);
@@ -150,27 +159,49 @@ class ListingService
         }
 
         // Filter by type
-        if (isset($filters['type']) && $filters['type'] !== null) {
+        if (isset($filters['type']) && $filters['type'] !== null && $filters['type'] !== '') {
             $type = $filters['type'];
             if (in_array($type, Listing::getTypeOptions())) {
-                $query->where('type', $type);
+                if ($type === Listing::TYPE_MARKETPLACE) {
+                    $query->where(function($q) {
+                        $q->where('type', Listing::TYPE_MARKETPLACE)
+                          ->orWhere('type', 'shop');
+                    });
+                } else {
+                    $query->where('type', $type);
+                }
             }
         }
 
-        $listings = $query->get();
+        try {
+            $listings = $query->get();
+        } catch (\Exception $e) {
+            \Log::error('Listing feed query failed: ' . $e->getMessage());
+            // Fallback: try without some filters if it failed
+            $listings = Listing::with(['user.cityLocation', 'user.areaLocation', 'category'])
+                ->where('status', Listing::STATUS_ACTIVE)
+                ->latest()
+                ->take(50)
+                ->get();
+        }
 
         // Calculate distances and sort if user has location
         if ($user && $user->hasLocation()) {
             $listings = $listings->map(function ($listing) use ($user) {
                 if ($listing->user && $listing->user->hasLocation()) {
-                    $distanceKm = $this->locationService->calculateDistance(
-                        $user->latitude,
-                        $user->longitude,
-                        $listing->user->latitude,
-                        $listing->user->longitude,
-                        'km'
-                    );
-                    $listing->distance_km = $distanceKm;
+                    try {
+                        $distanceKm = $this->locationService->calculateDistance(
+                            $user->latitude,
+                            $user->longitude,
+                            $listing->user->latitude,
+                            $listing->user->longitude,
+                            'km'
+                        );
+                        $listing->distance_km = $distanceKm;
+                    } catch (\Exception $e) {
+                        \Log::warning('Distance calculation failed for listing ' . $listing->id . ': ' . $e->getMessage());
+                        $listing->distance_km = null;
+                    }
                 } else {
                     $listing->distance_km = null;
                 }

@@ -116,14 +116,19 @@ class ListingResource extends JsonResource
             $distanceKm = $this->distance_km;
         } else {
             // Calculate distance using LocationService
-            $locationService = app(\App\Services\LocationService::class);
-            $distanceKm = $locationService->calculateDistance(
-                $user->latitude,
-                $user->longitude,
-                $this->user->latitude,
-                $this->user->longitude,
-                'km'
-            );
+            try {
+                $locationService = app(\App\Services\LocationService::class);
+                $distanceKm = $locationService->calculateDistance(
+                    $user->latitude,
+                    $user->longitude,
+                    $this->user->latitude,
+                    $this->user->longitude,
+                    'km'
+                );
+            } catch (\Exception $e) {
+                \Log::warning('Resource distance calculation failed: ' . $e->getMessage());
+                $distanceKm = null;
+            }
         }
         
         // Format distance based on size
@@ -145,7 +150,7 @@ class ListingResource extends JsonResource
     {
         $city = ($this->user->cityLocation && $this->user->cityLocation->name) 
             ? $this->user->cityLocation->name 
-            : ($this->user->city ?? 'Unknown');
+            : ($this->user->city ?? $this->user->location ?? 'Unknown');
         $area = ($this->user->areaLocation && $this->user->areaLocation->name) 
             ? $this->user->areaLocation->name 
             : null;

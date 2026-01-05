@@ -158,15 +158,27 @@ class Listing extends Model
     }
 
     /**
+     * City accessor with fallback to location
+     */
+    protected function city(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => $value ?? $this->attributes['location'] ?? null,
+        );
+    }
+
+    /**
      * Accessor to transform photo URLs to ensure they're accessible from the frontend
-     * This automatically transforms URLs when the photos attribute is accessed
-     * 
-     * Note: This accessor overrides the 'array' cast, so we handle JSON encoding/decoding manually
      */
     protected function photos(): Attribute
     {
         return Attribute::make(
             get: function ($value) {
+                // Fallback to 'images' column if 'photos' is null
+                if ($value === null && isset($this->attributes['images'])) {
+                    $value = $this->attributes['images'];
+                }
+
                 if (empty($value)) {
                     return [];
                 }
