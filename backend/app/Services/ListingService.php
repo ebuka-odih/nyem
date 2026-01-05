@@ -8,6 +8,7 @@ use App\Models\ListingStat;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ListingService
 {
@@ -124,10 +125,16 @@ class ListingService
                 
                 // If city is 'all', don't filter by city
                 if (strtolower($filterCity) !== 'all' && $filterCity !== '') {
-                    // Handle both 'city' and 'location' column names for backward compatibility
-                    $query->where(function($q) use ($filterCity) {
-                        $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity])
-                          ->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$filterCity]);
+                    // Get available columns to avoid SQL errors
+                    $tableName = $query->getModel()->getTable();
+                    $columns = Schema::getColumnListing($tableName);
+                    $query->where(function($q) use ($filterCity, $columns) {
+                        if (in_array('city', $columns)) {
+                            $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity]);
+                        }
+                        if (in_array('location', $columns)) {
+                            $q->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$filterCity]);
+                        }
                     });
                 }
             } else {
@@ -136,9 +143,15 @@ class ListingService
                 if (config('app.env') !== 'local' && $user && ($user->city || $user->city_id)) {
                     $userCity = $user->city ? trim($user->city) : null;
                     if ($userCity) {
-                        $query->where(function($q) use ($userCity) {
-                            $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity])
-                              ->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$userCity]);
+                        $tableName = $query->getModel()->getTable();
+                        $columns = Schema::getColumnListing($tableName);
+                        $query->where(function($q) use ($userCity, $columns) {
+                            if (in_array('city', $columns)) {
+                                $q->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
+                            }
+                            if (in_array('location', $columns)) {
+                                $q->orWhereRaw('LOWER(TRIM(COALESCE(location, ""))) = LOWER(?)', [$userCity]);
+                            }
                         });
                     }
                 }

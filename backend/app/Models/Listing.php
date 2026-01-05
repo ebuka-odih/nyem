@@ -18,7 +18,7 @@ class Listing extends Model
      *
      * @var string
      */
-    protected $table = 'listings';
+    protected $table = 'items';
 
     /**
      * Available condition options

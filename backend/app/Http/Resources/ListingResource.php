@@ -70,7 +70,7 @@ class ListingResource extends JsonResource
                 'id' => $this->user->id,
                 'username' => $this->user->username,
                 'profile_photo' => $this->user->profile_photo ?? null,
-                'city' => ($this->user->cityLocation && $this->user->cityLocation->name) ? $this->user->cityLocation->name : ($this->user->city ?? 'Unknown'),
+                'city' => ($this->user->cityLocation && $this->user->cityLocation->name) ? $this->user->cityLocation->name : ($this->user->city ?? $this->user->location ?? 'Unknown'),
                 'area' => ($this->user->areaLocation && $this->user->areaLocation->name) ? $this->user->areaLocation->name : null,
                 'city_id' => $this->user->city_id,
                 'area_id' => $this->user->area_id,
