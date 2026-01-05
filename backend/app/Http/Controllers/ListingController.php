@@ -49,25 +49,34 @@ class ListingController extends Controller
     }
 
     /**
-     * Display a listing of the resource (feed)
+     * @return mixed
      */
-    public function feed(Request $request): JsonResponse
+    public function feed(Request $request)
     {
-        $user = $request->user(); // Can be null if not authenticated
-        $blockedIds = $user ? $this->blockedUserIds($user) : [];
+        try {
+            $user = $request->user(); // Can be null if not authenticated
+            $blockedIds = $user ? $this->blockedUserIds($user) : [];
 
-        // Extract filters from request
-        $filters = [
-            'include_own' => $request->boolean('include_own', true),
-            'ignore_city' => $request->boolean('ignore_city', false),
-            'city' => $request->filled('city') ? $request->string('city')->toString() : null,
-            'category' => $request->filled('category') ? $request->string('category')->toString() : null,
-            'type' => $request->filled('type') ? $request->string('type')->toString() : null,
-        ];
+            // Extract filters from request
+            $filters = [
+                'include_own' => $request->boolean('include_own', true),
+                'ignore_city' => $request->boolean('ignore_city', false),
+                'city' => $request->filled('city') ? $request->string('city')->toString() : null,
+                'category' => $request->filled('category') ? $request->string('category')->toString() : null,
+                'type' => $request->filled('type') ? $request->string('type')->toString() : null,
+            ];
 
-        $listings = $this->listingService->getFeedListings($filters, $user, $blockedIds);
+            $listings = $this->listingService->getFeedListings($filters, $user, $blockedIds);
 
-        return new ListingCollection($listings);
+            return new ListingCollection($listings);
+        } catch (\Exception $e) {
+            \Log::error('Feed failed: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+            return response()->json([
+                'error' => 'Internal Server Error',
+                'message' => $e->getMessage(),
+                'trace' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
+        }
     }
 
     /**
