@@ -32,6 +32,29 @@
   <!-- Favicon -->
   <link rel="shortcut icon" href="/favicon.ico" />
   
+  <!-- Register Service Worker Early (before PushAlert) -->
+  <script>
+    // Register service worker immediately so PushAlert can access it
+    if ('serviceWorker' in navigator) {
+      // Store registration promise globally for PushAlert
+      window.serviceWorkerRegistrationPromise = navigator.serviceWorker
+        .register('/sw.js', { 
+          updateViaCache: 'none',
+          scope: '/'
+        })
+        .then(function(registration) {
+          console.log('Service Worker registered successfully:', registration.scope);
+          // Store registration globally for PushAlert
+          window.serviceWorkerRegistration = registration;
+          return registration;
+        })
+        .catch(function(error) {
+          console.warn('Service Worker registration failed:', error);
+          return null;
+        });
+    }
+  </script>
+  
   <!-- OneSignal Web Push Notifications -->
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script>
@@ -55,13 +78,36 @@
   </script>
   
   <!-- PushAlert Unified Code -->
+  <!-- Load PushAlert after service worker registration -->
   <script type="text/javascript">
-    (function(d, t) {
-        var g = d.createElement(t),
-        s = d.getElementsByTagName(t)[0];
+    (function() {
+      var loadPushAlert = function() {
+        var g = document.createElement("script");
+        var s = document.getElementsByTagName("script")[0];
         g.src = "https://cdn.pushalert.co/unified_64c21421543ea0b4bdf6d1cadfae7894.js";
+        g.async = true;
         s.parentNode.insertBefore(g, s);
-    }(document, "script"));
+      };
+      
+      // Wait for service worker registration if it exists
+      if (window.serviceWorkerRegistrationPromise) {
+        window.serviceWorkerRegistrationPromise.then(function(registration) {
+          if (registration) {
+            // Wait a bit for service worker to be fully ready
+            setTimeout(loadPushAlert, 300);
+          } else {
+            // Registration failed, still try to load PushAlert
+            setTimeout(loadPushAlert, 500);
+          }
+        }).catch(function() {
+          // If promise fails, still try to load PushAlert
+          setTimeout(loadPushAlert, 500);
+        });
+      } else {
+        // No service worker support, load PushAlert anyway
+        setTimeout(loadPushAlert, 500);
+      }
+    })();
   </script>
   <!-- End PushAlert Unified Code -->
   
