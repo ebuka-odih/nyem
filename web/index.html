@@ -80,6 +80,8 @@
         try {
           await OneSignal.init({
             appId: "401c6128-33c4-47ba-af30-337413de42bb",
+            serviceWorkerPath: '/sw.js', // Use our custom service worker that includes OneSignal
+            serviceWorkerParam: { scope: '/' },
           });
           // Store OneSignal instance globally
           window.OneSignal = OneSignal;
