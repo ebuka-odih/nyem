@@ -9,8 +9,17 @@ import { ENDPOINTS } from '../constants/endpoints';
 declare global {
   interface Window {
     OneSignal?: {
-      isPushNotificationsEnabled: () => Promise<boolean>;
-      getUserId: () => Promise<string | null>;
+      User: {
+        PushSubscription: {
+          optIn: () => Promise<void>;
+          optOut: () => Promise<void>;
+          id: string | null;
+          optedIn: boolean;
+        };
+      };
+      Notifications: {
+        requestPermission: () => Promise<string>;
+      };
       Slidedown: {
         promptPush: () => Promise<void>;
       };
@@ -181,27 +190,55 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   // Check OneSignal subscription status
   const checkOneSignalSubscription = async () => {
     try {
-      // Wait for OneSignal to be ready if using deferred loading
-      if (window.OneSignalDeferred) {
-        await new Promise<void>((resolve) => {
-          window.OneSignalDeferred.push(async (OneSignal: any) => {
-            try {
-              const isOptedIn = await OneSignal.isPushNotificationsEnabled();
-              setIsSubscribed(isOptedIn);
-            } catch (err) {
-              console.error('Failed to check OneSignal subscription:', err);
-            } finally {
+      // Wait for OneSignal to be ready
+      await new Promise<void>((resolve) => {
+        if (window.OneSignal) {
+          resolve();
+        } else if (window.OneSignalDeferred) {
+          window.OneSignalDeferred.push(() => resolve());
+        } else {
+          // Wait a bit for OneSignal to load
+          const checkInterval = setInterval(() => {
+            if (window.OneSignal) {
+              clearInterval(checkInterval);
               resolve();
             }
-          });
-        });
-      } else if (window.OneSignal) {
-        // If OneSignal is already loaded
-        const isOptedIn = await window.OneSignal.isPushNotificationsEnabled();
-        setIsSubscribed(isOptedIn);
+          }, 100);
+          
+          // Timeout after 3 seconds
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 3000);
+        }
+      });
+
+      if (!window.OneSignal) {
+        return; // OneSignal not loaded yet
       }
+
+      const OneSignal = window.OneSignal as any;
+      
+      // Check subscription status using multiple possible API structures
+      let isOptedIn = false;
+      
+      if (OneSignal.User?.PushSubscription?.optedIn !== undefined) {
+        isOptedIn = OneSignal.User.PushSubscription.optedIn;
+      } else if (typeof OneSignal.isPushNotificationsEnabled === 'function') {
+        try {
+          isOptedIn = await OneSignal.isPushNotificationsEnabled();
+        } catch (err) {
+          console.warn('isPushNotificationsEnabled failed:', err);
+        }
+      } else if (OneSignal.getNotificationPermission) {
+        const permission = OneSignal.getNotificationPermission();
+        isOptedIn = permission === 'granted';
+      }
+
+      setIsSubscribed(isOptedIn);
     } catch (err) {
       console.error('Failed to check OneSignal subscription:', err);
+      // Don't set error state, just log it
     }
   };
 
@@ -210,57 +247,141 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     try {
       setIsSubscribing(true);
       
-      let oneSignalInstance: any = null;
-      
       // Wait for OneSignal to be ready
-      if (window.OneSignalDeferred) {
-        await new Promise<void>((resolve) => {
-          window.OneSignalDeferred.push(async (OneSignal: any) => {
-            oneSignalInstance = OneSignal;
+      await new Promise<void>((resolve) => {
+        if (window.OneSignal) {
+          resolve();
+        } else if (window.OneSignalDeferred) {
+          window.OneSignalDeferred.push(() => resolve());
+        } else {
+          // Wait a bit for OneSignal to load
+          const checkInterval = setInterval(() => {
+            if (window.OneSignal) {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 100);
+          
+          // Timeout after 5 seconds
+          setTimeout(() => {
+            clearInterval(checkInterval);
             resolve();
-          });
-        });
-      } else if (window.OneSignal) {
-        oneSignalInstance = window.OneSignal;
-      } else {
+          }, 5000);
+        }
+      });
+
+      if (!window.OneSignal) {
         console.error('OneSignal is not available');
+        alert('OneSignal is not loaded. Please refresh the page and try again.');
         setIsSubscribing(false);
         return;
       }
 
-      // Request permission and subscribe
-      await oneSignalInstance.Slidedown.promptPush();
-      const isOptedIn = await oneSignalInstance.isPushNotificationsEnabled();
-      setIsSubscribed(isOptedIn);
-      
-      if (isOptedIn) {
-        console.log('Successfully subscribed to OneSignal notifications');
-        
-        // Get the player ID and send it to the backend
-        try {
-          const playerId = await oneSignalInstance.getUserId();
-          if (playerId) {
-            const token = getStoredToken();
-            if (token) {
-              await apiFetch(ENDPOINTS.profile.updateOneSignalPlayerId, {
-                method: 'POST',
-                token,
-                body: {
-                  onesignal_player_id: playerId,
-                },
-              });
-              console.log('OneSignal player ID saved to backend');
+      const OneSignal = window.OneSignal as any;
+
+      try {
+        // Try using Slidedown first (recommended for v16)
+        if (OneSignal.Slidedown && OneSignal.Slidedown.promptPush) {
+          await OneSignal.Slidedown.promptPush();
+        } else if (OneSignal.Notifications && OneSignal.Notifications.requestPermission) {
+          // Fallback: Request permission directly
+          const permission = await OneSignal.Notifications.requestPermission();
+          if (permission === 'granted') {
+            if (OneSignal.User?.PushSubscription?.optIn) {
+              await OneSignal.User.PushSubscription.optIn();
             }
           }
-        } catch (err) {
-          console.error('Failed to save OneSignal player ID:', err);
-          // Don't fail the subscription if saving player ID fails
+        } else {
+          // Try legacy API methods
+          if (typeof OneSignal.registerForPushNotifications === 'function') {
+            await OneSignal.registerForPushNotifications();
+          } else {
+            throw new Error('OneSignal subscription methods not available');
+          }
         }
-      } else {
-        console.log('User declined OneSignal notifications');
+
+        // Wait a moment for subscription to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Check subscription status using multiple possible API structures
+        let isOptedIn = false;
+        let playerId: string | null = null;
+
+        if (OneSignal.User?.PushSubscription) {
+          isOptedIn = OneSignal.User.PushSubscription.optedIn ?? false;
+          playerId = OneSignal.User.PushSubscription.id ?? null;
+        } else if (typeof OneSignal.isPushNotificationsEnabled === 'function') {
+          isOptedIn = await OneSignal.isPushNotificationsEnabled();
+          if (typeof OneSignal.getUserId === 'function') {
+            playerId = await OneSignal.getUserId();
+          }
+        } else if (OneSignal.getNotificationPermission) {
+          const permission = OneSignal.getNotificationPermission();
+          isOptedIn = permission === 'granted';
+        }
+
+        setIsSubscribed(isOptedIn);
+        
+        if (isOptedIn) {
+          console.log('Successfully subscribed to OneSignal notifications');
+          
+          // Get the player ID and send it to the backend
+          if (playerId) {
+            try {
+              const token = getStoredToken();
+              if (token) {
+                await apiFetch(ENDPOINTS.profile.updateOneSignalPlayerId, {
+                  method: 'POST',
+                  token,
+                  body: {
+                    onesignal_player_id: playerId,
+                  },
+                });
+                console.log('OneSignal player ID saved to backend:', playerId);
+              }
+            } catch (err) {
+              console.error('Failed to save OneSignal player ID:', err);
+              // Don't fail the subscription if saving player ID fails
+            }
+          } else {
+            console.warn('OneSignal player ID not available yet - will retry on next check');
+            // Retry getting player ID after a delay
+            setTimeout(async () => {
+              try {
+                const OneSignal = window.OneSignal as any;
+                const retryPlayerId = OneSignal?.User?.PushSubscription?.id || 
+                                    (typeof OneSignal.getUserId === 'function' ? await OneSignal.getUserId() : null);
+                if (retryPlayerId) {
+                  const token = getStoredToken();
+                  if (token) {
+                    await apiFetch(ENDPOINTS.profile.updateOneSignalPlayerId, {
+                      method: 'POST',
+                      token,
+                      body: { onesignal_player_id: retryPlayerId },
+                    });
+                  }
+                }
+              } catch (err) {
+                console.error('Retry failed to save player ID:', err);
+              }
+            }, 3000);
+          }
+        } else {
+          console.log('User declined OneSignal notifications');
+        }
+      } catch (err: any) {
+        // Handle IndexedDB errors gracefully
+        if (err?.name === 'UnknownError' || err?.message?.includes('indexedDB') || err?.message?.includes('backing store')) {
+          console.error('IndexedDB error (browser storage issue):', err);
+          alert('Unable to enable notifications due to browser storage restrictions. Please:\n1. Clear your browser cache\n2. Check browser settings allow storage\n3. Try a different browser or incognito mode');
+        } else {
+          console.error('Failed to subscribe to notifications:', err);
+          alert('Failed to enable notifications: ' + (err?.message || 'Unknown error'));
+        }
       }
     } catch (err) {
       console.error('Failed to subscribe to notifications:', err);
+      alert('Failed to enable notifications. Please try again.');
     } finally {
       setIsSubscribing(false);
     }
