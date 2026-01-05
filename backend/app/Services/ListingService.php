@@ -117,15 +117,19 @@ class ListingService
         $query->latest();
 
         // City filtering
-        if (config('app.env') !== 'local' || !($filters['ignore_city'] ?? false)) {
+        // Only apply city filter if ignore_city is not true
+        if (!($filters['ignore_city'] ?? false)) {
             if (isset($filters['city']) && $filters['city'] !== null) {
                 $filterCity = trim((string) $filters['city']);
                 
+                // If city is 'all', don't filter by city
                 if (strtolower($filterCity) !== 'all') {
                     $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$filterCity]);
                 }
             } else {
-                if ($user && $user->city) {
+                // If no city filter provided and user has a city, filter by user's city
+                // Only in production environment (not local)
+                if (config('app.env') !== 'local' && $user && $user->city) {
                     $userCity = trim($user->city);
                     $query->whereRaw('LOWER(TRIM(COALESCE(city, ""))) = LOWER(?)', [$userCity]);
                 }

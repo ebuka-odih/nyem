@@ -69,6 +69,8 @@ const App = () => {
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
   const [currentCity, setCurrentCity] = useState("All Locations");
+  const [cities, setCities] = useState<Array<{id: number; name: string}>>([]);
+  const [categories, setCategories] = useState<Array<{id: number; name: string}>>([]);
 
   const [activeTab, setActiveTab] = useState<'marketplace' | 'services' | 'barter'>('marketplace');
   const [activePage, setActivePage] = useState<'discover' | 'upload' | 'matches' | 'profile'>('discover');
@@ -195,6 +197,27 @@ const App = () => {
     }
   }, []);
 
+  // Fetch cities and categories from backend on mount
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        // Fetch cities
+        const citiesResponse = await apiFetch(ENDPOINTS.locationsCities);
+        const citiesData = citiesResponse.data?.cities || citiesResponse.cities || [];
+        setCities(citiesData);
+        
+        // Fetch categories (marketplace categories)
+        const categoriesResponse = await apiFetch(`${ENDPOINTS.categories}?parent=Shop`);
+        const categoriesData = categoriesResponse.categories || categoriesResponse.data?.categories || [];
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error('Failed to fetch filters:', error);
+      }
+    };
+    
+    fetchFilters();
+  }, []);
+
   const sendNativeNotification = (title: string, body: string, icon?: string) => {
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification(title, {
@@ -302,14 +325,10 @@ const App = () => {
       // Add city filter - send 'all' to show all cities, or specific city
       if (currentCity === "All Locations") {
         params.push('city=all');
+        // Also add ignore_city to ensure all listings are shown regardless of environment
+        params.push('ignore_city=true');
       } else {
         params.push(`city=${encodeURIComponent(currentCity)}`);
-      }
-      
-      // For local development, allow ignoring city filter to see all listings
-      // This helps when testing with listings from different cities
-      if ((window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && currentCity === "All Locations") {
-        params.push('ignore_city=true');
       }
       
       // Build feed URL
