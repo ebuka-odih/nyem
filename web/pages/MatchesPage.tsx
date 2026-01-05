@@ -1,19 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Heart, Zap, ChevronRight, Search, MoreHorizontal, CheckCheck, X, Check, Star, Send, ArrowLeft, MoreVertical, Phone, Video, Paperclip, Smile, ShieldCheck, Lock, CreditCard, ShoppingBag, ShieldAlert, Bell } from 'lucide-react';
+import { MessageSquare, Heart, Zap, ChevronRight, Search, MoreHorizontal, CheckCheck, X, Check, Star, Send, ArrowLeft, MoreVertical, Phone, Video, Paperclip, Smile, ShieldCheck, Lock, CreditCard, ShoppingBag, ShieldAlert } from 'lucide-react';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
-
-// OneSignal TypeScript declarations
-declare global {
-  interface Window {
-    OneSignal?: any;
-    OneSignalDeferred?: Array<(OneSignal: any) => void | Promise<void>>;
-    OneSignalReady?: Promise<any>;
-    PushAlert?: any;
-  }
-}
+import { PushNotificationSubscription } from '../components/PushNotificationSubscription';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -142,10 +133,6 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   const [isEscrowActive, setIsEscrowActive] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isSubscribing, setIsSubscribing] = useState(false);
-  const [isPushAlertSubscribed, setIsPushAlertSubscribed] = useState(false);
-  const [isPushAlertSubscribing, setIsPushAlertSubscribing] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -173,11 +160,9 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   useEffect(() => {
     fetchConversations();
     fetchMessageRequests();
-    checkOneSignalSubscription();
   }, []);
 
-  // Check OneSignal subscription status
-  const checkOneSignalSubscription = async () => {
+  const fetchConversations = async () => {
     try {
       // Wait for OneSignal to be ready using the promise from initialization
       let OneSignal: any = null;
@@ -351,7 +336,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
           // Get the player ID and send it to the backend
           if (playerId) {
             try {
-              const token = getStoredToken();
+      const token = getStoredToken();
               if (token) {
                 await apiFetch(ENDPOINTS.profile.updateOneSignalPlayerId, {
                   method: 'POST',
@@ -518,10 +503,6 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   }, []);
 
   const fetchConversations = async () => {
-    try {
-      setLoading(true);
-      const token = getStoredToken();
-      if (!token) return;
 
       const response = await apiFetch<{ conversations: ChatMessage[] }>(ENDPOINTS.conversations.list, { token });
       if (response.conversations) {
@@ -1074,42 +1055,9 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
         </button>
       </div>
 
-      {/* OneSignal Subscribe Button */}
-      <div className="px-4 mb-3">
-        <button
-          onClick={handleSubscribeToNotifications}
-          disabled={isSubscribing || isSubscribed}
-          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
-            isSubscribed
-              ? 'bg-emerald-500 text-white shadow-lg cursor-not-allowed'
-              : isSubscribing
-              ? 'bg-neutral-300 text-neutral-500 cursor-wait'
-              : 'bg-[#830e4c] text-white shadow-lg active:scale-95 hover:bg-[#931e5c]'
-          }`}
-        >
-          <Bell size={18} strokeWidth={2.5} />
-          {isSubscribed ? 'Subscribed (OneSignal)' : isSubscribing ? 'Subscribing...' : 'Subscribe (OneSignal)'}
-          {isSubscribed && <Check size={16} strokeWidth={3} />}
-        </button>
-      </div>
-
-      {/* PushAlert Subscribe Button */}
+      {/* Push Notification Subscription */}
       <div className="px-4 mb-4">
-        <button
-          onClick={handlePushAlertSubscribe}
-          disabled={isPushAlertSubscribing || isPushAlertSubscribed}
-          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
-            isPushAlertSubscribed
-              ? 'bg-blue-500 text-white shadow-lg cursor-not-allowed'
-              : isPushAlertSubscribing
-              ? 'bg-neutral-300 text-neutral-500 cursor-wait'
-              : 'bg-blue-600 text-white shadow-lg active:scale-95 hover:bg-blue-700'
-          }`}
-        >
-          <Bell size={18} strokeWidth={2.5} />
-          {isPushAlertSubscribed ? 'Subscribed (PushAlert)' : isPushAlertSubscribing ? 'Subscribing...' : 'Subscribe (PushAlert)'}
-          {isPushAlertSubscribed && <Check size={16} strokeWidth={3} />}
-        </button>
+        <PushNotificationSubscription />
       </div>
 
       {/* Content */}
