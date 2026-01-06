@@ -35,6 +35,7 @@ export interface Product {
   vendor: Vendor;
   distance: string;
   isSuper?: boolean;
+  isAd?: boolean;
 }
 
 export interface CityData {

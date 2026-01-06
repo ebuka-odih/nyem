@@ -128,10 +128,30 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   const [showPromoCard, setShowPromoCard] = useState(false);
   const PROMO_CARD_INTERVAL = 5; // Show promo card every N swipes
   
-  // Track swipe count for ad card (every 3 swipes)
+  // Track swipe count for ad card (every 3 swipes - tracks both left and right swipes)
   const adSwipeCountRef = useRef(0);
   const [showAdCard, setShowAdCard] = useState(false);
   const AD_CARD_INTERVAL = 3; // Show ad card every N swipes
+  
+  // Helper function to track swipe and check if ad card should show
+  const trackSwipeForAdCard = () => {
+    // Only track for Marketplace and Swap tabs
+    if (activeTab !== 'Marketplace' && activeTab !== 'Swap') {
+      return false; // Don't show ad card on Services tab
+    }
+    
+    // Increment ad card swipe count
+    adSwipeCountRef.current = adSwipeCountRef.current + 1;
+    const newAdCount = adSwipeCountRef.current;
+    
+    // Show ad card every AD_CARD_INTERVAL swipes
+    if (newAdCount > 0 && newAdCount % AD_CARD_INTERVAL === 0) {
+      setShowAdCard(true);
+      return true; // Ad card will be shown
+    }
+    
+    return false; // Ad card won't show
+  };
   
   // Track previous filter values to detect when they change
   const prevFiltersRef = useRef<{ tab: string; categoryId: number | null; location: string }>({
@@ -614,8 +634,16 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
       // Advance to next item after a short delay to show the toast
       // This acknowledges the action and moves to the next card
       setTimeout(() => {
-        // Track swipe count for Marketplace and Swap tabs (for promo card)
+        // Track swipe count for Marketplace and Swap tabs (for promo card and ad card)
         if (activeTab === 'Marketplace' || activeTab === 'Swap') {
+          // Track swipe for ad card (returns true if ad card should show)
+          const shouldShowAdCard = trackSwipeForAdCard();
+          
+          if (shouldShowAdCard) {
+            return; // Don't advance index yet, ad card will be shown
+          }
+          
+          // Check for promo card (only if ad card won't show)
           setSwipeCount(prevCount => {
             const newCount = prevCount + 1;
             // Show promo card every PROMO_CARD_INTERVAL swipes
@@ -658,8 +686,16 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     setShowOfferModal(false);
     setShowMarketplaceModal(false);
     
-    // Track swipe count for Marketplace and Swap tabs (for promo card)
+    // Track swipe count for Marketplace and Swap tabs (for promo card and ad card)
     if (activeTab === 'Marketplace' || activeTab === 'Swap') {
+      // Track swipe for ad card (returns true if ad card should show)
+      const shouldShowAdCard = trackSwipeForAdCard();
+      
+      if (shouldShowAdCard) {
+        return; // Don't advance index yet, ad card will be shown
+      }
+      
+      // Check for promo card (only if ad card won't show)
       const newCount = swipeCount + 1;
       setSwipeCount(newCount);
       // Show promo card every PROMO_CARD_INTERVAL swipes
@@ -839,13 +875,10 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         onSwipeLeft={async () => {
           // Track swipe count for Marketplace and Swap tabs (for promo card and ad card)
           if (activeTab === 'Marketplace' || activeTab === 'Swap') {
-            // Increment ad card swipe count using ref (for immediate access)
-            adSwipeCountRef.current = adSwipeCountRef.current + 1;
-            const newAdCount = adSwipeCountRef.current;
+            // Track swipe for ad card (returns true if ad card should show)
+            const shouldShowAdCard = trackSwipeForAdCard();
             
-            // Show ad card every AD_CARD_INTERVAL swipes (prioritize ad card over promo card if both would show)
-            if (newAdCount > 0 && newAdCount % AD_CARD_INTERVAL === 0) {
-              setShowAdCard(true);
+            if (shouldShowAdCard) {
               return; // Don't advance index yet, ad card will be shown
             }
             
@@ -861,6 +894,7 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
               setCurrentIndex(prevIndex => prevIndex + 1);
               return newCount;
             });
+            // Note: Don't return here - let the setSwipeCount callback handle advancement
           } else {
             // For other tabs, just advance
             setCurrentIndex(prev => {

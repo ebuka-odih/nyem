@@ -18,12 +18,13 @@ class SwipeController extends Controller
 {
     public function store(Request $request)
     {
+        $listingTable = (new Listing())->getTable();
         $data = $request->validate([
-            'target_listing_id' => 'required|exists:listings,id',
-            'target_item_id' => 'sometimes|exists:listings,id', // Backward compatibility alias
+            'target_listing_id' => "required|exists:{$listingTable},id",
+            'target_item_id' => "sometimes|exists:{$listingTable},id", // Backward compatibility alias
             'direction' => 'required|in:left,right,up',
-            'offered_listing_id' => 'nullable|exists:listings,id',
-            'offered_item_id' => 'nullable|exists:listings,id', // Backward compatibility alias
+            'offered_listing_id' => "nullable|exists:{$listingTable},id",
+            'offered_item_id' => "nullable|exists:{$listingTable},id", // Backward compatibility alias
         ]);
 
         $user = $request->user();

@@ -25,6 +25,7 @@ import {
 import { Product, Vendor } from './types';
 import { CATEGORIES_DATA, NIGERIA_CITIES } from './data';
 import { SwipeCard } from './components/SwipeCard';
+import { AdSwipeCard } from './components/AdSwipeCard';
 import { SwipeControls } from './components/SwipeControls';
 import { Modal } from './components/Modal';
 import { UploadPage } from './pages/UploadPage';
@@ -64,13 +65,14 @@ const App = () => {
   const [lastSparkedItem, setLastSparkedItem] = useState<Product | null>(null);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [loadingItems, setLoadingItems] = useState(false);
+  const [swipeCount, setSwipeCount] = useState(0);
 
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
   const [currentCity, setCurrentCity] = useState("All Locations");
-  const [cities, setCities] = useState<Array<{id: number; name: string}>>([]);
-  const [categories, setCategories] = useState<Array<{id: number; name: string}>>([]);
+  const [cities, setCities] = useState<Array<{ id: number; name: string }>>([]);
+  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
 
   const [activeTab, setActiveTab] = useState<'marketplace' | 'services' | 'barter'>('marketplace');
   const [activePage, setActivePage] = useState<'discover' | 'upload' | 'matches' | 'profile'>('discover');
@@ -137,17 +139,17 @@ const App = () => {
         } catch (error: any) {
           // Check if this is an authentication error (401, 403) vs server/network error
           const errorMessage = error?.message || String(error || '');
-          
+
           // Explicitly check for authentication errors
-          const isAuthError = 
-            errorMessage.includes('401') || 
+          const isAuthError =
+            errorMessage.includes('401') ||
             errorMessage.includes('403') ||
             errorMessage.includes('Unauthorized') ||
             errorMessage.includes('Unauthenticated') ||
             errorMessage.includes('Invalid credentials');
-          
+
           // Explicitly check for server errors (500, 502, 503, 504, etc.)
-          const isServerError = 
+          const isServerError =
             errorMessage.includes('500') ||
             errorMessage.includes('502') ||
             errorMessage.includes('503') ||
@@ -155,15 +157,15 @@ const App = () => {
             errorMessage.includes('Server error') ||
             errorMessage.includes('Internal Server Error') ||
             errorMessage.includes('Service temporarily unavailable');
-          
+
           // Check if it's a network error (shouldn't clear token)
-          const isNetworkError = 
+          const isNetworkError =
             errorMessage.includes('Network error') ||
             errorMessage.includes('Cannot connect') ||
             errorMessage.includes('Failed to fetch') ||
             errorMessage.includes('Cannot reach API') ||
             error?.name === 'TypeError';
-          
+
           // Only clear token on authentication errors, not server errors or network errors
           if (isAuthError && !isServerError && !isNetworkError) {
             // Token invalid, clear it and redirect to welcome
@@ -205,7 +207,7 @@ const App = () => {
         const citiesResponse = await apiFetch(ENDPOINTS.locationsCities);
         const citiesData = citiesResponse.data?.cities || citiesResponse.cities || [];
         setCities(citiesData);
-        
+
         // Fetch categories (marketplace categories)
         const categoriesResponse = await apiFetch(`${ENDPOINTS.categories}?parent=Shop`);
         const categoriesData = categoriesResponse.categories || categoriesResponse.data?.categories || [];
@@ -214,7 +216,7 @@ const App = () => {
         console.error('Failed to fetch filters:', error);
       }
     };
-    
+
     fetchFilters();
   }, []);
 
@@ -231,7 +233,7 @@ const App = () => {
   const transformListingToProduct = (listing: any): Product => {
     // Handle user/owner data (ListingResource provides both 'user' and 'owner')
     const user = listing.user || listing.owner || {};
-    
+
     // Handle images - ListingResource provides 'images' array and 'gallery' array (both same)
     // Also check for 'image' (singular) as fallback
     let images: string[] = [];
@@ -242,7 +244,7 @@ const App = () => {
     } else if (listing.image) {
       images = [listing.image];
     }
-    
+
     // Format price - ListingResource formats price with commas for marketplace type
     let price = 'Price on request';
     if (listing.price) {
@@ -251,7 +253,7 @@ const App = () => {
         price = listing.price.includes('₦') ? listing.price : `₦${listing.price}`;
       } else {
         // If it's a string without commas, parse and format it
-        const priceValue = typeof listing.price === 'string' 
+        const priceValue = typeof listing.price === 'string'
           ? parseFloat(listing.price.replace(/[₦,]/g, ''))
           : listing.price;
         // Format with commas for display
@@ -279,11 +281,11 @@ const App = () => {
 
     // Format vendor location - prioritize owner.location (formatted "Area, City") from ListingResource
     // Fallback to constructing from user.area and user.city if owner.location is not available
-    const fullLocation = listing.owner?.location 
-      ? listing.owner.location 
-      : (user.area 
-          ? `${user.area}, ${user.city || listing.city || 'Unknown'}` 
-          : (user.city || listing.city || 'Unknown'));
+    const fullLocation = listing.owner?.location
+      ? listing.owner.location
+      : (user.area
+        ? `${user.area}, ${user.city || listing.city || 'Unknown'}`
+        : (user.city || listing.city || 'Unknown'));
 
     return {
       id: listing.id,
@@ -314,11 +316,11 @@ const App = () => {
   // Fetch items from API - matches the approach used in UploadPage
   const fetchItems = useCallback(async () => {
     if (activeTab !== 'marketplace') return; // Only fetch for marketplace tab
-    
+
     setLoadingItems(true);
     try {
       const token = getStoredToken();
-      
+
       // Check if user has location set, if not show modal
       if (token && isAuthenticated) {
         try {
@@ -332,19 +334,19 @@ const App = () => {
           console.error('Failed to check location status:', err);
         }
       }
-      
+
       // Build query parameters - same approach as other parts of the app
       const params: string[] = [];
-      
+
       // Add type filter for marketplace (matches UploadPage which creates with type='marketplace')
       // Note: We filter for 'marketplace' type to match listings created via UploadPage
       params.push('type=marketplace');
-      
+
       // Add category filter
       if (activeCategory !== "All") {
         params.push(`category=${encodeURIComponent(activeCategory)}`);
       }
-      
+
       // Add city filter - send 'all' to show all cities, or specific city name
       if (currentCity === "All Locations") {
         params.push('city=all');
@@ -356,20 +358,20 @@ const App = () => {
         params.push(`city=${encodeURIComponent(currentCity)}`);
         // Don't send ignore_city when filtering by specific city
       }
-      
+
       // Build feed URL
       let feedUrl = ENDPOINTS.items.feed;
       if (params.length > 0) {
         feedUrl += `?${params.join('&')}`;
       }
-      
+
       console.log('[Discover] Fetching items from:', feedUrl);
       console.log('[Discover] Filters:', { activeCategory, currentCity, activeTab });
-      
+
       // Fetch items from API - same endpoint used by UploadPage to fetch user listings
       const response = await apiFetch(feedUrl, { token: token || undefined });
       const apiItems = response.listings || response.items || response.data || [];
-      
+
       console.log('[Discover] Received items from API:', apiItems.length);
       if (apiItems.length > 0) {
         console.log('[Discover] First item sample:', {
@@ -381,7 +383,7 @@ const App = () => {
           price: apiItems[0].price
         });
       }
-      
+
       // Transform API items to Product format
       // Backend already filters by status='active', but we double-check here
       const transformedItems = apiItems
@@ -400,11 +402,12 @@ const App = () => {
           return true;
         })
         .map(transformListingToProduct);
-      
+
       console.log('[Discover] Transformed items for display:', transformedItems.length);
-      
+
       setItems(transformedItems);
       setHistory([]);
+      setSwipeCount(0);
     } catch (error) {
       console.error('[Discover] Failed to fetch items:', error);
       setItems([]);
@@ -424,7 +427,7 @@ const App = () => {
     try {
       const response = await apiFetch<{ data: { items: any[] } }>(ENDPOINTS.swipes.wishlist, { token });
       const wishlistItems = response.data?.items || [];
-      
+
       // Transform backend items to Product format
       const formattedItems: Product[] = wishlistItems.map((item: any) => ({
         id: item.id,
@@ -437,7 +440,7 @@ const App = () => {
         isSuper: item.isSuper || true,
         owner: item.owner,
       }));
-      
+
       setLikedItems(formattedItems);
     } catch (err) {
       console.error('Failed to fetch wishlist:', err);
@@ -462,9 +465,57 @@ const App = () => {
 
   const activeIndex = items.length - 1;
 
+  // Function to create a special Ad item
+  const createAdItem = useCallback((): Product => {
+    return {
+      id: `ad-${Date.now()}`,
+      name: 'Small Business Support',
+      description: 'Nyem empowers local artisans and micro-businesses. Join our community and shine together!',
+      price: 'PROMO',
+      category: 'COMMUNITY',
+      images: ['https://images.unsplash.com/photo-1542744094-24638eff58bb?w=800'],
+      color: '#830e4c',
+      longDescription: '',
+      distance: 'Local',
+      vendor: {
+        name: 'Nyem Community',
+        avatar: 'https://via.placeholder.com/150',
+        location: 'Everywhere',
+        rating: 5,
+        reviewCount: 1000,
+        joinedDate: '2024',
+        bio: 'Supporting small businesses.',
+        verified: true,
+        followers: 10000
+      },
+      isAd: true
+    };
+  }, []);
+
   const handleSwipe = useCallback(async (direction: 'left' | 'right' | 'up') => {
     const swipedItem = items[activeIndex];
     if (!swipedItem) return;
+
+    // If it's an ad, just remove it and move on
+    if (swipedItem.isAd) {
+      setItems(prev => prev.slice(0, -1));
+      setTriggerDir(null);
+      return;
+    }
+
+    // Helper to remove item and handle ad injection
+    const popItem = () => {
+      setSwipeCount(prev => prev + 1);
+      setItems(prev => {
+        const newList = prev.slice(0, -1);
+        // If we've reached 3 swipes, insert an ad card as the next item
+        if ((swipeCount + 1) % 3 === 0 && newList.length > 0) {
+          return [...newList, createAdItem()];
+        }
+        return newList;
+      });
+      setTriggerDir(null);
+    };
 
     // Check if user is authenticated
     const isAuthenticated = localStorage.getItem('auth_token') !== null;
@@ -472,14 +523,12 @@ const App = () => {
     // Allow left swipe (pass) for everyone
     if (direction === 'left') {
       setHistory(prev => [...prev, swipedItem]);
-      setItems(prev => prev.slice(0, -1));
-      setTriggerDir(null);
+      popItem();
       return;
     }
 
     // Require authentication for right (like) and up (super interest) swipes
     if (!isAuthenticated) {
-      // Show login page
       setAuthState('login');
       return;
     }
@@ -489,45 +538,39 @@ const App = () => {
       try {
         const token = getStoredToken();
         if (token) {
-          // Send swipe request to backend
-          // For 'up' direction (star), we'll send it as 'right' with a special flag, or handle it separately
           await apiFetch(ENDPOINTS.swipes.create, {
             method: 'POST',
             token,
             body: {
               target_listing_id: swipedItem.id,
-              direction: direction === 'up' ? 'up' : 'right', // Send 'up' for star action
+              direction: direction === 'up' ? 'up' : 'right',
             },
           });
         }
       } catch (err) {
         console.error('Failed to send swipe:', err);
-        // Continue with UI update even if API call fails
       }
     }
 
     if (direction === 'up') {
       setLastSparkedItem(swipedItem);
       setShowSellerToast(true);
-      sendNativeNotification(
-        "New Super Interest! ⚡️",
-        `A buyer is highly interested in your "${swipedItem.name}". Open Nyem to chat!`,
-        swipedItem.images[0]
-      );
+      if (typeof sendNativeNotification === 'function') {
+        sendNativeNotification(
+          "New Super Interest!",
+          `A buyer is highly interested in your "${swipedItem.name}". Open Nyem to chat!`,
+          swipedItem.images[0]
+        );
+      }
       setTimeout(() => setShowSellerToast(false), 3500);
+
+      // Refresh wishlist
+      setTimeout(() => fetchWishlist(), 500);
     }
 
-    // Only add to wishlist when star button (up direction) is used
-    if (direction === 'up') {
-      // Refresh wishlist from backend to get the latest data
-      setTimeout(() => {
-        fetchWishlist();
-      }, 500); // Small delay to ensure backend has processed the swipe
-    }
     setHistory(prev => [...prev, swipedItem]);
-    setItems(prev => prev.slice(0, -1));
-    setTriggerDir(null);
-  }, [items, activeIndex]);
+    popItem();
+  }, [items, activeIndex, swipeCount, createAdItem, fetchWishlist]);
 
   const handleShare = async (product: Product | null = null) => {
     const itemToShare = product || items[activeIndex] || selectedProduct;
@@ -584,7 +627,7 @@ const App = () => {
   const removeFromWishlist = async (id: number) => {
     // Optimistically update UI
     setLikedItems(prev => prev.filter(item => item.id !== id));
-    
+
     // Note: We don't have a delete endpoint for wishlist items yet
     // The backend will automatically clean them up after 24 hours
     // For now, we just remove from local state
@@ -784,11 +827,21 @@ const App = () => {
                   </motion.div>
                 ) : items.length > 0 ? (
                   items.map((product: Product, idx: number) => (
-                    <SwipeCard
-                      key={`${product.id}-${items.length}`} product={product} index={activeIndex - idx} isTop={idx === activeIndex}
-                      onSwipe={handleSwipe} triggerDirection={idx === activeIndex ? triggerDir : null}
-                      onShowDetail={(p) => { setActiveImageIndex(0); setSelectedProduct(p); }}
-                    />
+                    product.isAd ? (
+                      <AdSwipeCard
+                        key={product.id}
+                        index={activeIndex - idx}
+                        isTop={idx === activeIndex}
+                        onSwipe={handleSwipe}
+                        triggerDirection={idx === activeIndex ? triggerDir : null}
+                      />
+                    ) : (
+                      <SwipeCard
+                        key={`${product.id}-${items.length}`} product={product} index={activeIndex - idx} isTop={idx === activeIndex}
+                        onSwipe={handleSwipe} triggerDirection={idx === activeIndex ? triggerDir : null}
+                        onShowDetail={(p) => { setActiveImageIndex(0); setSelectedProduct(p); }}
+                      />
+                    )
                   ))
                 ) : (
                   <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center px-8">
@@ -895,7 +948,7 @@ const App = () => {
                             <div className="flex items-center gap-1 text-neutral-400">
                               <MapPin size={10} strokeWidth={3} />
                               <span className="text-[10px] font-black uppercase tracking-tight">
-                                {selectedProduct.distance && selectedProduct.distance !== 'Unknown' && selectedProduct.distance !== 'UNKNOWN' 
+                                {selectedProduct.distance && selectedProduct.distance !== 'Unknown' && selectedProduct.distance !== 'UNKNOWN'
                                   ? `${selectedProduct.distance} ${selectedProduct.vendor.location}`
                                   : selectedProduct.vendor.location}
                               </span>
@@ -963,9 +1016,9 @@ const App = () => {
           <Modal isOpen={showLocationDialog} onClose={() => setShowLocationDialog(false)} title="SELECT CITY">
             <div className="space-y-2">
               {/* "All Locations" option */}
-              <button 
-                key="all" 
-                onClick={() => { setCurrentCity("All Locations"); setShowLocationDialog(false); }} 
+              <button
+                key="all"
+                onClick={() => { setCurrentCity("All Locations"); setShowLocationDialog(false); }}
                 className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === "All Locations" ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' : 'bg-white border-neutral-50 hover:border-neutral-100'}`}
               >
                 <div className="flex items-center gap-3.5">
@@ -987,13 +1040,13 @@ const App = () => {
                   )}
                 </div>
               </button>
-              
+
               {/* Cities from backend */}
               {cities.length > 0 ? (
                 cities.map(city => (
-                  <button 
-                    key={city.id} 
-                    onClick={() => { setCurrentCity(city.name); setShowLocationDialog(false); }} 
+                  <button
+                    key={city.id}
+                    onClick={() => { setCurrentCity(city.name); setShowLocationDialog(false); }}
                     className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === city.name ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' : 'bg-white border-neutral-50 hover:border-neutral-100'}`}
                   >
                     <div className="flex items-center gap-3.5">
@@ -1019,9 +1072,9 @@ const App = () => {
               ) : (
                 // Fallback to hardcoded cities if backend fetch failed
                 NIGERIA_CITIES.filter(c => c.city !== "All Locations").map(cityObj => (
-                  <button 
-                    key={cityObj.city} 
-                    onClick={() => { setCurrentCity(cityObj.city); setShowLocationDialog(false); }} 
+                  <button
+                    key={cityObj.city}
+                    onClick={() => { setCurrentCity(cityObj.city); setShowLocationDialog(false); }}
                     className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === cityObj.city ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' : 'bg-white border-neutral-50 hover:border-neutral-100'}`}
                   >
                     <div className="flex items-center gap-3.5">

@@ -119,10 +119,13 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
     };
   }, []);
 
-  const currentItem = items[currentIndex];
+  // Only get currentItem if we're not showing special cards (which don't have items)
+  const currentItem = (!showWelcomeCard && !showSignupWelcomeCard && !showPromoCard && !showAdCard) 
+    ? items[currentIndex] 
+    : undefined;
   const nextItem = items[currentIndex + 1];
   
-  // Check if current item belongs to the current user
+  // Check if current item belongs to the current user (only if currentItem exists)
   const isOwnItem = currentItem && currentUserId && currentItem.owner?.id 
     ? String(currentItem.owner.id) === String(currentUserId)
     : false;
@@ -166,6 +169,19 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   }, [currentItem?.id, isOwnItem]);
 
   const handleDragEnd = async (event: any, info: PanInfo) => {
+    // Don't handle drag if we're showing a special card (welcome, promo, ad)
+    // These cards have their own swipe handlers
+    if (showWelcomeCard || showSignupWelcomeCard || showPromoCard || showAdCard) {
+      controls.start({ x: 0, rotate: 0 });
+      return;
+    }
+    
+    // Don't handle drag if there's no current item
+    if (!currentItem) {
+      controls.start({ x: 0, rotate: 0 });
+      return;
+    }
+    
     if (info.offset.x > 100) {
       // Only allow swipe right if it's not the user's own item
       if (!isOwnItem) {
