@@ -23,6 +23,13 @@ export const FilterModal: React.FC<FilterModalProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef<HTMLElement | null>(null);
   
+  // Debug: Log options when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      console.log(`[FilterModal] ${type} modal opened with ${options.length} options:`, options);
+    }
+  }, [isOpen, type, options]);
+  
   // Find the AppShell container (phone window container) - find it immediately and on mount
   if (typeof document !== 'undefined' && !containerRef.current) {
     // Find the AppShell container - it has the safe-area-container class

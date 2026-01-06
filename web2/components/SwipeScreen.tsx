@@ -252,10 +252,31 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           apiFetch(ENDPOINTS.locations),
         ]);
 
-        const cats = (categoriesRes.categories || []) as Category[];
-        const locs = (locationsRes.locations || []) as Location[];
+        console.log('[SwipeScreen] Categories API response:', categoriesRes);
+        console.log('[SwipeScreen] Locations API response:', locationsRes);
 
-        console.log(`[SwipeScreen] Loaded ${cats.length} categories for ${activeTab} tab:`, cats.map(c => c.name));
+        // Handle different response formats - backend might return categories directly or in a wrapper
+        let cats: Category[] = [];
+        if (Array.isArray(categoriesRes)) {
+          cats = categoriesRes as Category[];
+        } else if (categoriesRes?.categories && Array.isArray(categoriesRes.categories)) {
+          cats = categoriesRes.categories as Category[];
+        } else if (categoriesRes?.data && Array.isArray(categoriesRes.data)) {
+          cats = categoriesRes.data as Category[];
+        }
+
+        // Handle different response formats for locations
+        let locs: Location[] = [];
+        if (Array.isArray(locationsRes)) {
+          locs = locationsRes as Location[];
+        } else if (locationsRes?.locations && Array.isArray(locationsRes.locations)) {
+          locs = locationsRes.locations as Location[];
+        } else if (locationsRes?.data && Array.isArray(locationsRes.data)) {
+          locs = locationsRes.data as Location[];
+        }
+
+        console.log(`[SwipeScreen] Parsed ${cats.length} categories for ${activeTab} tab:`, cats.map(c => ({ id: c.id, name: c.name })));
+        console.log(`[SwipeScreen] Parsed ${locs.length} locations:`, locs.map(l => ({ id: l.id, name: l.name })));
 
         setCategories(cats);
         setLocations(locs);
@@ -320,8 +341,9 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
           params.push(`type=${encodeURIComponent(itemType)}`);
 
           // Add category filter if not "All Categories"
+          // Backend expects 'category' parameter (accepts both ID and name)
           if (selectedCategoryId) {
-            params.push(`category_id=${selectedCategoryId}`);
+            params.push(`category=${selectedCategoryId}`);
           }
 
           // Add city filter
@@ -796,8 +818,18 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
   };
 
 
-  const resetStack = () => {
+  const resetStack = async () => {
+    // Reset index to 0
     setCurrentIndex(0);
+    tabIndicesRef.current[activeTab] = 0;
+    
+    // Reset swipe counts
+    setSwipeCount(0);
+    adSwipeCountRef.current = 0;
+    
+    // Reload items from API
+    await fetchItems();
+    
     // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
   };
 
@@ -821,9 +853,16 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     // Find and store the category ID for API filtering
     if (category === 'All Categories') {
       setSelectedCategoryId(null);
+      console.log('[SwipeScreen] Category filter cleared - showing all categories');
     } else {
       const cat = categories.find(c => c.name === category);
-      setSelectedCategoryId(cat?.id || null);
+      if (cat) {
+        setSelectedCategoryId(cat.id);
+        console.log('[SwipeScreen] Category filter set:', { name: category, id: cat.id });
+      } else {
+        console.warn('[SwipeScreen] Category not found in categories list:', category);
+        setSelectedCategoryId(null);
+      }
     }
     setShowCategoryDropdown(false);
   };
@@ -836,6 +875,10 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
 
   // Build category options list (with "All Categories" first)
   const categoryOptions = ['All Categories', ...categories.map(cat => cat.name)];
+  
+  // Debug: Log category options being passed to modal
+  console.log('[SwipeScreen] Category options for modal:', categoryOptions);
+  console.log('[SwipeScreen] Categories state:', categories);
 
   // Build location options list (with "All Locations" first)
   const locationOptions = ['all', ...locations.map(loc => loc.name)];

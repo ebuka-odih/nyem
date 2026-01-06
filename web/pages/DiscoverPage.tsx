@@ -357,6 +357,7 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
           setActiveCategory(category);
           setShowFilterDialog(false);
         }}
+        activeTab={activeTab}
       />
 
       <LocationModal

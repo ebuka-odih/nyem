@@ -28,7 +28,7 @@ interface SwipeCardStackProps {
   onDirectBuyRequest?: () => void; // Handler for direct buy request (no modal)
   isSendingBuyRequest?: boolean; // Loading state for buy request
   onItemClick: (item: SwipeItem) => void;
-  onReset: () => void;
+  onReset: () => void | Promise<void>;
   onWelcomeCardDismiss?: () => void;
   onPromoCardDismiss?: () => void;
   onAdCardDismiss?: () => void;
@@ -244,8 +244,12 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
                 <h3 className="text-lg font-bold text-gray-800 mb-2">You're all caught up!</h3>
                 <p className="text-gray-500 text-sm mb-4">Check back later for more items.</p>
                 <button
-                  onClick={onReset}
-                  className="flex items-center space-x-2 px-5 py-2.5 bg-brand text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform"
+                  onClick={async () => {
+                    if (onReset) {
+                      await onReset();
+                    }
+                  }}
+                  className="flex items-center space-x-2 px-5 py-2.5 bg-brand text-white rounded-full font-bold text-sm shadow-lg active:scale-95 transition-transform hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw size={16} />
                   <span>Start Over</span>
