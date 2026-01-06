@@ -136,7 +136,8 @@ class ListingService
             }
         }
         
-        $query->latest();
+        // Sort by newest first (created_at DESC) - this ensures new listings are at the top
+        $query->orderBy('created_at', 'desc');
 
         // City filtering
         // Only apply city filter if ignore_city is not true
@@ -218,17 +219,40 @@ class ListingService
             // Fallback: try without some filters if it failed
             $listings = Listing::with(['user.cityLocation', 'user.areaLocation', 'category'])
                 ->where('status', Listing::STATUS_ACTIVE)
-                ->latest()
+                ->orderBy('created_at', 'desc')
                 ->take(50)
                 ->get();
         }
 
-        // Calculate distances and filter by distance if user has location
+        // Get user's liked listings categories for personalization
+        $userLikedCategories = [];
+        if ($user) {
+            // Get categories from listings the user has liked (swiped right or up)
+            $likedSwipes = \App\Models\Swipe::where('from_user_id', $user->id)
+                ->whereIn('direction', ['right', 'up'])
+                ->with('targetListing.category')
+                ->get();
+            
+            // Count category preferences
+            $categoryCounts = [];
+            foreach ($likedSwipes as $swipe) {
+                if ($swipe->targetListing && $swipe->targetListing->category_id) {
+                    $catId = $swipe->targetListing->category_id;
+                    $categoryCounts[$catId] = ($categoryCounts[$catId] ?? 0) + 1;
+                }
+            }
+            
+            // Get top preferred categories (categories user has liked most)
+            arsort($categoryCounts);
+            $userLikedCategories = array_keys(array_slice($categoryCounts, 0, 5, true)); // Top 5 categories
+        }
+
+        // Calculate distances and apply personalized ranking
         // Priority: Use item coordinates > seller's user coordinates
         if ($user && $user->hasLocation()) {
             $maxDistanceKm = 100; // Default 100km radius, can be made configurable
             
-            $listings = $listings->map(function ($listing) use ($user) {
+            $listings = $listings->map(function ($listing) use ($user, $userLikedCategories) {
                 $distanceKm = null;
                 
                 // Priority 1: Use item's own coordinates if available
@@ -262,17 +286,54 @@ class ListingService
                 }
                 
                 $listing->distance_km = $distanceKm;
+                
+                // Calculate personalized score
+                // Score factors:
+                // 1. Recency (newer = higher score) - timestamp in seconds
+                // 2. Distance (closer = higher score) - inverse of distance
+                // 3. Category preference (liked categories = higher score)
+                $recencyScore = $listing->created_at->timestamp;
+                $distanceScore = $distanceKm !== null ? (1000 / max($distanceKm, 0.1)) : 0; // Inverse distance, max 1000 for very close items
+                $categoryScore = 0;
+                if (!empty($userLikedCategories) && $listing->category_id && in_array($listing->category_id, $userLikedCategories)) {
+                    // Boost listings from preferred categories
+                    $categoryScore = 500; // Significant boost for preferred categories
+                }
+                
+                // Combined score: recency (most important) + distance + category preference
+                // We use negative recency to sort descending (newest first), then add distance and category boosts
+                $listing->personalized_score = $recencyScore + $distanceScore + $categoryScore;
+                
                 return $listing;
             })
             // Filter out listings beyond max distance (keep null distances for now)
             ->filter(function ($listing) use ($maxDistanceKm) {
                 return $listing->distance_km === null || $listing->distance_km <= $maxDistanceKm;
             })
-            // Sort by distance (closest first), then by created_at (newest first)
-            ->sortBy(function ($listing) {
-                return [$listing->distance_km ?? 999999, -$listing->created_at->timestamp];
-            })
+            // Sort by personalized score (highest first) - this prioritizes:
+            // 1. Newest listings (recency score)
+            // 2. Closer listings (distance score)
+            // 3. Preferred categories (category score)
+            ->sortByDesc('personalized_score')
             ->values();
+        } else {
+            // If user doesn't have location, still apply category-based personalization
+            if (!empty($userLikedCategories)) {
+                $listings = $listings->map(function ($listing) use ($userLikedCategories) {
+                    $recencyScore = $listing->created_at->timestamp;
+                    $categoryScore = 0;
+                    if ($listing->category_id && in_array($listing->category_id, $userLikedCategories)) {
+                        $categoryScore = 500; // Boost for preferred categories
+                    }
+                    $listing->personalized_score = $recencyScore + $categoryScore;
+                    return $listing;
+                })
+                ->sortByDesc('personalized_score')
+                ->values();
+            } else {
+                // No personalization, just ensure newest first
+                $listings = $listings->sortByDesc('created_at')->values();
+            }
         }
 
         return $listings;

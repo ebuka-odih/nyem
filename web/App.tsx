@@ -413,12 +413,52 @@ const App = () => {
     }
   }, [activeTab, activeCategory, currentCity]);
 
+  // Fetch wishlist from backend
+  const fetchWishlist = useCallback(async () => {
+    const token = getStoredToken();
+    if (!token) {
+      setLikedItems([]);
+      return;
+    }
+
+    try {
+      const response = await apiFetch<{ data: { items: any[] } }>(ENDPOINTS.swipes.wishlist, { token });
+      const wishlistItems = response.data?.items || [];
+      
+      // Transform backend items to Product format
+      const formattedItems: Product[] = wishlistItems.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        category: item.category,
+        images: item.images || (item.image ? [item.image] : []),
+        image: item.image || (item.images && item.images[0] ? item.images[0] : 'https://via.placeholder.com/800'),
+        isSuper: item.isSuper || true,
+        owner: item.owner,
+      }));
+      
+      setLikedItems(formattedItems);
+    } catch (err) {
+      console.error('Failed to fetch wishlist:', err);
+      // Keep existing wishlist items on error
+    }
+  }, []);
+
   // Fetch items when discover page is active and filters change
   useEffect(() => {
     if (activePage === 'discover' || authState === 'discover') {
       fetchItems();
     }
   }, [activePage, authState, fetchItems]);
+
+  // Fetch wishlist when authenticated
+  useEffect(() => {
+    const token = getStoredToken();
+    if (token && (activePage === 'discover' || authState === 'discover')) {
+      fetchWishlist();
+    }
+  }, [activePage, authState, fetchWishlist]);
 
   const activeIndex = items.length - 1;
 
@@ -477,9 +517,12 @@ const App = () => {
       setTimeout(() => setShowSellerToast(false), 3500);
     }
 
-    if (direction === 'right' || direction === 'up') {
-      const enhancedItem = direction === 'up' ? { ...swipedItem, isSuper: true } : swipedItem;
-      setLikedItems(prev => prev.find(i => i.id === enhancedItem.id) ? prev : [...prev, enhancedItem]);
+    // Only add to wishlist when star button (up direction) is used
+    if (direction === 'up') {
+      // Refresh wishlist from backend to get the latest data
+      setTimeout(() => {
+        fetchWishlist();
+      }, 500); // Small delay to ensure backend has processed the swipe
     }
     setHistory(prev => [...prev, swipedItem]);
     setItems(prev => prev.slice(0, -1));
@@ -538,8 +581,14 @@ const App = () => {
     }
   };
 
-  const removeFromWishlist = (id: number) => {
+  const removeFromWishlist = async (id: number) => {
+    // Optimistically update UI
     setLikedItems(prev => prev.filter(item => item.id !== id));
+    
+    // Note: We don't have a delete endpoint for wishlist items yet
+    // The backend will automatically clean them up after 24 hours
+    // For now, we just remove from local state
+    // If you want immediate deletion, you could add a DELETE /swipes/{id} endpoint
   };
 
   const openSellerProfile = (vendor: Vendor) => {

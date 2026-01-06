@@ -85,6 +85,7 @@ interface SwipeScreenProps {
 
 // Local storage key for welcome card dismissed state
 const WELCOME_CARD_DISMISSED_KEY = 'nyem_welcome_card_dismissed';
+const SIGNUP_WELCOME_CARD_DISMISSED_KEY = 'nyem_signup_welcome_card_dismissed';
 
 export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, onLoginRequest, onSignUpRequest, initialTab = 'Marketplace', onTabChange, initialIndex = 0, onIndexChange }) => {
   const { token, isAuthenticated, user } = useAuth();
@@ -108,10 +109,29 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
     return dismissed !== 'true';
   });
   
+  // Show signup welcome card for new users (stored in localStorage)
+  const [showSignupWelcomeCard, setShowSignupWelcomeCard] = useState(() => {
+    // Check if user just signed up (check for a flag set after signup)
+    const justSignedUp = localStorage.getItem('nyem_just_signed_up');
+    const dismissed = localStorage.getItem(SIGNUP_WELCOME_CARD_DISMISSED_KEY);
+    // Show if user just signed up and hasn't dismissed it
+    if (justSignedUp === 'true' && dismissed !== 'true') {
+      // Clear the flag so it only shows once
+      localStorage.removeItem('nyem_just_signed_up');
+      return true;
+    }
+    return false;
+  });
+  
   // Track swipe count for promo card (Marketplace and Swap tabs, every 5 swipes)
   const [swipeCount, setSwipeCount] = useState(0);
   const [showPromoCard, setShowPromoCard] = useState(false);
   const PROMO_CARD_INTERVAL = 5; // Show promo card every N swipes
+  
+  // Track swipe count for ad card (every 3 swipes)
+  const adSwipeCountRef = useRef(0);
+  const [showAdCard, setShowAdCard] = useState(false);
+  const AD_CARD_INTERVAL = 3; // Show ad card every N swipes
   
   // Track previous filter values to detect when they change
   const prevFiltersRef = useRef<{ tab: string; categoryId: number | null; location: string }>({
@@ -812,24 +832,43 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
         likedItems={likedItems}
         showWelcomeCard={showWelcomeCard}
         showPromoCard={showPromoCard}
+        showAdCard={showAdCard}
+        showSignupWelcomeCard={showSignupWelcomeCard}
         currentUserId={user?.id}
         onLike={handleLike}
         onSwipeLeft={async () => {
-          // Track swipe count for Marketplace and Swap tabs (for promo card)
+          // Track swipe count for Marketplace and Swap tabs (for promo card and ad card)
           if (activeTab === 'Marketplace' || activeTab === 'Swap') {
-            const newCount = swipeCount + 1;
-            setSwipeCount(newCount);
-            // Show promo card every PROMO_CARD_INTERVAL swipes
-            if (newCount > 0 && newCount % PROMO_CARD_INTERVAL === 0) {
-              setShowPromoCard(true);
-              return; // Don't advance index yet, promo card will be shown
+            // Increment ad card swipe count using ref (for immediate access)
+            adSwipeCountRef.current = adSwipeCountRef.current + 1;
+            const newAdCount = adSwipeCountRef.current;
+            
+            // Show ad card every AD_CARD_INTERVAL swipes (prioritize ad card over promo card if both would show)
+            if (newAdCount > 0 && newAdCount % AD_CARD_INTERVAL === 0) {
+              setShowAdCard(true);
+              return; // Don't advance index yet, ad card will be shown
             }
+            
+            // Check for promo card (only if ad card won't show)
+            setSwipeCount(prevCount => {
+              const newCount = prevCount + 1;
+              // Show promo card every PROMO_CARD_INTERVAL swipes
+              if (newCount > 0 && newCount % PROMO_CARD_INTERVAL === 0) {
+                setShowPromoCard(true);
+                return prevCount; // Don't update count yet, promo card will handle it
+              }
+              // If neither card shows, advance to next item
+              setCurrentIndex(prevIndex => prevIndex + 1);
+              return newCount;
+            });
+          } else {
+            // For other tabs, just advance
+            setCurrentIndex(prev => {
+              const newIndex = prev + 1;
+              // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
+              return newIndex;
+            });
           }
-          setCurrentIndex(prev => {
-            const newIndex = prev + 1;
-            // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
-            return newIndex;
-          });
         }}
         onSwipeRight={handleRightSwipe}
         onDirectBuyRequest={handleDirectBuyRequest}
@@ -850,6 +889,33 @@ export const SwipeScreen: React.FC<SwipeScreenProps> = ({ onBack, onItemClick, o
             // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
             return newIndex;
           });
+        }}
+        onAdCardDismiss={() => {
+          // Hide ad card and continue to next item
+          setShowAdCard(false);
+          setCurrentIndex(prev => {
+            const newIndex = prev + 1;
+            // Note: onIndexChange will be called by the effect at line 144-149 when currentIndex changes
+            return newIndex;
+          });
+        }}
+        onAdCardAction={() => {
+          // Handle ad card action - could navigate to upload screen or show login prompt
+          // For now, just dismiss the card
+          setShowAdCard(false);
+          setCurrentIndex(prev => {
+            const newIndex = prev + 1;
+            return newIndex;
+          });
+          // TODO: Navigate to upload screen if needed
+        }}
+        onSignupWelcomeCardDismiss={() => {
+          // Mark signup welcome card as dismissed and save to localStorage
+          setShowSignupWelcomeCard(false);
+          localStorage.setItem(SIGNUP_WELCOME_CARD_DISMISSED_KEY, 'true');
+          // Also dismiss the regular welcome card since they've seen the signup one
+          setShowWelcomeCard(false);
+          localStorage.setItem(WELCOME_CARD_DISMISSED_KEY, 'true');
         }}
       />
 

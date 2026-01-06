@@ -37,6 +37,7 @@ export const ENDPOINTS = {
   swipes: {
     create: '/swipes',
     pendingRequests: '/swipes/pending-requests',
+    wishlist: '/swipes/wishlist',
   },
   tradeOffers: {
     pending: '/trade-offers/pending',

@@ -114,6 +114,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/swipes', [SwipeController::class, 'store']);
     Route::get('/swipes/pending-requests', [SwipeController::class, 'pendingRequests']);
+    Route::get('/swipes/wishlist', [SwipeController::class, 'wishlist']);
 
     Route::get('/trade-offers/pending', [TradeOfferController::class, 'pending']);
     Route::post('/trade-offers/{id}/respond', [TradeOfferController::class, 'respond']);

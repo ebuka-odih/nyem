@@ -568,11 +568,13 @@ const AppContent: React.FC = () => {
               name={signupName}
               password={signupPassword}
               onVerify={(isNewUser) => {
-                // After email verification, redirect directly to profile
-                // User already has name, email, and password from registration
-                // They can edit profile later if needed
+                // Set flag that user just signed up (to show welcome card)
+                if (isNewUser) {
+                  localStorage.setItem('nyem_just_signed_up', 'true');
+                }
+                // After email verification, redirect directly to discover page to show welcome card
                 navigateTo('home', true);
-                setActiveTab('profile');
+                setActiveTab('discover');
               }}
               onBack={handleGoBack}
             />

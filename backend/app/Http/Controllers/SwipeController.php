@@ -310,4 +310,69 @@ class SwipeController extends Controller
             'message' => 'This endpoint is deprecated. Use GET /trade-offers/pending instead.',
         ]);
     }
+
+    /**
+     * Get user's wishlist items (swipes with direction='up')
+     * Only returns items that are still within 24 hours
+     */
+    public function wishlist(Request $request)
+    {
+        $user = $request->user();
+        
+        // Get all 'up' swipes (star/wishlist items) that are less than 24 hours old
+        $twentyFourHoursAgo = now()->subHours(24);
+        
+        $wishlistSwipes = Swipe::where('from_user_id', $user->id)
+            ->where('direction', 'up')
+            ->where('created_at', '>=', $twentyFourHoursAgo)
+            ->with(['targetListing' => function ($query) {
+                $query->with(['user', 'category']);
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Transform swipes to listing format
+        $wishlistItems = $wishlistSwipes->map(function ($swipe) {
+            $listing = $swipe->targetListing;
+            if (!$listing) {
+                return null;
+            }
+            
+            // Get photos array - handle both array and accessor
+            $photos = $listing->photos;
+            if (is_string($photos)) {
+                $photos = json_decode($photos, true) ?? [];
+            }
+            if (!is_array($photos)) {
+                $photos = [];
+            }
+            
+            return [
+                'id' => $listing->id,
+                'name' => $listing->title,
+                'description' => $listing->description,
+                'price' => $listing->price,
+                'category' => $listing->category->name ?? 'Uncategorized',
+                'images' => $photos,
+                'image' => !empty($photos) ? $photos[0] : null,
+                'isSuper' => true,
+                'swipe_id' => $swipe->id,
+                'swipe_created_at' => $swipe->created_at,
+                'owner' => $listing->user ? [
+                    'id' => $listing->user->id,
+                    'name' => $listing->user->name ?? $listing->user->username,
+                    'username' => $listing->user->username,
+                    'image' => $listing->user->profile_photo,
+                ] : null,
+            ];
+        })->filter()->values();
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'items' => $wishlistItems,
+                'count' => $wishlistItems->count(),
+            ],
+        ]);
+    }
 }
