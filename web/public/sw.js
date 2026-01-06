@@ -6,7 +6,7 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 // Service Worker Version - Auto-updated on each build by vite-plugin-sw-version
 // This ensures cache invalidation when new builds are deployed
-const SW_VERSION = 'v3-1767695298911';
+const SW_VERSION = 'v4-fixed-router-404';
 const STATIC_CACHE = `nyem-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `nyem-runtime-${SW_VERSION}`;
 const API_CACHE = `nyem-api-${SW_VERSION}`;
@@ -31,7 +31,7 @@ self.addEventListener('install', (event) => {
         console.log('[SW] Caching App Shell assets');
         // Don't fail if some assets can't be cached
         return Promise.allSettled(
-          CRITICAL_ASSETS.map(url => 
+          CRITICAL_ASSETS.map(url =>
             cache.add(url).catch(err => {
               console.warn(`[SW] Failed to cache ${url}:`, err);
             })
@@ -55,16 +55,16 @@ self.addEventListener('activate', (event) => {
       const deletePromises = cacheNames
         .filter((cacheName) => {
           // Delete all caches that start with our prefix but aren't current version
-          return cacheName.startsWith(CACHE_PREFIX) && 
-                 cacheName !== STATIC_CACHE && 
-                 cacheName !== RUNTIME_CACHE && 
-                 cacheName !== API_CACHE;
+          return cacheName.startsWith(CACHE_PREFIX) &&
+            cacheName !== STATIC_CACHE &&
+            cacheName !== RUNTIME_CACHE &&
+            cacheName !== API_CACHE;
         })
         .map((cacheName) => {
           console.log('[SW] Deleting old cache:', cacheName);
           return caches.delete(cacheName);
         });
-      
+
       return Promise.all(deletePromises);
     }).then(() => {
       // Take control of all pages immediately
@@ -106,8 +106,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Determine if this is an API request
-  const isApiRequest = url.pathname.startsWith('/api/') || 
-                       url.hostname !== self.location.hostname;
+  const isApiRequest = url.pathname.startsWith('/api/') ||
+    url.hostname !== self.location.hostname;
 
   // Strategy 1: Cache-First for static assets (JS, CSS, images, fonts)
   // These rarely change and should load instantly from cache
@@ -188,25 +188,24 @@ self.addEventListener('fetch', (event) => {
               caches.open(RUNTIME_CACHE).then((cache) => {
                 cache.put(request, responseToCache);
               });
+              return networkResponse;
             }
+
+            // If network returns 404 for a navigation request, it's likely an SPA route
+            if (networkResponse && networkResponse.status === 404) {
+              return caches.match('/index.html') || networkResponse;
+            }
+
             return networkResponse;
           }).catch(() => {
-            // Network failed, that's okay - we'll use cache
+            // Network failed, we'll try to use /index.html from cache
+            return caches.match('/index.html');
           });
 
           // Return cached version immediately if available
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-
-          // No cache, wait for network
-          return fetchPromise.then((networkResponse) => {
-            if (networkResponse) {
-              return networkResponse;
-            }
-            // Fallback to index.html for SPA routing
-            return caches.match('/index.html') || new Response('Offline', { status: 503 });
-          });
+          // For navigation, if specifically requested URL isn't in cache, 
+          // we fallback to /index.html immediately for instant SPA loading
+          return cachedResponse || caches.match('/index.html') || fetchPromise;
         })
     );
     return;
@@ -269,12 +268,12 @@ self.addEventListener('notificationclick', (event) => {
 // Handle messages from clients (for update checking and control)
 self.addEventListener('message', (event) => {
   console.log('[SW] Received message:', event.data);
-  
+
   if (event.data && event.data.type === 'SKIP_WAITING') {
     // Client is requesting to skip waiting and activate immediately
     self.skipWaiting();
   }
-  
+
   if (event.data && event.data.type === 'GET_VERSION') {
     // Client is requesting the current service worker version
     event.ports[0].postMessage({
@@ -282,7 +281,7 @@ self.addEventListener('message', (event) => {
       version: SW_VERSION
     });
   }
-  
+
   if (event.data && event.data.type === 'CHECK_UPDATE') {
     // Client is requesting to check for updates
     self.registration.update().then(() => {
