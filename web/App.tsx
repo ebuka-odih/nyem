@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Settings, Sparkles } from 'lucide-react';
 import { Product, Vendor } from './types';
@@ -19,100 +20,43 @@ import { DiscoverLayout } from './components/DiscoverLayout';
 import { GeneralLayout } from './components/GeneralLayout';
 import { BottomNav } from './components/BottomNav';
 import { useAuth } from './hooks/useAuth';
-import { useLocation } from './hooks/useLocation';
+import { useLocation as useLocationHook } from './hooks/useLocation';
 import { useWishlist } from './hooks/useWishlist';
 import { useServiceWorker } from './hooks/useServiceWorker';
-import { apiFetch, getStoredUser } from './utils/api';
-import { ENDPOINTS } from './constants/endpoints';
+import { getStoredUser } from './utils/api';
 import { ServiceWorkerUpdate } from './components/ServiceWorkerUpdate';
+import { useCategories } from './hooks/api/useCategories';
+import { useWishlistQuery } from './hooks/api/useWishlist';
+import { useProfile } from './hooks/api/useProfile';
 
-const App = () => {
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'services' | 'barter'>('marketplace');
-  const [activePage, setActivePage] = useState<'discover' | 'upload' | 'matches' | 'profile'>('discover');
+// Discover Route Component
+const DiscoverRoute: React.FC = () => {
+  const { tab } = useParams<{ tab?: string }>();
+  const navigate = useNavigate();
+  const activeTab = (tab === 'services' || tab === 'barter' ? tab : 'marketplace') as 'marketplace' | 'services' | 'barter';
+  
   const [activeCategory, setActiveCategory] = useState("All");
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [showWishlist, setShowWishlist] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [forceProfileSettings, setForceProfileSettings] = useState(0);
-  const [categories, setCategories] = useState<Array<{ id: number; name: string }>>([]);
   const [triggerDir, setTriggerDir] = useState<'left' | 'right' | 'up' | null>(null);
   const [hasOpenModal, setHasOpenModal] = useState(false);
 
-  const {
-    authState,
-    setAuthState,
-    tempUserEmail,
-    setTempUserEmail,
-    tempRegisterData,
-    setTempRegisterData,
-    hasValidToken,
-    isAuthenticated,
-    signOut
-  } = useAuth();
-
+  const { hasValidToken, setAuthState } = useAuth();
   const {
     showLocationModal,
     setShowLocationModal,
     currentCity,
     setCurrentCity,
     cities,
-    checkLocationAndShowModal
-  } = useLocation();
-
-  const { likedItems, fetchWishlist } = useWishlist();
+  } = useLocationHook();
   
-  // Service worker update handling
-  const { isUpdateReady, activateUpdate } = useServiceWorker();
-
-  // Items and history are managed in DiscoverPage, but we need them here for SwipeControls
+  const { likedItems } = useWishlist();
+  const { data: profile } = useProfile();
+  
   const [discoverItems, setDiscoverItems] = useState<Product[]>([]);
   const [discoverHistory, setDiscoverHistory] = useState<Product[]>([]);
   const [discoverUndoLast, setDiscoverUndoLast] = useState<(() => void) | null>(null);
-  
-  // Auto-reload when update is ready (after a short delay)
-  useEffect(() => {
-    if (isUpdateReady) {
-      // Auto-reload after 2 seconds to apply update
-      const timer = setTimeout(() => {
-        activateUpdate();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isUpdateReady, activateUpdate]);
-
-  // Request notification permission on mount
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
-
-  // Fetch categories from backend on mount
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const categoriesResponse = await apiFetch(`${ENDPOINTS.categories}?parent=Shop`);
-        const categoriesData = categoriesResponse.categories || categoriesResponse.data?.categories || [];
-        setCategories(categoriesData);
-      } catch (error) {
-        console.error('Failed to fetch categories:', error);
-      }
-    };
-
-    fetchCategories();
-  }, []);
-
-  // Fetch wishlist when authenticated
-  useEffect(() => {
-    if (hasValidToken && (activePage === 'discover' || authState === 'discover')) {
-      fetchWishlist();
-    }
-  }, [activePage, authState, hasValidToken, fetchWishlist]);
-
-  const handleProfileSettingsClick = () => {
-    setForceProfileSettings(prev => prev + 1);
-  };
 
   const handleItemsChange = useCallback((items: Product[], history: Product[], undoLast: () => void) => {
     setDiscoverItems(items);
@@ -124,13 +68,10 @@ const App = () => {
     setHasOpenModal(hasOpenModal);
   }, []);
 
-  // Get current user ID to check if listing belongs to user
   const getCurrentUserId = (): string | number | null => {
-    const user = getStoredUser();
-    return user?.id || null;
+    return profile?.id || null;
   };
 
-  // Check if current item belongs to the user
   const currentItemIsOwn = (): boolean => {
     if (discoverItems.length === 0) return false;
     const activeIndex = discoverItems.length - 1;
@@ -140,236 +81,13 @@ const App = () => {
     const currentUserId = getCurrentUserId();
     if (!currentUserId || !currentItem.userId) return false;
 
-    // Compare user IDs (handle both string and number types)
     return String(currentItem.userId) === String(currentUserId);
   };
 
-  // Show auth pages (welcome, login, register, etc.)
-  if (authState === 'welcome' || authState === 'login' || authState === 'register' || authState === 'otp' || authState === 'forgot') {
-    return (
-      <>
-        <ServiceWorkerUpdate />
-        {showLocationModal && (
-          <LocationPermissionModal
-            onAllow={async () => {
-              setShowLocationModal(false);
-            }}
-            onSkip={() => {
-              setShowLocationModal(false);
-            }}
-          />
-        )}
-        <AuthLayout>
-          <AnimatePresence mode="wait">
-            {authState === 'welcome' && (
-              <WelcomePage
-                onStart={() => {
-                  setAuthState('discover');
-                  setActivePage('discover');
-                }}
-                onLogin={() => setAuthState('login')}
-                onRegister={() => setAuthState('register')}
-              />
-            )}
-            {authState === 'login' && (
-              <LoginPage
-                onLogin={async () => {
-                  await checkLocationAndShowModal();
-                  setAuthState('discover');
-                  setActivePage('discover');
-                }}
-                onGoToRegister={() => setAuthState('register')}
-                onGoToForgot={() => setAuthState('forgot')}
-                onSkip={() => {
-                  setAuthState('discover');
-                  setActivePage('discover');
-                }}
-              />
-            )}
-            {authState === 'register' && (
-              <RegisterPage
-                onRegister={(email, name, password) => {
-                  setTempUserEmail(email);
-                  setTempRegisterData({ name, password });
-                  setAuthState('otp');
-                }}
-                onGoToLogin={() => setAuthState('login')}
-                onSkip={() => {
-                  setAuthState('discover');
-                  setActivePage('discover');
-                }}
-              />
-            )}
-            {authState === 'otp' && (
-              <OtpVerificationPage
-                email={tempUserEmail}
-                name={tempRegisterData?.name}
-                password={tempRegisterData?.password}
-                onVerify={async () => {
-                  setTempRegisterData(null);
-                  await checkLocationAndShowModal();
-                  localStorage.removeItem('has_seen_welcome_card');
-                  setAuthState('discover');
-                  setActivePage('discover');
-                }}
-                onBack={() => {
-                  setTempRegisterData(null);
-                  setAuthState('register');
-                }}
-              />
-            )}
-            {authState === 'forgot' && (
-              <ForgotPasswordPage
-                onBack={() => setAuthState('login')}
-                onSubmit={() => setAuthState('login')}
-              />
-            )}
-          </AnimatePresence>
-        </AuthLayout>
-      </>
-    );
-  }
-
-  // Handle discover state - allow access without auth
-  if (authState === 'discover' || (authState === 'authenticated' && activePage === 'discover')) {
-    if (activePage !== 'discover') {
-      setActivePage('discover');
-    }
-  }
-
-  if (activePage === 'discover' || authState === 'discover') {
-    return (
-      <>
-        <ServiceWorkerUpdate />
-        {showLocationModal && (
-          <LocationPermissionModal
-            onAllow={async () => {
-              setShowLocationModal(false);
-            }}
-            onSkip={() => {
-              setShowLocationModal(false);
-            }}
-          />
-        )}
-        <DiscoverLayout
-          headerProps={{
-            onFilter: () => setShowFilterDialog(true),
-            onLocation: () => setShowLocationDialog(true),
-            onWishlist: () => setShowWishlist(true),
-            activeCategory,
-            setActiveTab,
-            activeTab,
-            wishlistCount: likedItems.length
-          }}
-          bottomNav={
-            <BottomNav
-              activePage={activePage}
-              setActivePage={setActivePage}
-              authState={authState}
-              setAuthState={setAuthState}
-              isChatOpen={isChatOpen}
-            />
-          }
-          floatingControls={activeTab === 'marketplace' && discoverItems.length > 0 && !hasOpenModal ? (
-            <SwipeControls
-              onUndo={() => discoverUndoLast?.()}
-              onNope={() => setTriggerDir('left')}
-              onStar={() => {
-                if (!hasValidToken) {
-                  setAuthState('login');
-                } else {
-                  setTriggerDir('up');
-                }
-              }}
-              onLike={() => {
-                if (!hasValidToken) {
-                  setAuthState('login');
-                } else {
-                  setTriggerDir('right');
-                }
-              }}
-              onShare={() => {
-                // Share handled in DiscoverPage via handleShare
-              }}
-              canUndo={discoverHistory.length > 0}
-              disableStar={currentItemIsOwn()}
-              disableLike={currentItemIsOwn()}
-            />
-          ) : undefined}
-        >
-          <DiscoverPage
-            activeTab={activeTab}
-            activeCategory={activeCategory}
-            setActiveCategory={setActiveCategory}
-            currentCity={currentCity}
-            setCurrentCity={setCurrentCity}
-            cities={cities}
-            likedItems={likedItems}
-            onWishlistClick={() => setShowWishlist(true)}
-            onNavigateToUpload={() => setActivePage('upload')}
-            hasValidToken={hasValidToken}
-            onLogin={() => setAuthState('login')}
-            triggerDir={triggerDir}
-            setTriggerDir={setTriggerDir}
-            showFilterDialog={showFilterDialog}
-            setShowFilterDialog={setShowFilterDialog}
-            showLocationDialog={showLocationDialog}
-            setShowLocationDialog={setShowLocationDialog}
-            showWishlist={showWishlist}
-            setShowWishlist={setShowWishlist}
-            onItemsChange={handleItemsChange}
-            onModalStateChange={handleModalStateChange}
-          />
-        </DiscoverLayout>
-      </>
-    );
-  }
-
-  const pageTitles = { upload: 'Studio', matches: 'Inbox', profile: 'Account' };
-  const rightActions = {
-    upload: { icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } },
-    matches: { icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } },
-    profile: { icon: <Settings size={20} strokeWidth={2.5} />, onClick: handleProfileSettingsClick }
+  const setActiveTab = (tab: 'marketplace' | 'services' | 'barter') => {
+    const path = tab === 'marketplace' ? '/discover' : `/discover/${tab}`;
+    navigate(path);
   };
-
-  // Show login prompt for protected pages if not authenticated
-  if ((activePage === 'upload' || activePage === 'matches' || activePage === 'profile') && !hasValidToken) {
-    return (
-      <>
-        <ServiceWorkerUpdate />
-        {showLocationModal && (
-          <LocationPermissionModal
-            onAllow={async () => {
-              setShowLocationModal(false);
-            }}
-            onSkip={() => {
-              setShowLocationModal(false);
-            }}
-          />
-        )}
-        <GeneralLayout
-          title={pageTitles[activePage]}
-          rightAction={rightActions[activePage]}
-          bottomNav={
-            <BottomNav
-              activePage={activePage}
-              setActivePage={setActivePage}
-              authState={authState}
-              setAuthState={setAuthState}
-              isChatOpen={isChatOpen}
-            />
-          }
-        >
-          <LoginPrompt
-            onLogin={() => setAuthState('login')}
-            onRegister={() => setAuthState('register')}
-            title={`${pageTitles[activePage]} Requires Login`}
-            message={`Please login or register to access ${pageTitles[activePage].toLowerCase()}`}
-          />
-        </GeneralLayout>
-      </>
-    );
-  }
 
   return (
     <>
@@ -384,38 +102,309 @@ const App = () => {
           }}
         />
       )}
-      <GeneralLayout
-        title={pageTitles[activePage]}
-        rightAction={rightActions[activePage]}
-        bottomNav={
-          <BottomNav
-            activePage={activePage}
-            setActivePage={setActivePage}
-            authState={authState}
-            setAuthState={setAuthState}
-            isChatOpen={isChatOpen}
+      <DiscoverLayout
+        headerProps={{
+          onFilter: () => setShowFilterDialog(true),
+          onLocation: () => setShowLocationDialog(true),
+          onWishlist: () => setShowWishlist(true),
+          activeCategory,
+          setActiveTab,
+          activeTab,
+          wishlistCount: likedItems.length
+        }}
+        bottomNav={<BottomNav />}
+        floatingControls={activeTab === 'marketplace' && discoverItems.length > 0 && !hasOpenModal ? (
+          <SwipeControls
+            onUndo={() => discoverUndoLast?.()}
+            onNope={() => setTriggerDir('left')}
+            onStar={() => {
+              if (!hasValidToken) {
+                navigate('/login');
+              } else {
+                setTriggerDir('up');
+              }
+            }}
+            onLike={() => {
+              if (!hasValidToken) {
+                navigate('/login');
+              } else {
+                setTriggerDir('right');
+              }
+            }}
+            onShare={() => {}}
+            canUndo={discoverHistory.length > 0}
+            disableStar={currentItemIsOwn()}
+            disableLike={currentItemIsOwn()}
           />
-        }
+        ) : undefined}
       >
-        {activePage === 'upload' ? (
+        <DiscoverPage
+          activeTab={activeTab}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+          currentCity={currentCity}
+          setCurrentCity={setCurrentCity}
+          cities={cities}
+          likedItems={likedItems}
+          onWishlistClick={() => setShowWishlist(true)}
+          onNavigateToUpload={() => navigate('/upload')}
+          hasValidToken={hasValidToken}
+          onLogin={() => navigate('/login')}
+          triggerDir={triggerDir}
+          setTriggerDir={setTriggerDir}
+          showFilterDialog={showFilterDialog}
+          setShowFilterDialog={setShowFilterDialog}
+          showLocationDialog={showLocationDialog}
+          setShowLocationDialog={setShowLocationDialog}
+          showWishlist={showWishlist}
+          setShowWishlist={setShowWishlist}
+          onItemsChange={handleItemsChange}
+          onModalStateChange={handleModalStateChange}
+        />
+      </DiscoverLayout>
+    </>
+  );
+};
+
+// Protected Route Component - Shows LoginPrompt if not authenticated
+const ProtectedRoute: React.FC<{ children: React.ReactNode; title: string }> = ({ children, title }) => {
+  const hasValidToken = localStorage.getItem('auth_token') !== null;
+  const navigate = useNavigate();
+
+  if (!hasValidToken) {
+    return (
+      <LoginPrompt
+        onLogin={() => navigate('/login')}
+        onRegister={() => navigate('/register')}
+        title={`${title} Requires Login`}
+        message={`Please login or register to access ${title.toLowerCase()}`}
+      />
+    );
+  }
+
+  return <>{children}</>;
+};
+
+// Upload Route Component
+const UploadRoute: React.FC = () => {
+  return (
+    <>
+      <ServiceWorkerUpdate />
+      <GeneralLayout
+        title="Studio"
+        rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => {} }}
+        bottomNav={<BottomNav />}
+      >
+        <ProtectedRoute title="Studio">
           <UploadPage />
-        ) : activePage === 'matches' ? (
+        </ProtectedRoute>
+      </GeneralLayout>
+    </>
+  );
+};
+
+// Matches Route Component
+const MatchesRoute: React.FC = () => {
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  
+  return (
+    <>
+      <ServiceWorkerUpdate />
+      <GeneralLayout
+        title="Inbox"
+        rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => {} }}
+        bottomNav={<BottomNav />}
+      >
+        <ProtectedRoute title="Inbox">
           <MatchesPage onChatToggle={setIsChatOpen} />
-        ) : (
+        </ProtectedRoute>
+      </GeneralLayout>
+    </>
+  );
+};
+
+// Profile Route Component
+const ProfileRoute: React.FC = () => {
+  const navigate = useNavigate();
+  const [forceProfileSettings, setForceProfileSettings] = useState(0);
+  const { signOut } = useAuth();
+
+  const handleProfileSettingsClick = () => {
+    setForceProfileSettings(prev => prev + 1);
+  };
+
+  return (
+    <>
+      <ServiceWorkerUpdate />
+      <GeneralLayout
+        title="Account"
+        rightAction={{ icon: <Settings size={20} strokeWidth={2.5} />, onClick: handleProfileSettingsClick }}
+        bottomNav={<BottomNav />}
+      >
+        <ProtectedRoute title="Account">
           <ProfilePage
             key={`profile-${forceProfileSettings}`}
             forceSettingsTab={forceProfileSettings > 0}
             onSignOut={() => {
               signOut();
-              setActivePage('discover');
+              navigate('/discover');
             }}
-            onNavigateToUpload={() => {
-              setActivePage('upload');
-            }}
+            onNavigateToUpload={() => navigate('/upload')}
           />
-        )}
+        </ProtectedRoute>
       </GeneralLayout>
     </>
+  );
+};
+
+// Auth Routes Component
+const AuthRoutes: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const {
+    authState,
+    setAuthState,
+    tempUserEmail,
+    setTempUserEmail,
+    tempRegisterData,
+    setTempRegisterData,
+  } = useAuth();
+  
+  const {
+    showLocationModal,
+    setShowLocationModal,
+    checkLocationAndShowModal
+  } = useLocationHook();
+
+  // Determine auth state from route
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/welcome') setAuthState('welcome');
+    else if (path === '/login') setAuthState('login');
+    else if (path === '/register') setAuthState('register');
+    else if (path === '/otp') setAuthState('otp');
+    else if (path === '/forgot') setAuthState('forgot');
+  }, [location.pathname, setAuthState]);
+
+  return (
+    <>
+      <ServiceWorkerUpdate />
+      {showLocationModal && (
+        <LocationPermissionModal
+          onAllow={async () => {
+            setShowLocationModal(false);
+          }}
+          onSkip={() => {
+            setShowLocationModal(false);
+          }}
+        />
+      )}
+      <AuthLayout>
+        <AnimatePresence mode="wait">
+          {authState === 'welcome' && (
+            <WelcomePage
+              onStart={() => navigate('/discover')}
+              onLogin={() => navigate('/login')}
+              onRegister={() => navigate('/register')}
+            />
+          )}
+          {authState === 'login' && (
+            <LoginPage
+              onLogin={async () => {
+                await checkLocationAndShowModal();
+                navigate('/discover');
+              }}
+              onGoToRegister={() => navigate('/register')}
+              onGoToForgot={() => navigate('/forgot')}
+              onSkip={() => navigate('/discover')}
+            />
+          )}
+          {authState === 'register' && (
+            <RegisterPage
+              onRegister={(email, name, password) => {
+                setTempUserEmail(email);
+                setTempRegisterData({ name, password });
+                navigate('/otp');
+              }}
+              onGoToLogin={() => navigate('/login')}
+              onSkip={() => navigate('/discover')}
+            />
+          )}
+          {authState === 'otp' && (
+            <OtpVerificationPage
+              email={tempUserEmail}
+              name={tempRegisterData?.name}
+              password={tempRegisterData?.password}
+              onVerify={async () => {
+                setTempRegisterData(null);
+                await checkLocationAndShowModal();
+                localStorage.removeItem('has_seen_welcome_card');
+                navigate('/discover');
+              }}
+              onBack={() => {
+                setTempRegisterData(null);
+                navigate('/register');
+              }}
+            />
+          )}
+          {authState === 'forgot' && (
+            <ForgotPasswordPage
+              onBack={() => navigate('/login')}
+              onSubmit={() => navigate('/login')}
+            />
+          )}
+        </AnimatePresence>
+      </AuthLayout>
+    </>
+  );
+};
+
+const App = () => {
+  const {
+    showLocationModal,
+    setShowLocationModal,
+  } = useLocationHook();
+
+  // Service worker update handling
+  const { isUpdateReady, activateUpdate } = useServiceWorker();
+
+  // Auto-reload when update is ready (after a short delay)
+  useEffect(() => {
+    if (isUpdateReady) {
+      const timer = setTimeout(() => {
+        activateUpdate();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isUpdateReady, activateUpdate]);
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  return (
+    <Routes>
+      {/* Auth Routes */}
+      <Route path="/welcome" element={<AuthRoutes />} />
+      <Route path="/login" element={<AuthRoutes />} />
+      <Route path="/register" element={<AuthRoutes />} />
+      <Route path="/otp" element={<AuthRoutes />} />
+      <Route path="/forgot" element={<AuthRoutes />} />
+      
+      {/* Main App Routes */}
+      <Route path="/discover" element={<DiscoverRoute />} />
+      <Route path="/discover/:tab" element={<DiscoverRoute />} />
+      <Route path="/upload" element={<UploadRoute />} />
+      <Route path="/matches" element={<MatchesRoute />} />
+      <Route path="/profile" element={<ProfileRoute />} />
+      
+      {/* Default redirect */}
+      <Route path="/" element={<Navigate to="/discover" replace />} />
+      <Route path="*" element={<Navigate to="/discover" replace />} />
+    </Routes>
   );
 };
 

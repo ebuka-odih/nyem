@@ -1,8 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { Product } from '../types';
-import { getStoredToken, apiFetch } from '../utils/api';
-import { ENDPOINTS } from '../constants/endpoints';
+import { getStoredToken } from '../utils/api';
 import { transformListingToProduct, createAdItem, createWelcomeItem } from '../utils/productTransformers';
+import { useListingsFeed } from './api/useListings';
 
 // Storage key generator based on filters
 const getStorageKey = (activeTab: string, activeCategory: string, currentCity: string) => {
@@ -49,7 +49,6 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
 
   const [items, setItems] = useState<Product[]>(restoredState?.items || []);
   const [history, setHistory] = useState<Product[]>(restoredState?.history || []);
-  const [loadingItems, setLoadingItems] = useState(false);
   const [swipeCount, setSwipeCount] = useState(restoredState?.swipeCount || 0);
 
   // Track previous filters to detect changes
@@ -99,102 +98,25 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
     }
   }, [activeTab, activeCategory, currentCity]);
 
-  // Fetch items from API - matches the approach used in UploadPage
-  const fetchItems = useCallback(async () => {
-    if (activeTab !== 'marketplace') return; // Only fetch for marketplace tab
+  // Use React Query for fetching
+  const {
+    data: fetchedItems,
+    isLoading: loadingItems,
+    refetch: fetchItems
+  } = useListingsFeed({ activeTab, activeCategory, currentCity });
 
-    setLoadingItems(true);
-    try {
-      const token = getStoredToken();
-
-      // Build query parameters - same approach as other parts of the app
-      const params: string[] = [];
-
-      // Add type filter for marketplace (matches UploadPage which creates with type='marketplace')
-      // Note: We filter for 'marketplace' type to match listings created via UploadPage
-      params.push('type=marketplace');
-
-      // Add category filter
-      if (activeCategory !== "All") {
-        params.push(`category=${encodeURIComponent(activeCategory)}`);
-      }
-
-      // Add city filter - send 'all' to show all cities, or specific city name
-      if (currentCity === "All Locations") {
-        params.push('city=all');
-        // Also add ignore_city to ensure all listings are shown regardless of environment
-        params.push('ignore_city=true');
-      } else {
-        // Send the city name exactly as it appears in the database
-        // The city name should match what's stored in listings.city field
-        params.push(`city=${encodeURIComponent(currentCity)}`);
-        // Don't send ignore_city when filtering by specific city
-      }
-
-      // Build feed URL
-      let feedUrl = ENDPOINTS.items.feed;
-      if (params.length > 0) {
-        feedUrl += `?${params.join('&')}`;
-      }
-
-      console.log('[Discover] Fetching items from:', feedUrl);
-      console.log('[Discover] Filters:', { activeCategory, currentCity, activeTab });
-
-      // Fetch items from API - same endpoint used by UploadPage to fetch user listings
-      const response = await apiFetch(feedUrl, { token: token || undefined });
-      const apiItems = response.listings || response.items || response.data || [];
-
-      console.log('[Discover] Received items from API:', apiItems.length);
-      if (apiItems.length > 0) {
-        console.log('[Discover] First item sample:', {
-          id: apiItems[0].id,
-          title: apiItems[0].title,
-          type: apiItems[0].type,
-          status: apiItems[0].status,
-          city: apiItems[0].city,
-          price: apiItems[0].price
-        });
-      }
-
-      // Transform API items to Product format
-      // Backend already filters by status='active', but we double-check here
-      const transformedItems = apiItems
-        .filter((item: any) => {
-          // Only show active items
-          if (item.status && item.status !== 'active') {
-            console.log('[Discover] Filtered out inactive item:', item.id, item.status);
-            return false;
-          }
-          // Only show marketplace type (matching UploadPage which creates with type='marketplace')
-          const itemType = item.type?.toLowerCase();
-          if (itemType !== 'marketplace' && itemType !== 'shop') {
-            console.log('[Discover] Filtered out non-marketplace item:', item.id, itemType);
-            return false;
-          }
-          return true;
-        })
-        .map(transformListingToProduct);
-
-      console.log('[Discover] Transformed items for display:', transformedItems.length);
-
-      // Add Welcome Card for new users or if not seen
+  // Sync fetched items with local items state
+  useEffect(() => {
+    if (fetchedItems && fetchedItems.length > 0 && items.length === 0 && !hasRestoredRef.current) {
+      // Add Welcome Card if needed
+      let finalItems = [...fetchedItems];
       const hasSeenWelcome = localStorage.getItem('has_seen_welcome_card') === 'true';
-      if (!hasSeenWelcome && transformedItems.length > 0) {
-        transformedItems.push(createWelcomeItem());
+      if (!hasSeenWelcome) {
+        finalItems.push(createWelcomeItem());
       }
-
-      setItems(transformedItems);
-      setHistory([]);
-      setSwipeCount(0);
-      hasRestoredRef.current = false; // Mark as fresh fetch
-    } catch (error) {
-      console.error('[Discover] Failed to fetch items:', error);
-      setItems([]);
-      hasRestoredRef.current = false;
-    } finally {
-      setLoadingItems(false);
+      setItems(finalItems);
     }
-  }, [activeTab, activeCategory, currentCity]);
+  }, [fetchedItems, items.length]);
 
   const undoLast = useCallback(() => {
     if (history.length === 0) return;

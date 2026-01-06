@@ -16,7 +16,8 @@ import { Modal } from '../components/Modal';
 import { useItems } from '../hooks/useItems';
 import { useWishlist } from '../hooks/useWishlist';
 import { createAdItem, sendNativeNotification } from '../utils/productTransformers';
-import { getStoredToken, apiFetch } from '../utils/api';
+import { getStoredToken } from '../utils/api';
+import { useCreateSwipe } from '../hooks/api/useListings';
 import { ENDPOINTS } from '../constants/endpoints';
 
 interface DiscoverPageProps {
@@ -81,6 +82,8 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   const [viewingSeller, setViewingSeller] = useState<Vendor | null>(null);
   const [showSellerToast, setShowSellerToast] = useState(false);
   const [lastSparkedItem, setLastSparkedItem] = useState<Product | null>(null);
+
+  const createSwipeMutation = useCreateSwipe();
 
   // Expose items and history to parent component
   useEffect(() => {
@@ -149,17 +152,10 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
     // Send swipe to backend API
     if (direction === 'right' || direction === 'up') {
       try {
-        const token = getStoredToken();
-        if (token) {
-          await apiFetch(ENDPOINTS.swipes.create, {
-            method: 'POST',
-            token,
-            body: {
-              target_listing_id: swipedItem.id,
-              direction: direction === 'up' ? 'up' : 'right',
-            },
-          });
-        }
+        await createSwipeMutation.mutateAsync({
+          target_listing_id: swipedItem.id,
+          direction: direction === 'up' ? 'up' : 'right',
+        });
       } catch (err) {
         console.error('Failed to send swipe:', err);
       }

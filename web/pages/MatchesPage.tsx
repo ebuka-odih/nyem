@@ -7,6 +7,8 @@ import { ChatsList } from '../components/ChatsList';
 import { RequestsList } from '../components/RequestsList';
 import { NotificationPermissionModal } from '../components/NotificationPermissionModal';
 import { Bell } from 'lucide-react';
+import { useConversations, useMessageRequests } from '../hooks/api/useMatches';
+import { useProfile } from '../hooks/api/useProfile';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -65,80 +67,42 @@ interface MatchesPageProps {
 
 export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   const [activeTab, setActiveTab] = useState<'requests' | 'chats'>('chats');
-  const [requests, setRequests] = useState<MatchRequest[]>([]);
-  const [chats, setChats] = useState<ChatMessage[]>([]);
-  const [loading, setLoading] = useState(true);
+  // React Query hooks
+  const {
+    data: chats = [],
+    isLoading: loadingChats,
+    refetch: fetchConversations
+  } = useConversations();
+
+  const {
+    data: requests = [],
+    isLoading: loadingRequests,
+    refetch: fetchMessageRequests
+  } = useMessageRequests();
+
   const [selectedChat, setSelectedChat] = useState<ChatMessage | null>(null);
   const [isSendingTestNotification, setIsSendingTestNotification] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
-  
   const currentUserId = useRef<string | null>(null);
 
-  // Fetch current user ID
+  const { data: userData } = useProfile();
+
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = getStoredToken();
-        if (!token) return;
-
-        const response = await apiFetch<any>(ENDPOINTS.profile.me, { token });
-        if (response && response.user && response.user.id) {
-          currentUserId.current = response.user.id;
-        }
-      } catch (err) {
-        console.error('Failed to fetch user:', err);
-      }
-    };
-    fetchUser();
-  }, []);
-
-  // Fetch conversations and message requests
-  useEffect(() => {
-    fetchConversations();
-    fetchMessageRequests();
-  }, []);
-
-  const fetchConversations = async () => {
-    try {
-      setLoading(true);
-      const token = getStoredToken();
-      if (!token) return;
-
-      const response = await apiFetch<{ conversations: ChatMessage[] }>(ENDPOINTS.conversations.list, { token });
-      if (response.conversations) {
-        setChats(response.conversations);
-      }
-    } catch (err) {
-      console.error('Failed to fetch conversations:', err);
-    } finally {
-      setLoading(false);
+    if (userData?.id) {
+      currentUserId.current = userData.id;
     }
-  };
+  }, [userData]);
 
-  const fetchMessageRequests = async () => {
-    try {
-      const token = getStoredToken();
-      if (!token) return;
-
-      const response = await apiFetch<{ requests: MatchRequest[] }>(ENDPOINTS.messageRequests.pending, { token });
-      if (response.requests) {
-        setRequests(response.requests);
-      }
-    } catch (err) {
-      console.error('Failed to fetch message requests:', err);
-    }
-  };
+  const loading = loadingChats || loadingRequests;
 
   const handleRequestAccepted = async () => {
     // Refresh both lists after accepting a request
-      await fetchConversations();
+    await fetchConversations();
     await fetchMessageRequests();
-      setActiveTab('chats');
+    setActiveTab('chats');
   };
 
   const handleRequestDeclined = (requestId: string) => {
-    // Remove from local state immediately for better UX
-    setRequests(prev => prev.filter(r => r.id !== requestId));
     // Optionally refresh to ensure consistency
     fetchMessageRequests();
   };
@@ -300,7 +264,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       transition={subtleTransition}
@@ -308,13 +272,13 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     >
       {/* Tabs */}
       <div className="flex px-4 gap-4 mb-6 mt-2">
-        <button 
+        <button
           onClick={() => setActiveTab('chats')}
           className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'chats' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
         >
           Chats
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('requests')}
           className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'requests' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
         >
@@ -332,11 +296,10 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
         <button
           onClick={handleTestNotification}
           disabled={isSendingTestNotification}
-          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${
-            isSendingTestNotification
-              ? 'bg-neutral-300 text-neutral-500 cursor-wait'
-              : 'bg-[#830e4c] text-white shadow-lg active:scale-95 hover:bg-[#931e5c]'
-          }`}
+          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${isSendingTestNotification
+            ? 'bg-neutral-300 text-neutral-500 cursor-wait'
+            : 'bg-[#830e4c] text-white shadow-lg active:scale-95 hover:bg-[#931e5c]'
+            }`}
         >
           <Bell size={18} strokeWidth={2.5} />
           {isSendingTestNotification ? 'Sending...' : 'Test Push Notification'}

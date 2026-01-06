@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Settings, 
-  ShieldCheck, 
-  MapPin, 
-  Package, 
-  Star, 
-  Wallet, 
-  ChevronRight, 
-  LogOut, 
-  Bell, 
-  CreditCard, 
+import {
+  Settings,
+  ShieldCheck,
+  MapPin,
+  Package,
+  Star,
+  Wallet,
+  ChevronRight,
+  LogOut,
+  Bell,
+  CreditCard,
   History,
   ExternalLink,
   Edit3,
@@ -32,8 +32,10 @@ import {
   Camera,
   ChevronDown
 } from 'lucide-react';
-import { apiFetch, getStoredUser, getStoredToken } from '../utils/api';
+import { getStoredUser, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { useProfile, useUpdateProfile } from '../hooks/api/useProfile';
+import { useCities, useAreas } from '../hooks/api/useLocations';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -51,11 +53,11 @@ interface ProfilePageProps {
 }
 
 const CustomToggle: React.FC<{ active: boolean; onClick: () => void }> = ({ active, onClick }) => (
-  <button 
+  <button
     onClick={(e) => { e.stopPropagation(); onClick(); }}
     className={`w-12 h-6 rounded-full relative flex items-center px-1 transition-colors duration-300 ${active ? 'bg-[#830e4c]' : 'bg-neutral-200'}`}
   >
-    <motion.div 
+    <motion.div
       animate={{ x: active ? 24 : 0 }}
       transition={{ type: "spring", stiffness: 500, damping: 30 }}
       className="w-4 h-4 bg-white rounded-full shadow-md"
@@ -99,24 +101,14 @@ interface Drop {
 export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSignOut, onNavigateToUpload }) => {
   const [activeTab, setActiveTab] = useState<'drops' | 'settings'>('drops');
   const [currentView, setCurrentView] = useState<SubPageView>('main');
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [myDrops, setMyDrops] = useState<Drop[]>([]);
-  
-  // Edit Profile States
-  const [displayName, setDisplayName] = useState('');
-  const [cityId, setCityId] = useState<number | ''>('');
-  const [areaId, setAreaId] = useState<number | ''>('');
-  const [bio, setBio] = useState('');
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [editLoading, setEditLoading] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
-  const [cities, setCities] = useState<any[]>([]);
-  const [areas, setAreas] = useState<any[]>([]);
-  const [loadingCities, setLoadingCities] = useState(false);
-  const [loadingAreas, setLoadingAreas] = useState(false);
+  // React Query Hooks
+  const { data: user, isLoading: loading, refetch: refetchUser } = useProfile();
+  const updateProfileMutation = useUpdateProfile();
+  const { data: cities = [], isLoading: loadingCities } = useCities();
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
+  // Settings States
   // Settings States
   const [notifs, setNotifs] = useState({ push: true });
   const [escrowActive, setEscrowActive] = useState(true);
@@ -126,202 +118,47 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
     accountName: ""
   });
 
-  // Fetch user data on mount
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const token = getStoredToken();
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  // Local UI states for editing
+  const [displayName, setDisplayName] = useState('');
+  const [cityId, setCityId] = useState<number | ''>('');
+  const [areaId, setAreaId] = useState<number | ''>('');
+  const [bio, setBio] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
 
-      try {
-        // Try to get cached user first for instant display
-        const cachedUser = getStoredUser();
-        if (cachedUser) {
-          setUser(cachedUser);
-          setBankDetails(prev => ({
-            ...prev,
-            accountName: cachedUser.name || cachedUser.username || ""
-          }));
-          // Initialize edit form - use name first, then username
-          const cachedName = cachedUser.name || cachedUser.username || '';
-          setDisplayName(cachedName);
-          setCityId(cachedUser.city_id || '');
-          setAreaId(cachedUser.area_id || '');
-          setBio(cachedUser.bio || '');
-          setProfilePhoto(cachedUser.profile_photo || null);
+  const { data: areas = [], isLoading: loadingAreas } = useAreas(cityId);
+  const editLoading = updateProfileMutation.isPending;
+  const myDrops: Drop[] = React.useMemo(() => {
+    if (!user) return [];
+    const items = (user as any).items || (user as any).listings || [];
+    return items
+      .filter((item: any) => item.status === 'active')
+      .slice(0, 5)
+      .map((item: any) => {
+        const photos = item.photos || [];
+        const primaryImage = photos[0] || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f3f4f6" width="300" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+
+        let formattedPrice = 'Price not set';
+        if (item.price) {
+          if (typeof item.price === 'string') {
+            formattedPrice = item.price.includes('₦') ? item.price : `₦${item.price}`;
+          } else {
+            formattedPrice = `₦${parseFloat(item.price).toLocaleString()}`;
+          }
         }
 
-        // Fetch fresh user data from API
-        const response = await apiFetch<{ user: User }>(ENDPOINTS.profile.me, { token });
-        const userData = response.user || response.data?.user;
-        
-        if (userData) {
-          setUser(userData);
-          setBankDetails(prev => ({
-            ...prev,
-            accountName: userData.name || userData.username || ""
-          }));
-          // Update edit form with fresh data - prioritize name field
-          const fullName = userData.name || userData.username || '';
-          setDisplayName(fullName);
-          setCityId(userData.city_id || '');
-          setAreaId(userData.area_id || '');
-          setBio(userData.bio || '');
-          setProfilePhoto(userData.profile_photo || null);
-          
-          // Format and set user items (drops) - get latest 5 active items
-          const items = (userData as any).items || [];
-          const formattedDrops: Drop[] = items
-            .filter((item: any) => item.status === 'active') // Only show active items
-            .slice(0, 5) // Get latest 5 items (already ordered by latest first from backend)
-            .map((item: any) => {
-              // Get primary image from photos array
-              const photos = item.photos || [];
-              const primaryImage = photos[0] || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f3f4f6" width="300" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
-              
-              // Format price with naira symbol
-              let formattedPrice = 'Price not set';
-              if (item.price) {
-                if (typeof item.price === 'string') {
-                  formattedPrice = item.price.includes('₦') ? item.price : `₦${item.price}`;
-                } else {
-                  formattedPrice = `₦${parseFloat(item.price).toLocaleString()}`;
-                }
-              }
-              
-              // Get views count from item stats
-              const viewsCount = (item.views_count || item.views || 0);
-              
-              return {
-                id: item.id,
-                name: item.title || 'Untitled Item',
-                price: formattedPrice,
-                image: primaryImage,
-                views: viewsCount,
-                status: item.status === 'active' ? 'Active' : 'Sold'
-              };
-            });
-          
-          setMyDrops(formattedDrops);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user data:', error);
-        // Keep cached user if API fails
-        const cachedUser = getStoredUser();
-        if (cachedUser) {
-          setUser(cachedUser);
-          // Initialize edit form with cached data
-          setDisplayName(cachedUser.name || cachedUser.username || '');
-          setCityId(cachedUser.city_id || '');
-          setAreaId(cachedUser.area_id || '');
-          setBio(cachedUser.bio || '');
-          setProfilePhoto(cachedUser.profile_photo || null);
-          
-          // Set cached items if available
-          const cachedItems = (cachedUser as any).items || [];
-          const formattedDrops: Drop[] = cachedItems
-            .filter((item: any) => item.status === 'active')
-            .slice(0, 5)
-            .map((item: any) => {
-              const photos = item.photos || [];
-              const primaryImage = photos[0] || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300"%3E%3Crect fill="%23f3f4f6" width="300" height="300"/%3E%3Ctext fill="%239ca3af" font-family="sans-serif" font-size="16" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
-              let formattedPrice = 'Price not set';
-              if (item.price) {
-                if (typeof item.price === 'string') {
-                  formattedPrice = item.price.includes('₦') ? item.price : `₦${item.price}`;
-                } else {
-                  formattedPrice = `₦${parseFloat(item.price).toLocaleString()}`;
-                }
-              }
-              const viewsCount = (item.views_count || item.views || 0);
-              return {
-                id: item.id,
-                name: item.title || 'Untitled Item',
-                price: formattedPrice,
-                image: primaryImage,
-                views: viewsCount,
-                status: item.status === 'active' ? 'Active' : 'Sold'
-              };
-            });
-          setMyDrops(formattedDrops);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
+        return {
+          id: item.id,
+          name: item.title || 'Untitled Item',
+          price: formattedPrice,
+          image: primaryImage,
+          views: (item.views_count || item.views || 0),
+          status: item.status === 'active' ? 'Active' : 'Sold'
+        };
+      });
+  }, [user]);
 
-    fetchUserData();
-  }, []);
-
-  // Fetch cities on mount
-  useEffect(() => {
-    const fetchCities = async () => {
-      try {
-        setLoadingCities(true);
-        const res = await apiFetch(ENDPOINTS.locationsCities);
-        const citiesData = res.data?.cities || res.cities || [];
-        setCities(citiesData);
-      } catch (err) {
-        console.error('Failed to fetch cities:', err);
-        setCities([]);
-      } finally {
-        setLoadingCities(false);
-      }
-    };
-
-    fetchCities();
-  }, []);
-
-  // Fetch areas when city is selected
-  useEffect(() => {
-    const fetchAreas = async () => {
-      if (!cityId) {
-        setAreas([]);
-        setAreaId('');
-        return;
-      }
-
-      try {
-        setLoadingAreas(true);
-        const res = await apiFetch(ENDPOINTS.locationsAreas(cityId));
-        const areasData = res.data?.areas || res.areas || [];
-        setAreas(areasData);
-        
-        // If user had an area_id but it's not in the new city's areas, clear it
-        if (areaId && !areasData.find((a: any) => a.id === areaId)) {
-          setAreaId('');
-        }
-      } catch (err) {
-        console.error('Failed to fetch areas:', err);
-        setAreas([]);
-      } finally {
-        setLoadingAreas(false);
-      }
-    };
-
-    fetchAreas();
-  }, [cityId]);
-
-  // Fetch areas when user data loads and has city_id
-  useEffect(() => {
-    if (user?.city_id && areas.length === 0 && cityId) {
-      const fetchAreas = async () => {
-        try {
-          setLoadingAreas(true);
-          const res = await apiFetch(ENDPOINTS.locationsAreas(user.city_id!));
-          const areasData = res.data?.areas || res.areas || [];
-          setAreas(areasData);
-        } catch (err) {
-          console.error('Failed to fetch areas:', err);
-        } finally {
-          setLoadingAreas(false);
-        }
-      };
-      fetchAreas();
-    }
-  }, [user, cityId]);
+  // Manual fetches removed in favor of React Query hooks
 
   useEffect(() => {
     if (forceSettingsTab) {
@@ -353,13 +190,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
         setEditError('Image must be less than 2MB');
         return;
       }
-      
+
       // Check file type
       if (!file.type.startsWith('image/')) {
         setEditError('Please select a valid image file');
         return;
       }
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setProfilePhoto(reader.result as string);
@@ -370,7 +207,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
       };
       reader.readAsDataURL(file);
     }
-    
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -405,13 +242,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
       return;
     }
 
-    setEditLoading(true);
     try {
-      const token = getStoredToken();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
       const updateData: any = {
         name: displayName.trim(),
         city_id: typeof cityId === 'number' ? cityId : parseInt(cityId as string),
@@ -424,32 +255,15 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
         updateData.area_id = null;
       }
 
-      // Include profile photo if it's a new upload (base64 data URI)
       if (profilePhoto && profilePhoto !== user?.profile_photo && profilePhoto.startsWith('data:image/')) {
         updateData.profile_photo = profilePhoto;
       }
 
-      const response = await apiFetch<{ user: User }>(ENDPOINTS.profile.update, {
-        method: 'PUT',
-        token,
-        body: updateData,
-      });
-
-      const userData = response.user || response.data?.user;
-      if (userData) {
-        setUser(userData);
-        const freshResponse = await apiFetch<{ user: User }>(ENDPOINTS.profile.me, { token });
-        const freshUser = freshResponse.user || freshResponse.data?.user;
-        if (freshUser) {
-          setUser(freshUser);
-        }
-        setCurrentView('main');
-      }
+      await updateProfileMutation.mutateAsync(updateData);
+      setCurrentView('main');
     } catch (err: any) {
       setEditError(err.message || 'Failed to update profile. Please try again.');
       console.error('Update profile error:', err);
-    } finally {
-      setEditLoading(false);
     }
   };
 
@@ -476,9 +290,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 />
                 <div className="w-28 h-28 rounded-[2.5rem] bg-[#830e4c1a] border-4 border-white shadow-xl overflow-hidden">
                   {profilePhoto ? (
-                    <img 
-                      src={profilePhoto} 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={profilePhoto}
+                      className="w-full h-full object-cover"
                       alt="Profile"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -486,9 +300,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                       }}
                     />
                   ) : user?.profile_photo ? (
-                    <img 
-                      src={user.profile_photo} 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={user.profile_photo}
+                      className="w-full h-full object-cover"
                       alt="Profile"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -496,14 +310,14 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                       }}
                     />
                   ) : (
-                    <img 
+                    <img
                       src={`https://i.pravatar.cc/300?u=${user?.id || user?.email || user?.username || 'user'}`}
-                      className="w-full h-full object-cover" 
+                      className="w-full h-full object-cover"
                       alt="Profile"
                     />
                   )}
                 </div>
-                <button 
+                <button
                   type="button"
                   className="absolute -bottom-1 -right-1 bg-[#830e4c] text-white p-2.5 rounded-2xl shadow-lg border border-white active:scale-90 transition-all"
                   onClick={handlePhotoSelect}
@@ -516,8 +330,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             {/* Display Name */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Display Name *</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your display name"
@@ -533,7 +347,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 City *
               </label>
               <div className="relative">
-                <select 
+                <select
                   value={cityId}
                   onChange={(e) => setCityId(e.target.value ? parseInt(e.target.value) : '')}
                   disabled={loadingCities}
@@ -561,7 +375,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   Area {areas.length > 0 ? '(Optional)' : ''}
                 </label>
                 <div className="relative">
-                  <select 
+                  <select
                     value={areaId}
                     onChange={(e) => setAreaId(e.target.value ? parseInt(e.target.value) : '')}
                     disabled={loadingAreas || areas.length === 0}
@@ -588,16 +402,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             {/* Bio */}
             <div className="space-y-2">
               <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Bio</label>
-              <textarea 
+              <textarea
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Tell us about yourself..." 
+                placeholder="Tell us about yourself..."
                 className="w-full bg-white border border-neutral-200 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all shadow-sm resize-none min-h-[120px] placeholder:text-neutral-200"
               />
             </div>
 
             {/* Save Button */}
-            <button 
+            <button
               onClick={handleUpdateProfile}
               disabled={editLoading}
               className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -615,10 +429,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   <h4 className="text-sm font-black text-neutral-900 uppercase tracking-tight">Push Notifications</h4>
                   <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">Chat messages and system alerts</p>
                 </div>
-                <CustomToggle active={notifs.push} onClick={() => setNotifs({...notifs, push: !notifs.push})} />
+                <CustomToggle active={notifs.push} onClick={() => setNotifs({ ...notifs, push: !notifs.push })} />
               </div>
             </div>
-            
+
             <div className="p-5 bg-[#830e4c1a] rounded-3xl border border-[#830e4c33] flex gap-4 items-start">
               <Zap size={18} className="text-[#830e4c] shrink-0 mt-0.5" />
               <p className="text-[10px] font-bold text-[#830e4c] uppercase tracking-widest leading-relaxed">
@@ -633,7 +447,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             {/* Escrow Activation Card */}
             <div className="space-y-3">
               <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Escrow Status</label>
-              <div 
+              <div
                 onClick={() => setEscrowActive(!escrowActive)}
                 className={`p-6 rounded-[2.5rem] border-2 transition-all cursor-pointer ${escrowActive ? 'bg-emerald-50 border-emerald-500 shadow-xl shadow-emerald-100' : 'bg-white border-neutral-100 shadow-sm'}`}
               >
@@ -648,8 +462,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                     {escrowActive ? 'Escrow Protection Active' : 'Escrow Protection Disabled'}
                   </h4>
                   <p className={`text-[10px] font-bold uppercase tracking-widest leading-relaxed ${escrowActive ? 'text-emerald-600' : 'text-neutral-400'}`}>
-                    {escrowActive 
-                      ? 'Your deals are secured by Nyem Escrow. Funds are held until buyers confirm delivery.' 
+                    {escrowActive
+                      ? 'Your deals are secured by Nyem Escrow. Funds are held until buyers confirm delivery.'
                       : 'Activate escrow to build trust and protect your transactions from disputes.'}
                   </p>
                 </div>
@@ -664,7 +478,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   <Edit3 size={12} /> Edit
                 </button>
               </div>
-              
+
               <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-6 shadow-sm space-y-5">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 bg-[#830e4c] rounded-2xl flex items-center justify-center text-white">
@@ -675,7 +489,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                     <p className="text-sm font-black text-neutral-900 truncate">{bankDetails.bankName}</p>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div className="min-w-0">
                     <h5 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Account Number</h5>
@@ -687,7 +501,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-neutral-50 rounded-3xl p-4 border border-neutral-100 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-emerald-500 shadow-sm">
                   <CheckCircle2 size={16} strokeWidth={3} />
@@ -733,7 +547,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                       <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest mt-1">FaceID or Fingerprint</p>
                     </div>
                   </div>
-                  <CustomToggle active={true} onClick={() => {}} />
+                  <CustomToggle active={true} onClick={() => { }} />
                 </div>
               </div>
             </div>
@@ -753,7 +567,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 <span className="text-[8px] font-black text-neutral-300 uppercase tracking-widest px-2 py-1 bg-neutral-50 rounded-lg">Lagos, NG</span>
               </div>
             </div>
-            
+
             <button className="w-full py-5 bg-[#830e4c] text-white rounded-[2rem] font-black uppercase tracking-[0.25em] text-[10px] shadow-xl active:scale-95 transition-all">
               Change Login Password
             </button>
@@ -795,7 +609,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 </button>
               </div>
             ))}
-            
+
             <button className="w-full py-5 text-[10px] font-black text-neutral-300 uppercase tracking-[0.25em] mt-4 flex items-center justify-center gap-2">
               <History size={14} /> Request Transaction Export
             </button>
@@ -809,7 +623,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   // Show loading state while fetching user data
   if (loading && !user) {
     return (
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={subtleTransition}
@@ -822,7 +636,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   }
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={subtleTransition}
@@ -830,7 +644,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
     >
       <AnimatePresence mode="wait">
         {currentView === 'main' ? (
-          <motion.div 
+          <motion.div
             key="main-profile"
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -842,9 +656,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
               <div className="relative mb-6">
                 <div className="w-28 h-28 rounded-[2.5rem] bg-[#830e4c1a] border-4 border-white shadow-xl overflow-hidden">
                   {user?.profile_photo ? (
-                    <img 
-                      src={user.profile_photo} 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={user.profile_photo}
+                      className="w-full h-full object-cover"
                       alt="Profile"
                       onError={(e) => {
                         // Fallback to generated avatar if image fails to load
@@ -853,9 +667,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                       }}
                     />
                   ) : (
-                    <img 
+                    <img
                       src={`https://i.pravatar.cc/300?u=${user?.id || user?.email || user?.username || 'user'}`}
-                      className="w-full h-full object-cover" 
+                      className="w-full h-full object-cover"
                       alt="Profile"
                     />
                   )}
@@ -864,7 +678,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   <Edit3 size={16} strokeWidth={2.5} />
                 </button>
               </div>
-              
+
               <div className="text-center space-y-1">
                 <div className="flex items-center justify-center gap-2">
                   <h2 className="text-2xl font-black text-neutral-900 tracking-tighter uppercase italic">
@@ -899,13 +713,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
 
             {/* Content Tabs */}
             <div className="flex gap-4 mb-6">
-              <button 
+              <button
                 onClick={() => setActiveTab('drops')}
                 className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'drops' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
               >
                 My Listings
               </button>
-              <button 
+              <button
                 onClick={() => setActiveTab('settings')}
                 className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'settings' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
               >
@@ -915,7 +729,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
 
             <AnimatePresence mode="wait">
               {activeTab === 'drops' ? (
-                <motion.div 
+                <motion.div
                   key="drops-list"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -947,7 +761,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                           </button>
                         </div>
                       ))}
-                      <button 
+                      <button
                         onClick={() => {
                           if (onNavigateToUpload) {
                             onNavigateToUpload();
@@ -968,7 +782,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                         <h4 className="text-base font-black text-neutral-900 uppercase tracking-tighter">No drops yet</h4>
                         <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Start sharing your items with the community!</p>
                       </div>
-                      <button 
+                      <button
                         onClick={() => {
                           if (onNavigateToUpload) {
                             onNavigateToUpload();
@@ -983,7 +797,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   )}
                 </motion.div>
               ) : (
-                <motion.div 
+                <motion.div
                   key="settings-list"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -991,7 +805,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   className="space-y-2 pb-24"
                 >
                   {menuItems.map((item) => (
-                    <button 
+                    <button
                       key={item.label}
                       onClick={() => setCurrentView(item.id as SubPageView)}
                       className="w-full flex items-center justify-between p-4 bg-white border border-neutral-100 rounded-[1.5rem] hover:bg-neutral-50 active:scale-[0.99] transition-all"
@@ -1005,8 +819,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                       <ChevronRight size={18} className="text-neutral-200" strokeWidth={3} />
                     </button>
                   ))}
-                  
-                  <button 
+
+                  <button
                     onClick={() => {
                       if (onSignOut) {
                         onSignOut();
@@ -1026,7 +840,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             </AnimatePresence>
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             key="sub-page"
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -1034,7 +848,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
             className="w-full"
           >
             <div className="flex items-center gap-4 mb-8 pt-4">
-              <button 
+              <button
                 onClick={() => setCurrentView('main')}
                 className="p-3 bg-neutral-100 rounded-2xl text-neutral-900 active:scale-90 transition-all"
               >
@@ -1047,7 +861,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                 </h3>
               </div>
             </div>
-            
+
             <div className="pb-32">
               {renderSubPage()}
             </div>

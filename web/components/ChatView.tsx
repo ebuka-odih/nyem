@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Phone, MoreVertical, Lock, ChevronRight, Check, ShieldCheck, ShieldAlert, Paperclip, Smile, Send, CheckCheck, ShoppingBag } from 'lucide-react';
 import { apiFetch, getStoredToken } from '../utils/api';
+import { useMessages, useSendMessage } from '../hooks/api/useMatches';
+import { useQuery } from '@tanstack/react-query';
+import { fetcher } from '../hooks/api/fetcher';
 import { ENDPOINTS } from '../constants/endpoints';
 
 const subtleTransition = {
@@ -63,46 +66,35 @@ function formatTime(dateString: string): string {
   return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ 
-  chat, 
-  currentUserId, 
+export const ChatView: React.FC<ChatViewProps> = ({
+  chat,
+  currentUserId,
   onClose,
-  onChatToggle 
+  onChatToggle
 }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  // React Query hooks for messages
+  const {
+    data: messages = [],
+    isLoading: loadingMessages,
+    refetch: refetchMessages
+  } = useMessages(chat.conversation_id);
+
+  const sendMessageMutation = useSendMessage();
+
   const [newMessage, setNewMessage] = useState("");
-  const [sendingMessage, setSendingMessage] = useState(false);
   const [isEscrowActive, setIsEscrowActive] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [chatListingInfo, setChatListingInfo] = useState<{ title: string; image?: string; price?: string } | null>(null);
-  
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isMe = (senderId: string) => senderId === currentUserId;
   const otherUser = chat.other_user;
 
-  const fetchMessages = async (conversationId: string) => {
-    try {
-      setLoadingMessages(true);
-      const token = getStoredToken();
-      if (!token) return;
-
-      const response = await apiFetch<{ messages: Message[] }>(ENDPOINTS.conversations.messages(conversationId), { token });
-      if (response.messages) {
-        setMessages(response.messages);
-      }
-    } catch (err) {
-      console.error('Failed to fetch messages:', err);
-    } finally {
-      setLoadingMessages(false);
-    }
-  };
-
   useEffect(() => {
-    fetchMessages(chat.conversation_id);
+    refetchMessages();
   }, [chat.conversation_id]);
 
   useEffect(() => {
@@ -121,72 +113,53 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    // Fetch matches for this conversation to get listing info
-    const fetchMatches = async () => {
-      try {
-        const token = getStoredToken();
-        if (!token) return;
+  // Fetch matches for this conversation to get listing info
+  const { data: matchesData } = useQuery({
+    queryKey: ['conversations', chat.conversation_id, 'matches'],
+    queryFn: () => fetcher<{ matches: any[] }>(ENDPOINTS.conversations.matches(chat.conversation_id)),
+  });
 
-        const response = await apiFetch<{ matches: any[] }>(ENDPOINTS.conversations.matches(chat.conversation_id), { token });
-        if (response.matches && response.matches.length > 0) {
-          const match = response.matches[0];
-          const listing = match.my_listing || match.my_item || match.listing1;
-          if (listing) {
-            setChatListingInfo({
-              title: listing.title || 'Unknown Listing',
-              image: listing.photos?.[0] || listing.photo || null,
-              price: listing.price ? `₦${Number(listing.price).toLocaleString()}` : undefined,
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to fetch matches:', err);
+  useEffect(() => {
+    if (matchesData?.matches && matchesData.matches.length > 0) {
+      const match = matchesData.matches[0];
+      const listing = match.my_listing || match.my_item || match.listing1;
+      if (listing) {
+        setChatListingInfo({
+          title: listing.title || 'Unknown Listing',
+          image: listing.photos?.[0] || listing.photo || null,
+          price: listing.price ? `₦${Number(listing.price).toLocaleString()}` : undefined,
+        });
       }
-    };
-    fetchMatches();
-  }, [chat.conversation_id]);
+    }
+  }, [matchesData]);
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || sendingMessage) return;
+    if (!newMessage.trim() || sendMessageMutation.isPending) return;
 
     try {
-      setSendingMessage(true);
-      const token = getStoredToken();
-      if (!token) return;
-
-      const response = await apiFetch<{ message: Message }>(ENDPOINTS.messages.create, {
-        method: 'POST',
-        token,
-        body: {
-          conversation_id: chat.conversation_id,
-          message_text: newMessage.trim(),
-        },
+      await sendMessageMutation.mutateAsync({
+        conversation_id: chat.conversation_id,
+        message_text: newMessage.trim(),
+        receiver_id: otherUser.id
       });
-
-      if (response && response.message && typeof response.message === 'object') {
-        const newMsg = response.message as Message;
-        setMessages(prev => [...prev, newMsg]);
-        setNewMessage("");
-      }
+      setNewMessage("");
     } catch (err: any) {
       console.error('Failed to send message:', err);
       alert(err.message || 'Failed to send message. Please try again.');
-    } finally {
-      setSendingMessage(false);
     }
   };
+
+  const sendingMessage = sendMessageMutation.isPending;
 
   const handleClose = () => {
     setIsEscrowActive(false);
     setShowActionMenu(false);
     setIsCheckingOut(false);
-    setMessages([]);
     onClose();
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 10 }}
@@ -196,7 +169,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       {/* Chat Header */}
       <header className="shrink-0 bg-white/80 backdrop-blur-xl border-b border-neutral-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <button 
+          <button
             onClick={handleClose}
             className="p-2 -ml-1 text-[#830e4c] active:scale-95 transition-all"
           >
@@ -204,8 +177,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </button>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <img 
-                src={otherUser.profile_photo || `https://i.pravatar.cc/150?u=${otherUser.id}`} 
+              <img
+                src={otherUser.profile_photo || `https://i.pravatar.cc/150?u=${otherUser.id}`}
                 className="w-10 h-10 rounded-full object-cover border border-neutral-100"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -227,7 +200,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <button className="p-2 text-neutral-400 hover:text-[#830e4c] transition-colors active:scale-90">
             <Phone size={20} />
           </button>
-          <button 
+          <button
             onClick={() => setShowActionMenu(!showActionMenu)}
             className={`p-2 transition-all active:scale-90 ${showActionMenu ? 'text-[#830e4c]' : 'text-neutral-400 hover:text-[#830e4c]'}`}
           >
@@ -236,13 +209,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
           <AnimatePresence>
             {showActionMenu && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute top-full right-0 mt-2 w-56 bg-white border border-neutral-100 rounded-2xl shadow-2xl z-50 p-2 overflow-hidden"
               >
-                <button 
+                <button
                   onClick={() => {
                     setIsEscrowActive(!isEscrowActive);
                     setShowActionMenu(false);
@@ -282,8 +255,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
         <div className="bg-neutral-50 px-4 py-3 flex items-center justify-between border-b border-neutral-100">
           <div className="flex items-center gap-3">
             {chatListingInfo.image && (
-              <img 
-                src={chatListingInfo.image} 
+              <img
+                src={chatListingInfo.image}
                 className="w-10 h-10 rounded-lg object-cover border border-neutral-200"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -305,14 +278,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
       {/* Escrow Protected Banner */}
       <AnimatePresence>
         {isEscrowActive && chatListingInfo?.price && (
-          <motion.div 
+          <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             className="overflow-hidden bg-white border-b border-[#830e4c33]"
           >
             <div className="p-4">
-              <div 
+              <div
                 onClick={() => setIsCheckingOut(true)}
                 className="bg-[#830e4c] rounded-[1.5rem] p-4 flex items-center justify-between shadow-lg shadow-[#830e4c1a] cursor-pointer active:scale-[0.98] transition-all hover:bg-[#931e5c]"
               >
@@ -335,7 +308,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       </AnimatePresence>
 
       {/* Message List */}
-      <div 
+      <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 space-y-5 bg-white no-scrollbar"
       >
@@ -355,7 +328,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               {messages.map((msg) => {
                 const senderIsMe = isMe(msg.sender_id);
                 return (
-                  <motion.div 
+                  <motion.div
                     key={msg.id}
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -363,11 +336,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     className={`flex ${senderIsMe ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className="flex flex-col max-w-[82%] gap-1">
-                      <div className={`px-5 py-3 rounded-[1.5rem] text-sm font-medium shadow-sm border ${
-                        senderIsMe 
-                          ? 'bg-[#830e4c] text-white border-[#830e4c] rounded-br-none' 
-                          : 'bg-neutral-50 text-neutral-900 border-neutral-100 rounded-bl-none'
-                      }`}>
+                      <div className={`px-5 py-3 rounded-[1.5rem] text-sm font-medium shadow-sm border ${senderIsMe
+                        ? 'bg-[#830e4c] text-white border-[#830e4c] rounded-br-none'
+                        : 'bg-neutral-50 text-neutral-900 border-neutral-100 rounded-bl-none'
+                        }`}>
                         {msg.message_text}
                       </div>
                       <div className={`flex items-center gap-1.5 px-1 ${senderIsMe ? 'justify-end' : 'justify-start'}`}>
@@ -397,14 +369,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
       <AnimatePresence>
         {isCheckingOut && chatListingInfo?.price && (
           <>
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsCheckingOut(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm z-[400]"
             />
-            <motion.div 
+            <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
@@ -441,7 +413,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 <Lock size={16} strokeWidth={2.5} />
                 Confirm & Pay Securely
               </button>
-              <button 
+              <button
                 onClick={() => setIsCheckingOut(false)}
                 className="w-full py-4 text-[10px] font-black text-neutral-300 uppercase tracking-[0.2em] mt-2"
               >
@@ -458,7 +430,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <button className="p-2.5 text-neutral-400 hover:text-[#830e4c] active:scale-95 transition-all">
             <Paperclip size={18} />
           </button>
-          <input 
+          <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -470,14 +442,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
           <button className="p-2.5 text-neutral-400 hover:text-[#830e4c] active:scale-95 transition-all">
             <Smile size={18} />
           </button>
-          <button 
+          <button
             onClick={sendMessage}
             disabled={!newMessage.trim() || sendingMessage}
-            className={`p-2.5 rounded-full transition-all active:scale-95 ${
-              newMessage.trim() && !sendingMessage
-                ? 'bg-[#830e4c] text-white shadow-lg' 
-                : 'bg-neutral-200 text-neutral-400'
-            }`}
+            className={`p-2.5 rounded-full transition-all active:scale-95 ${newMessage.trim() && !sendingMessage
+              ? 'bg-[#830e4c] text-white shadow-lg'
+              : 'bg-neutral-200 text-neutral-400'
+              }`}
           >
             <Send size={16} />
           </button>

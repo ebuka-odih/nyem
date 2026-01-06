@@ -1,30 +1,37 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Compass, PlusCircle, MessageSquare, User } from 'lucide-react';
 
 type PageType = 'discover' | 'upload' | 'matches' | 'profile';
-type AuthState = 'welcome' | 'login' | 'register' | 'otp' | 'forgot' | 'authenticated' | 'discover';
 
 interface BottomNavProps {
-  activePage: PageType;
-  setActivePage: (page: PageType) => void;
-  authState: AuthState;
-  setAuthState: (state: AuthState) => void;
   isChatOpen?: boolean;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
-  activePage,
-  setActivePage,
-  authState,
-  setAuthState,
   isChatOpen = false,
 }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
   // Check if user has valid token
   const hasValidToken = localStorage.getItem('auth_token') !== null;
 
   // Don't show nav when chat is open
   if (isChatOpen) return null;
+
+  // Determine active page from location
+  const getActivePage = (): PageType => {
+    const path = location.pathname;
+    if (path.startsWith('/discover')) return 'discover';
+    if (path.startsWith('/upload')) return 'upload';
+    if (path.startsWith('/matches')) return 'matches';
+    if (path.startsWith('/profile')) return 'profile';
+    return 'discover';
+  };
+
+  const activePage = getActivePage();
 
   const pages: PageType[] = ['discover', 'upload', 'matches', 'profile'];
   const icons = {
@@ -40,18 +47,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     profile: 'profile',
   };
 
-  const handlePageClick = (page: PageType) => {
+  const handlePageClick = (e: React.MouseEvent, page: PageType) => {
     const isProtected = page !== 'discover';
     
     if (isProtected && !hasValidToken) {
-      // Show login prompt for protected pages
-      setAuthState('login');
-    } else {
-      setActivePage(page);
-      if (authState === 'discover' && hasValidToken) {
-        setAuthState('authenticated');
-      }
+      e.preventDefault();
+      navigate('/login', { state: { from: location } });
     }
+    // Otherwise, let the Link handle navigation
   };
 
   const safeAreaBottom = `calc(8px + env(safe-area-inset-bottom, 0px))`;
@@ -69,47 +72,53 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         const isActive = activePage === page;
         const Icon = icons[page];
         const label = labels[page];
+        const path = page === 'discover' ? '/discover' : `/${page}`;
 
         return (
-          <motion.button
+          <Link
             key={page}
-            onClick={() => handlePageClick(page)}
+            to={path}
+            onClick={(e) => handlePageClick(e, page)}
             className="flex flex-col items-center justify-center gap-1 relative flex-1 min-w-0 py-1"
-            whileTap={{ scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
-            <div className="relative">
-              <Icon
-                size={24}
-                strokeWidth={isActive ? 2.5 : 2}
-                className={`transition-all duration-200 ${
+            <motion.div
+              whileTap={{ scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+              className="w-full h-full flex flex-col items-center justify-center"
+            >
+              <div className="relative">
+                <Icon
+                  size={24}
+                  strokeWidth={isActive ? 2.5 : 2}
+                  className={`transition-all duration-200 ${
+                    isActive ? 'text-[#830e4c]' : 'text-neutral-500'
+                  }`}
+                />
+                {isActive && (
+                  <motion.div
+                    layoutId="activeBackground"
+                    className="absolute inset-0 -z-10 bg-[#830e4c]/8 rounded-full -m-2"
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  />
+                )}
+              </div>
+              <span
+                className={`text-[10px] font-semibold uppercase tracking-[0.03em] leading-tight transition-all duration-200 ${
                   isActive ? 'text-[#830e4c]' : 'text-neutral-500'
                 }`}
-              />
+              >
+                {label}
+              </span>
               {isActive && (
                 <motion.div
-                  layoutId="activeBackground"
-                  className="absolute inset-0 -z-10 bg-[#830e4c]/8 rounded-full -m-2"
+                  layoutId="navIndicator"
+                  className="absolute -bottom-1 w-1 h-1 rounded-full bg-[#830e4c]"
+                  initial={false}
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
               )}
-            </div>
-            <span
-              className={`text-[10px] font-semibold uppercase tracking-[0.03em] leading-tight transition-all duration-200 ${
-                isActive ? 'text-[#830e4c]' : 'text-neutral-500'
-              }`}
-            >
-              {label}
-            </span>
-            {isActive && (
-              <motion.div
-                layoutId="navIndicator"
-                className="absolute -bottom-1 w-1 h-1 rounded-full bg-[#830e4c]"
-                initial={false}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              />
-            )}
-          </motion.button>
+            </motion.div>
+          </Link>
         );
       })}
     </nav>

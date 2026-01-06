@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, X, Check, Send } from 'lucide-react';
-import { apiFetch, getStoredToken } from '../utils/api';
-import { ENDPOINTS } from '../constants/endpoints';
+import { useRespondToRequest } from '../hooks/api/useMatches';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -74,26 +73,19 @@ function formatRelativeTime(dateString: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
 }
 
-export const RequestsList: React.FC<RequestsListProps> = ({ 
-  requests, 
+export const RequestsList: React.FC<RequestsListProps> = ({
+  requests,
   onRequestAccepted,
   onRequestDeclined,
-  onChatOpen 
+  onChatOpen
 }) => {
   const [acceptingRequestId, setAcceptingRequestId] = useState<string | null>(null);
   const [replyMessage, setReplyMessage] = useState("");
+  const respondMutation = useRespondToRequest();
 
   const handleDecline = async (id: string) => {
     try {
-      const token = getStoredToken();
-      if (!token) return;
-
-      await apiFetch(ENDPOINTS.messageRequests.respond(id), {
-        method: 'POST',
-        token,
-        body: { decision: 'decline' },
-      });
-
+      await respondMutation.mutateAsync({ id, decision: 'decline' });
       // Notify parent to remove from state immediately
       onRequestDeclined?.(id);
     } catch (err) {
@@ -108,13 +100,9 @@ export const RequestsList: React.FC<RequestsListProps> = ({
 
   const confirmAccept = async (request: MatchRequest) => {
     try {
-      const token = getStoredToken();
-      if (!token) return;
-
-      const response = await apiFetch<any>(ENDPOINTS.messageRequests.respond(request.id), {
-        method: 'POST',
-        token,
-        body: { decision: 'accept' },
+      const response: any = await respondMutation.mutateAsync({
+        id: request.id,
+        decision: 'accept'
       });
 
       setAcceptingRequestId(null);
@@ -136,7 +124,7 @@ export const RequestsList: React.FC<RequestsListProps> = ({
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
@@ -148,9 +136,9 @@ export const RequestsList: React.FC<RequestsListProps> = ({
         const fromUser = request.from_user;
 
         return (
-          <motion.div 
+          <motion.div
             layout
-            key={request.id} 
+            key={request.id}
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
@@ -159,8 +147,8 @@ export const RequestsList: React.FC<RequestsListProps> = ({
           >
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
-                <img 
-                  src={fromUser.photo || `https://i.pravatar.cc/150?u=${fromUser.id}`} 
+                <img
+                  src={fromUser.photo || `https://i.pravatar.cc/150?u=${fromUser.id}`}
                   className="w-14 h-14 rounded-2xl object-cover border border-neutral-100"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -182,8 +170,8 @@ export const RequestsList: React.FC<RequestsListProps> = ({
                 </p>
               </div>
               {listing?.photo && (
-                <img 
-                  src={listing.photo} 
+                <img
+                  src={listing.photo}
                   className="w-14 h-14 rounded-2xl object-cover border border-neutral-50 grayscale-[0.3]"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
@@ -201,28 +189,28 @@ export const RequestsList: React.FC<RequestsListProps> = ({
 
             <AnimatePresence>
               {acceptingRequestId === request.id ? (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   transition={subtleTransition}
                   className="space-y-3 pt-1"
                 >
                   <div className="relative">
-                    <textarea 
+                    <textarea
                       autoFocus
                       value={replyMessage}
                       onChange={(e) => setReplyMessage(e.target.value)}
                       placeholder="Add a friendly reply..."
                       className="w-full bg-white border border-neutral-200 rounded-2xl px-4 py-4 text-sm font-medium text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all resize-none min-h-[110px] placeholder:text-neutral-300"
                     />
-                    <button 
+                    <button
                       onClick={() => confirmAccept(request)}
                       className="absolute bottom-3 right-3 p-3 bg-[#830e4c] text-white rounded-xl shadow-lg active:scale-95 transition-all"
                     >
                       <Send size={18} />
                     </button>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setAcceptingRequestId(null)}
                     className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-neutral-300 hover:text-[#830e4c] transition-colors"
                   >
@@ -231,14 +219,14 @@ export const RequestsList: React.FC<RequestsListProps> = ({
                 </motion.div>
               ) : (
                 <div className="flex gap-3">
-                  <button 
+                  <button
                     onClick={() => handleDecline(request.id)}
                     className="flex-1 bg-white hover:bg-rose-50 hover:text-rose-500 text-neutral-400 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 border border-neutral-100 hover:border-rose-100"
                   >
                     <X size={16} strokeWidth={3} />
                     <span className="text-[10px] font-black uppercase tracking-widest">Decline</span>
                   </button>
-                  <button 
+                  <button
                     onClick={() => handleAccept(request)}
                     className="flex-[2] bg-[#830e4c] text-white py-3.5 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all border border-[#830e4c]"
                   >

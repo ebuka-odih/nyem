@@ -1,4 +1,4 @@
-import React from 'lucide-react';
+import React from 'react';
 import { Globe, MapPin, Check, ChevronRight } from 'lucide-react';
 import { NIGERIA_CITIES } from '../../data';
 import { Modal } from '../Modal';
@@ -24,28 +24,25 @@ export const LocationModal: React.FC<LocationModalProps> = ({
         {/* "All Locations" option */}
         <button
           key="all"
-          onClick={() => { 
-            onCitySelect("All Locations"); 
-            onClose(); 
+          onClick={() => {
+            onCitySelect("All Locations");
+            onClose();
           }}
-          className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${
-            currentCity === "All Locations" 
-              ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' 
+          className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === "All Locations"
+              ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm'
               : 'bg-white border-neutral-50 hover:border-neutral-100'
-          }`}
+            }`}
         >
           <div className="flex items-center gap-3.5">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-              currentCity === "All Locations" 
-                ? 'bg-[#830e4c] text-white' 
+            <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${currentCity === "All Locations"
+                ? 'bg-[#830e4c] text-white'
                 : 'bg-neutral-50 text-neutral-400'
-            }`}>
+              }`}>
               <Globe size={20} />
             </div>
             <div className="text-left">
-              <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${
-                currentCity === "All Locations" ? 'text-[#830e4c]' : 'text-neutral-900'
-              }`}>
+              <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${currentCity === "All Locations" ? 'text-[#830e4c]' : 'text-neutral-900'
+                }`}>
                 All Locations
               </h4>
               <p className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.15em] mt-0.5">
@@ -65,32 +62,29 @@ export const LocationModal: React.FC<LocationModalProps> = ({
         </button>
 
         {/* Cities from backend */}
-        {cities.length > 0 ? (
+        {cities && cities.length > 0 ? (
           cities.map(city => (
             <button
               key={city.id}
-              onClick={() => { 
-                onCitySelect(city.name); 
-                onClose(); 
+              onClick={() => {
+                onCitySelect(city.name);
+                onClose();
               }}
-              className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${
-                currentCity === city.name 
-                  ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' 
+              className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === city.name
+                  ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm'
                   : 'bg-white border-neutral-50 hover:border-neutral-100'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3.5">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                  currentCity === city.name 
-                    ? 'bg-[#830e4c] text-white' 
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${currentCity === city.name
+                    ? 'bg-[#830e4c] text-white'
                     : 'bg-neutral-50 text-neutral-400'
-                }`}>
+                  }`}>
                   <MapPin size={20} />
                 </div>
                 <div className="text-left">
-                  <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${
-                    currentCity === city.name ? 'text-[#830e4c]' : 'text-neutral-900'
-                  }`}>
+                  <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${currentCity === city.name ? 'text-[#830e4c]' : 'text-neutral-900'
+                    }`}>
                     {city.name}
                   </h4>
                   <p className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.15em] mt-0.5">
@@ -114,28 +108,25 @@ export const LocationModal: React.FC<LocationModalProps> = ({
           NIGERIA_CITIES.filter(c => c.city !== "All Locations").map(cityObj => (
             <button
               key={cityObj.city}
-              onClick={() => { 
-                onCitySelect(cityObj.city); 
-                onClose(); 
+              onClick={() => {
+                onCitySelect(cityObj.city);
+                onClose();
               }}
-              className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${
-                currentCity === cityObj.city 
-                  ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm' 
+              className={`w-full flex items-center justify-between p-3.5 rounded-2xl transition-all border-2 active:scale-[0.98] ${currentCity === cityObj.city
+                  ? 'bg-[#830e4c1a] border-[#830e4c] shadow-sm'
                   : 'bg-white border-neutral-50 hover:border-neutral-100'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3.5">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${
-                  currentCity === cityObj.city 
-                    ? 'bg-[#830e4c] text-white' 
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${currentCity === cityObj.city
+                    ? 'bg-[#830e4c] text-white'
                     : 'bg-neutral-50 text-neutral-400'
-                }`}>
+                  }`}>
                   <MapPin size={20} />
                 </div>
                 <div className="text-left">
-                  <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${
-                    currentCity === cityObj.city ? 'text-[#830e4c]' : 'text-neutral-900'
-                  }`}>
+                  <h4 className={`text-base font-black tracking-tight leading-tight uppercase italic ${currentCity === cityObj.city ? 'text-[#830e4c]' : 'text-neutral-900'
+                    }`}>
                     {cityObj.city}
                   </h4>
                   <p className="text-[8px] font-black text-neutral-300 uppercase tracking-[0.15em] mt-0.5">

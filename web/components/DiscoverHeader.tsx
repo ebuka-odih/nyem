@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Filter, MapPin, Zap, ChevronDown } from 'lucide-react';
 
 interface DiscoverHeaderProps {
@@ -14,7 +15,16 @@ interface DiscoverHeaderProps {
 
 export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({ 
   onFilter, onLocation, onWishlist, activeCategory, setActiveTab, activeTab, wishlistCount 
-}) => (
+}) => {
+  const navigate = useNavigate();
+  
+  const handleTabChange = (tab: 'marketplace' | 'services' | 'barter') => {
+    const path = tab === 'marketplace' ? '/discover' : `/discover/${tab}`;
+    navigate(path);
+    setActiveTab(tab);
+  };
+
+  return (
   <header className="shrink-0 z-[100] bg-white pt-[calc(env(safe-area-inset-top,0px)+10px)] pb-2 px-5 sm:px-8 border-b border-neutral-100">
     <div className="max-w-4xl mx-auto flex flex-col gap-2.5">
       {/* Brand Logo Area - Balanced and spaced */}
@@ -43,7 +53,7 @@ export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({
           {(['marketplace', 'services', 'barter'] as const).map((tab) => (
             <button 
               key={tab} 
-              onClick={() => setActiveTab(tab)} 
+              onClick={() => handleTabChange(tab)} 
               className={`relative z-10 flex-1 flex items-center justify-center text-[10px] sm:text-[14px] font-black transition-all duration-300 uppercase px-2.5 sm:px-4 min-w-0 ${activeTab === tab ? 'text-[#830e4c]' : 'text-neutral-400'}`}
             >
               <span className="whitespace-nowrap tracking-tighter sm:tracking-widest">{tab === 'marketplace' ? 'SHOP' : tab}</span>
@@ -73,4 +83,5 @@ export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({
       </div>
     </div>
   </header>
-);
+  );
+};

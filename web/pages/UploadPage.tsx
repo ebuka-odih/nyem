@@ -1,18 +1,21 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Plus, 
-  X, 
-  Edit3, 
-  Trash2, 
-  ImageIcon, 
-  LayoutGrid, 
+import {
+  Plus,
+  X,
+  Edit3,
+  Trash2,
+  ImageIcon,
+  LayoutGrid,
   PlusSquare,
   Send
 } from 'lucide-react';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { useCategories } from '../hooks/api/useCategories';
+import { useProfile } from '../hooks/api/useProfile';
+import { useCreateListing, useUpdateListing, useDeleteListing } from '../hooks/api/useListings';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -41,7 +44,7 @@ interface UserListing {
 export const UploadPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'collection' | 'new'>('new');
   const [editingItem, setEditingItem] = useState<UserListing | null>(null);
-  
+
   // Form States
   const [images, setImages] = useState<string[]>([]);
   const [title, setTitle] = useState("");
@@ -49,16 +52,28 @@ export const UploadPage: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | "">("");
   const [selectedCondition, setSelectedCondition] = useState("");
   const [price, setPrice] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Data States
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(false);
-  const [myListings, setMyListings] = useState<UserListing[]>([]);
-  const [loadingListings, setLoadingListings] = useState(false);
-  
+  // React Query hooks
+  const { data: categories = [], isLoading: loadingCategories } = useCategories('Shop');
+  const { data: userData, isLoading: loadingListings, refetch: fetchUserListings } = useProfile();
+  const createListingMutation = useCreateListing();
+  const updateListingMutation = useUpdateListing();
+  const deleteListingMutation = useDeleteListing();
+
+  const myListings = (userData?.listings || userData?.items || []).map((listing: any) => ({
+    id: listing.id,
+    title: listing.title || listing.name || 'Untitled',
+    photos: listing.photos || (listing.image ? [listing.image] : []),
+    price: listing.price,
+    status: listing.status || 'active',
+    category_id: listing.category_id,
+    condition: listing.condition,
+    description: listing.description,
+  }));
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submitting = createListingMutation.isPending || updateListingMutation.isPending;
 
   // Condition options matching backend Listing model constants
   const conditions = [
@@ -68,75 +83,7 @@ export const UploadPage: React.FC = () => {
     { value: 'fair', label: 'Fair' },
   ];
 
-  // Fetch categories on mount
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  // Fetch user listings when collection tab is active
-  useEffect(() => {
-    if (activeTab === 'collection') {
-      fetchUserListings();
-    }
-  }, [activeTab]);
-
-  const fetchCategories = async () => {
-    try {
-      setLoadingCategories(true);
-      const token = getStoredToken();
-      // Only fetch marketplace categories (Shop parent category)
-      const categoriesUrl = `${ENDPOINTS.categories}?parent=${encodeURIComponent('Shop')}`;
-      console.log('[UploadPage] Fetching marketplace categories from:', categoriesUrl);
-      const response = await apiFetch<{ categories: Category[] }>(categoriesUrl, { token });
-      console.log('[UploadPage] Categories response:', response);
-      if (response.categories) {
-        console.log('[UploadPage] Setting categories:', response.categories.length, 'items');
-        console.log('[UploadPage] Category names:', response.categories.map(c => c.name));
-        console.log('[UploadPage] Full categories data:', JSON.stringify(response.categories, null, 2));
-        setCategories(response.categories);
-      } else {
-        console.warn('[UploadPage] No categories in response');
-        setCategories([]);
-      }
-    } catch (err) {
-      console.error('Failed to fetch categories:', err);
-      setError('Failed to load categories. Please refresh the page.');
-      setCategories([]);
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
-
-  const fetchUserListings = async () => {
-    try {
-      setLoadingListings(true);
-      const token = getStoredToken();
-      if (!token) return;
-
-      const response = await apiFetch<{ user: { items?: UserListing[]; listings?: UserListing[] } }>(ENDPOINTS.profile.me, { token });
-      const userData = response.user || (response as any).data?.user;
-      const listings = userData?.listings || userData?.items || [];
-      
-      // Format listings for display
-      const formattedListings: UserListing[] = listings.map((listing: any) => ({
-        id: listing.id,
-        title: listing.title || listing.name || 'Untitled',
-        photos: listing.photos || (listing.image ? [listing.image] : []),
-        price: listing.price,
-        status: listing.status || 'active',
-        category_id: listing.category_id,
-        condition: listing.condition,
-        description: listing.description,
-      }));
-      
-      setMyListings(formattedListings);
-    } catch (err) {
-      console.error('Failed to fetch user listings:', err);
-      setError('Failed to load your listings. Please refresh the page.');
-    } finally {
-      setLoadingListings(false);
-    }
-  };
+  // Manual fetches removed in favor of React Query
 
   const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -156,7 +103,7 @@ export const UploadPage: React.FC = () => {
       }
 
       // Convert files to base64
-      const base64Promises = Array.from(files).slice(0, 4 - images.length).map((file) => {
+      const base64Promises = Array.from(files).slice(0, 4 - images.length).map((file: File) => {
         return new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => {
@@ -181,9 +128,9 @@ export const UploadPage: React.FC = () => {
 
       const uploadResults = await Promise.all(uploadPromises);
       const newUrls = uploadResults.map((result) => result.url);
-      
+
       setImages([...images, ...newUrls]);
-      
+
       // Reset file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -245,54 +192,29 @@ export const UploadPage: React.FC = () => {
     }
 
     try {
-      setSubmitting(true);
       setError(null);
-      const token = getStoredToken();
-      if (!token) {
-        setError('Please login to create a listing');
-        return;
-      }
-
       const payload: any = {
         title: title.trim(),
         description: desc.trim() || null,
         category_id: Number(selectedCategoryId),
         condition: selectedCondition,
         photos: images,
-        type: 'marketplace', // Default to marketplace for now
+        type: 'marketplace',
         price: parseFloat(price),
       };
 
       if (editingItem) {
-        // Update existing listing
-        const response = await apiFetch(ENDPOINTS.items.update(editingItem.id), {
-          method: 'PUT',
-          token,
-          body: payload,
-        });
-        
-        // Refresh listings
-        await fetchUserListings();
+        await updateListingMutation.mutateAsync({ id: editingItem.id, data: payload });
         setActiveTab('collection');
         resetForm();
       } else {
-        // Create new listing
-        const response = await apiFetch(ENDPOINTS.items.create, {
-          method: 'POST',
-          token,
-          body: payload,
-        });
-        
-        // Refresh listings
-        await fetchUserListings();
+        await createListingMutation.mutateAsync(payload);
         setActiveTab('collection');
         resetForm();
       }
     } catch (err: any) {
       console.error('Failed to submit listing:', err);
       setError(err.message || 'Failed to save listing. Please try again.');
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -302,16 +224,7 @@ export const UploadPage: React.FC = () => {
     }
 
     try {
-      const token = getStoredToken();
-      if (!token) return;
-
-      await apiFetch(ENDPOINTS.items.delete(id), {
-        method: 'DELETE',
-        token,
-      });
-
-      // Refresh listings
-      await fetchUserListings();
+      await deleteListingMutation.mutateAsync(id);
     } catch (err: any) {
       console.error('Failed to delete listing:', err);
       setError(err.message || 'Failed to delete listing. Please try again.');
@@ -320,9 +233,9 @@ export const UploadPage: React.FC = () => {
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       className="w-full flex flex-col gap-6"
     >
       {/* Error Message */}
@@ -334,14 +247,14 @@ export const UploadPage: React.FC = () => {
 
       {/* Tabs */}
       <div className="flex bg-neutral-100 p-1 rounded-3xl shrink-0">
-        <button 
+        <button
           onClick={() => setActiveTab('collection')}
           className={`relative flex-1 py-3.5 flex items-center justify-center gap-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'collection' ? 'bg-white text-[#830e4c] shadow-md' : 'text-neutral-400 hover:text-neutral-600'}`}
         >
           <LayoutGrid size={16} strokeWidth={activeTab === 'collection' ? 3 : 2} />
           Your Collection
         </button>
-        <button 
+        <button
           onClick={() => { setActiveTab('new'); if (!editingItem) resetForm(); }}
           className={`relative flex-1 py-3.5 flex items-center justify-center gap-2 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${activeTab === 'new' ? 'bg-white text-[#830e4c] shadow-md' : 'text-neutral-400 hover:text-neutral-600'}`}
         >
@@ -352,7 +265,7 @@ export const UploadPage: React.FC = () => {
 
       <AnimatePresence mode="wait">
         {activeTab === 'collection' ? (
-          <motion.div 
+          <motion.div
             key="collection-grid"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -360,7 +273,7 @@ export const UploadPage: React.FC = () => {
             transition={subtleTransition}
             className="grid grid-cols-2 gap-4 pb-20"
           >
-            <button 
+            <button
               onClick={() => setActiveTab('new')}
               className="aspect-square bg-neutral-50 border-2 border-dashed border-neutral-200 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 text-neutral-400 hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all group shadow-sm"
             >
@@ -376,15 +289,15 @@ export const UploadPage: React.FC = () => {
               </div>
             ) : (
               myListings.map((item) => (
-                <motion.div 
+                <motion.div
                   layout
-                  key={item.id} 
+                  key={item.id}
                   className="group relative aspect-square bg-white rounded-[2.5rem] overflow-hidden shadow-md border border-neutral-100"
                 >
                   {item.photos && item.photos.length > 0 && (
-                    <img 
-                      src={item.photos[0]} 
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    <img
+                      src={item.photos[0]}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       alt={item.title}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -416,7 +329,7 @@ export const UploadPage: React.FC = () => {
             )}
           </motion.div>
         ) : (
-          <motion.div 
+          <motion.div
             key="new-drop-form"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -429,9 +342,9 @@ export const UploadPage: React.FC = () => {
               <div className="flex items-center justify-between bg-[#830e4c] rounded-[2rem] p-5 shadow-xl border border-white/10 shrink-0">
                 <div className="flex items-center gap-4 overflow-hidden">
                   {editingItem.photos && editingItem.photos.length > 0 && (
-                    <img 
-                      src={editingItem.photos[0]} 
-                      className="w-12 h-12 rounded-2xl object-cover border border-white/20 shrink-0" 
+                    <img
+                      src={editingItem.photos[0]}
+                      className="w-12 h-12 rounded-2xl object-cover border border-white/20 shrink-0"
                       alt={editingItem.title}
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
@@ -456,17 +369,17 @@ export const UploadPage: React.FC = () => {
                 <label className="text-[11px] font-black text-neutral-900 uppercase tracking-[0.2em]">Product Imagery</label>
                 <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{images.length}/4 Required</span>
               </div>
-              
+
               <div className="grid grid-cols-4 gap-3">
                 {images.map((img, idx) => (
-                  <motion.div 
-                    initial={{ scale: 0.8, opacity: 0 }} 
+                  <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
-                    key={idx} 
+                    key={idx}
                     className="relative aspect-square rounded-2xl overflow-hidden border border-neutral-200 shadow-sm group"
                   >
                     <img src={img} className="w-full h-full object-cover" alt={`Upload ${idx + 1}`} />
-                    <button 
+                    <button
                       onClick={() => removeImage(idx)}
                       className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity"
                     >
@@ -474,9 +387,9 @@ export const UploadPage: React.FC = () => {
                     </button>
                   </motion.div>
                 ))}
-                
+
                 {images.length < 4 && (
-                  <button 
+                  <button
                     onClick={() => fileInputRef.current?.click()}
                     className="aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm"
                   >
@@ -500,11 +413,11 @@ export const UploadPage: React.FC = () => {
               {/* 1. Title */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Listing Title</label>
-                <input 
-                  type="text" 
-                  value={title} 
+                <input
+                  type="text"
+                  value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., iPhone 15 Pro Max" 
+                  placeholder="e.g., iPhone 15 Pro Max"
                   className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200"
                 />
               </div>
@@ -512,10 +425,10 @@ export const UploadPage: React.FC = () => {
               {/* 2. Description */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Description</label>
-                <textarea 
-                  value={desc} 
+                <textarea
+                  value={desc}
                   onChange={(e) => setDesc(e.target.value)}
-                  placeholder="Tell buyers why they need this..." 
+                  placeholder="Tell buyers why they need this..."
                   rows={4}
                   className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-medium text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200 resize-none"
                 />
@@ -524,14 +437,14 @@ export const UploadPage: React.FC = () => {
               {/* 3. Category */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Category</label>
-                <select 
+                <select
                   value={selectedCategoryId === '' ? '' : String(selectedCategoryId)}
                   onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : '')}
                   disabled={loadingCategories}
                   className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="">Select Category</option>
-                  {categories.map((cat) => (
+                  {Array.isArray(categories) && categories.map((cat: any) => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name}
                     </option>
@@ -542,7 +455,7 @@ export const UploadPage: React.FC = () => {
               {/* 4. Condition */}
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Condition</label>
-                <select 
+                <select
                   value={selectedCondition}
                   onChange={(e) => setSelectedCondition(e.target.value)}
                   className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm"
@@ -563,20 +476,20 @@ export const UploadPage: React.FC = () => {
                   <div className="flex items-center justify-center pl-6 pr-3 border-r border-neutral-100 bg-neutral-50/30 shrink-0">
                     <span className="text-[#830e4c] font-black text-lg">₦</span>
                   </div>
-                  <input 
-                    type="number" 
-                    value={price} 
+                  <input
+                    type="number"
+                    value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0.00" 
+                    placeholder="0.00"
                     min="0"
                     step="0.01"
-                    className="w-full bg-transparent border-none px-4 py-0 text-sm font-black text-neutral-900 focus:ring-0 focus:outline-none placeholder:text-neutral-200" 
+                    className="w-full bg-transparent border-none px-4 py-0 text-sm font-black text-neutral-900 focus:ring-0 focus:outline-none placeholder:text-neutral-200"
                   />
                 </div>
               </div>
             </div>
 
-            <button 
+            <button
               onClick={handleSubmit}
               disabled={submitting}
               className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
