@@ -277,9 +277,6 @@ class ConversationController extends Controller
         ], 200);
     }
 
-    /**
-     * List all conversations for authenticated user
-     */
     public function index(Request $request)
     {
         $user = $request->user();
@@ -298,6 +295,42 @@ class ConversationController extends Controller
                 
                 $lastMessage = $conversation->messages->first();
                 
+                // Try to get listing context from matches or message requests
+                $listingContext = null;
+                
+                // First, check if there's a match with listing info
+                $match = $conversation->matches()->with(['listing1', 'listing2'])->first();
+                if ($match) {
+                    $myListing = $match->listing1->user_id === $user->id ? $match->listing1 : $match->listing2;
+                    if ($myListing) {
+                        $listingContext = [
+                            'id' => $myListing->id,
+                            'title' => $myListing->title,
+                            'photo' => !empty($myListing->photos) ? $myListing->photos[0] : null,
+                            'price' => $myListing->price,
+                        ];
+                    }
+                }
+                
+                // If no match, check message requests
+                if (!$listingContext) {
+                    $messageRequest = \App\Models\MessageRequest::where(function ($q) use ($user, $otherUser) {
+                        $q->where('from_user_id', $user->id)->where('to_user_id', $otherUser->id);
+                    })->orWhere(function ($q) use ($user, $otherUser) {
+                        $q->where('from_user_id', $otherUser->id)->where('to_user_id', $user->id);
+                    })->with('listing')->first();
+                    
+                    if ($messageRequest && $messageRequest->listing) {
+                        $listing = $messageRequest->listing;
+                        $listingContext = [
+                            'id' => $listing->id,
+                            'title' => $listing->title,
+                            'photo' => !empty($listing->photos) ? $listing->photos[0] : null,
+                            'price' => $listing->price,
+                        ];
+                    }
+                }
+                
                 return [
                     'id' => $conversation->id,
                     'conversation_id' => $conversation->id,
@@ -308,6 +341,7 @@ class ConversationController extends Controller
                         'sender_id' => $lastMessage->sender_id,
                         'created_at' => $lastMessage->created_at,
                     ] : null,
+                    'listing_context' => $listingContext,
                     'created_at' => $conversation->created_at,
                     'updated_at' => $conversation->updated_at,
                 ];

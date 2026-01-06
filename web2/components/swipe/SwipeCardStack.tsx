@@ -198,7 +198,11 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
   };
 
   const swipe = async (direction: 'left' | 'right') => {
-    await controls.start({ x: direction === 'left' ? -500 : 500, opacity: 0 });
+    await controls.start({ 
+      x: direction === 'left' ? -500 : 500, 
+      opacity: 0,
+      transition: { duration: 0.15, ease: 'easeOut' }
+    });
     if (direction === 'left') {
       onSwipeLeft();
     }
@@ -270,7 +274,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
           <motion.div
             key="signup-welcome-card"
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
-            style={{ x, rotate, opacity }}
+            style={{ x, rotate, opacity, willChange: 'transform' }}
             animate={controls}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
@@ -278,7 +282,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             onDragEnd={async (event: any, info: PanInfo) => {
               if (Math.abs(info.offset.x) > 100) {
                 // Swipe in either direction dismisses the signup welcome card
-                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0 });
+                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                 x.set(0);
                 onSignupWelcomeCardDismiss?.();
               } else {
@@ -296,7 +300,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
           <motion.div
             key="welcome-card"
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
-            style={{ x, rotate, opacity }}
+            style={{ x, rotate, opacity, willChange: 'transform' }}
             animate={controls}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
@@ -304,7 +308,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             onDragEnd={async (event: any, info: PanInfo) => {
               if (Math.abs(info.offset.x) > 100) {
                 // Swipe in either direction dismisses the welcome card
-                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0 });
+                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                 x.set(0);
                 onWelcomeCardDismiss?.();
               } else {
@@ -322,7 +326,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
           <motion.div
             key="promo-card"
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
-            style={{ x, rotate, opacity }}
+            style={{ x, rotate, opacity, willChange: 'transform' }}
             animate={controls}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
@@ -330,7 +334,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             onDragEnd={async (event: any, info: PanInfo) => {
               if (Math.abs(info.offset.x) > 100) {
                 // Swipe in either direction dismisses the promo card
-                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0 });
+                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                 x.set(0);
                 onPromoCardDismiss?.();
               } else {
@@ -348,7 +352,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
           <motion.div
             key="ad-card"
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
-            style={{ x, rotate, opacity }}
+            style={{ x, rotate, opacity, willChange: 'transform' }}
             animate={controls}
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
@@ -356,7 +360,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             onDragEnd={async (event: any, info: PanInfo) => {
               if (Math.abs(info.offset.x) > 100) {
                 // Swipe in either direction dismisses the ad card
-                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0 });
+                await controls.start({ x: info.offset.x > 0 ? 500 : -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                 x.set(0);
                 onAdCardDismiss?.();
               } else {
@@ -374,7 +378,7 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
           <motion.div
             key={currentItem.id}
             className="absolute inset-0 w-full h-full z-10 cursor-grab active:cursor-grabbing origin-bottom"
-            style={{ x, rotate, opacity }}
+            style={{ x, rotate, opacity, willChange: 'transform' }}
             animate={controls}
             drag="x"
             dragConstraints={{ left: -200, right: isOwnItem ? 0 : 200 }} // Prevent right drag on own items
@@ -404,19 +408,19 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             <button
               onClick={async () => {
                 if (showWelcomeCard) {
-                  await controls.start({ x: -500, opacity: 0 });
+                  await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                   x.set(0);
                   onWelcomeCardDismiss?.();
                 } else if (showSignupWelcomeCard) {
-                  await controls.start({ x: -500, opacity: 0 });
+                  await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                   x.set(0);
                   onSignupWelcomeCardDismiss?.();
                 } else if (showPromoCard) {
-                  await controls.start({ x: -500, opacity: 0 });
+                  await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                   x.set(0);
                   onPromoCardDismiss?.();
                 } else if (showAdCard) {
-                  await controls.start({ x: -500, opacity: 0 });
+                  await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                   x.set(0);
                   onAdCardDismiss?.();
                 } else if (currentItem) {
@@ -431,15 +435,15 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
             <button
               onClick={async () => {
                 if (showWelcomeCard) {
-                  await controls.start({ x: 500, opacity: 0 });
+                  await controls.start({ x: 500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                   x.set(0);
                   onWelcomeCardDismiss?.();
                 } else if (showPromoCard) {
-                  await controls.start({ x: 500, opacity: 0 });
+                  await controls.start({ x: 500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                   x.set(0);
                   onPromoCardDismiss?.();
                 } else if (showAdCard) {
-                  await controls.start({ x: 500, opacity: 0 });
+                  await controls.start({ x: 500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                   x.set(0);
                   onAdCardDismiss?.();
                 } else if (currentItem && !isOwnItem) {
@@ -460,19 +464,19 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
               <button
                 onClick={async () => {
                   if (showWelcomeCard) {
-                    await controls.start({ x: -500, opacity: 0 });
+                    await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onWelcomeCardDismiss?.();
                   } else if (showSignupWelcomeCard) {
-                    await controls.start({ x: -500, opacity: 0 });
+                    await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onSignupWelcomeCardDismiss?.();
                   } else if (showPromoCard) {
-                    await controls.start({ x: -500, opacity: 0 });
+                    await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onPromoCardDismiss?.();
                   } else if (showAdCard) {
-                    await controls.start({ x: -500, opacity: 0 });
+                    await controls.start({ x: -500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onAdCardDismiss?.();
                   } else if (currentItem) {
@@ -487,19 +491,19 @@ export const SwipeCardStack: React.FC<SwipeCardStackProps> = ({
               <button
                 onClick={async () => {
                   if (showWelcomeCard) {
-                    await controls.start({ x: 500, opacity: 0 });
+                    await controls.start({ x: 500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onWelcomeCardDismiss?.();
                   } else if (showSignupWelcomeCard) {
-                    await controls.start({ x: 500, opacity: 0 });
+                    await controls.start({ x: 500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onSignupWelcomeCardDismiss?.();
                   } else if (showPromoCard) {
-                    await controls.start({ x: 500, opacity: 0 });
+                    await controls.start({ x: 500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onPromoCardDismiss?.();
                   } else if (showAdCard) {
-                    await controls.start({ x: 500, opacity: 0 });
+                    await controls.start({ x: 500, opacity: 0, transition: { duration: 0.15, ease: 'easeOut' } });
                     x.set(0);
                     onAdCardDismiss?.();
                   } else if (currentItem && !isOwnItem) {

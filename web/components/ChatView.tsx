@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Phone, MoreVertical, Lock, ChevronRight, Check, ShieldCheck, ShieldAlert, Paperclip, Smile, Send, CheckCheck, ShoppingBag } from 'lucide-react';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { useMessages, useSendMessage } from '../hooks/api/useMatches';
-import { useQuery } from '@tanstack/react-query';
-import { fetcher } from '../hooks/api/fetcher';
+import { useConversationListing } from '../hooks/api/useConversationListing';
 import { ENDPOINTS } from '../constants/endpoints';
 
 const subtleTransition = {
@@ -29,6 +28,12 @@ interface ChatMessage {
     message_text: string;
     sender_id: string;
     created_at: string;
+  };
+  listing_context?: {
+    id: string;
+    title: string;
+    photo?: string;
+    price?: number;
   };
   updated_at: string;
 }
@@ -113,25 +118,31 @@ export const ChatView: React.FC<ChatViewProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Fetch matches for this conversation to get listing info
-  const { data: matchesData } = useQuery({
-    queryKey: ['conversations', chat.conversation_id, 'matches'],
-    queryFn: () => fetcher<{ matches: any[] }>(ENDPOINTS.conversations.matches(chat.conversation_id)),
-  });
+  // Fetch listing context for this conversation
+  const { data: conversationListing } = useConversationListing(chat.conversation_id);
 
+  // Set listing info from conversation data or fetched listing
   useEffect(() => {
-    if (matchesData?.matches && matchesData.matches.length > 0) {
-      const match = matchesData.matches[0];
-      const listing = match.my_listing || match.my_item || match.listing1;
-      if (listing) {
-        setChatListingInfo({
-          title: listing.title || 'Unknown Listing',
-          image: listing.photos?.[0] || listing.photo || null,
-          price: listing.price ? `₦${Number(listing.price).toLocaleString()}` : undefined,
-        });
-      }
+    console.log('=== ChatView Listing Debug ===');
+    console.log('chat.listing_context:', chat.listing_context);
+    console.log('conversationListing:', conversationListing);
+    console.log('Current chatListingInfo:', chatListingInfo);
+
+    const listingData = chat.listing_context || conversationListing;
+
+    if (listingData) {
+      const newInfo = {
+        title: listingData.title || 'Unknown Listing',
+        image: listingData.photo || null,
+        price: listingData.price ? `₦${Number(listingData.price).toLocaleString()}` : undefined,
+      };
+      console.log('Setting new listing info:', newInfo);
+      setChatListingInfo(newInfo);
+    } else {
+      console.log('No listing data available');
     }
-  }, [matchesData]);
+    console.log('=== End Debug ===');
+  }, [chat.listing_context, conversationListing]);
 
   const sendMessage = async () => {
     if (!newMessage.trim() || sendMessageMutation.isPending) return;
@@ -167,7 +178,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       className="fixed inset-0 bg-white z-[300] flex flex-col"
     >
       {/* Chat Header */}
-      <header className="shrink-0 bg-white/80 backdrop-blur-xl border-b border-neutral-100 px-4 py-4 flex items-center justify-between sticky top-0 z-10">
+      <header className="shrink-0 bg-white border-b border-neutral-100 px-4 flex items-center justify-between" style={{ paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: '16px' }}>
         <div className="flex items-center gap-3">
           <button
             onClick={handleClose}
@@ -252,24 +263,24 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       {/* Item Context Banner */}
       {chatListingInfo && (
-        <div className="bg-neutral-50 px-4 py-3 flex items-center justify-between border-b border-neutral-100">
-          <div className="flex items-center gap-3">
+        <div className="bg-white px-5 py-4 flex items-center justify-between border-b border-neutral-50 shadow-[0_4px_12px_rgba(0,0,0,0,02)] z-[5]">
+          <div className="flex items-center gap-4">
             {chatListingInfo.image && (
               <img
                 src={chatListingInfo.image}
-                className="w-10 h-10 rounded-lg object-cover border border-neutral-200"
+                className="w-12 h-12 rounded-[14px] object-cover border border-neutral-100 shadow-sm"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
                 }}
               />
             )}
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Regarding Item</span>
-              <span className="text-xs font-bold text-[#830e4c] truncate max-w-[150px]">{chatListingInfo.title}</span>
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[10px] font-black text-neutral-300 uppercase tracking-[0.1em]">Regarding Item</span>
+              <span className="text-[14px] font-black text-[#830e4c] truncate max-w-[180px] tracking-tight leading-tight">{chatListingInfo.title}</span>
             </div>
           </div>
-          <button className="px-3 py-1.5 bg-white border border-[#830e4c]/20 rounded-full text-[9px] font-black uppercase tracking-widest text-[#830e4c] shadow-sm active:scale-95 transition-all">
+          <button className="px-5 py-2.5 bg-white border border-neutral-100 rounded-full text-[10px] font-black uppercase tracking-widest text-[#830e4c] shadow-sm active:scale-95 transition-all">
             View Post
           </button>
         </div>
@@ -318,8 +329,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         ) : (
           <>
-            <div className="flex justify-center mb-6">
-              <span className="px-4 py-1.5 bg-[#830e4c1a] rounded-full text-[9px] font-black text-[#830e4c] uppercase tracking-[0.2em]">
+            <div className="flex justify-center mb-8 mt-4">
+              <span className="px-8 py-2.5 bg-[#830e4c0d] rounded-full text-[10px] font-black text-[#830e4c] uppercase tracking-[0.15em] shadow-sm border border-[#830e4c10]">
                 Deal Conversation
               </span>
             </div>

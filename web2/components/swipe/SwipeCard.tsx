@@ -126,8 +126,10 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({ item, isLiked: isLikedProp
         <img
           src={item.image}
           alt={item.title}
-          className={`w-full h-full object-cover transition-all duration-700 ${imageLoaded ? 'opacity-100 scale-100' : 'opacity-0 scale-105'}`}
+          className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          style={{ willChange: 'opacity' }}
           onLoad={() => setImageLoaded(true)}
+          loading="eager"
         />
 
         {/* Gradient overlay */}

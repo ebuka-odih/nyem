@@ -7,7 +7,7 @@ import { ChatsList } from '../components/ChatsList';
 import { RequestsList } from '../components/RequestsList';
 import { NotificationPermissionModal } from '../components/NotificationPermissionModal';
 import { Bell } from 'lucide-react';
-import { useConversations, useMessageRequests } from '../hooks/api/useMatches';
+import { useConversations, useMessageRequests, useTradeOffers } from '../hooks/api/useMatches';
 import { useProfile } from '../hooks/api/useProfile';
 
 const subtleTransition = {
@@ -80,8 +80,13 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     refetch: fetchMessageRequests
   } = useMessageRequests();
 
+  const {
+    data: tradeOffers = [],
+    isLoading: loadingTrades,
+    refetch: fetchTradeOffers
+  } = useTradeOffers();
+
   const [selectedChat, setSelectedChat] = useState<ChatMessage | null>(null);
-  const [isSendingTestNotification, setIsSendingTestNotification] = useState(false);
   const [showNotificationModal, setShowNotificationModal] = useState(false);
   const currentUserId = useRef<string | null>(null);
 
@@ -99,6 +104,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     // Refresh both lists after accepting a request
     await fetchConversations();
     await fetchMessageRequests();
+    await fetchTradeOffers();
     setActiveTab('chats');
   };
 
@@ -135,120 +141,9 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     }
   };
 
-  const showBrowserNotification = (title: string, message: string) => {
-    if (!('Notification' in window)) {
-      console.warn('Browser does not support notifications');
-      return;
-    }
-
-    if (Notification.permission === 'granted') {
-      new Notification(title, {
-        body: message,
-        icon: '/icon-192x192.png',
-        badge: '/icon-72x72.png',
-        tag: 'nyem-test-notification',
-        requireInteraction: false,
-      });
-    } else if (Notification.permission !== 'denied') {
-      Notification.requestPermission().then((permission) => {
-        if (permission === 'granted') {
-          new Notification(title, {
-            body: message,
-            icon: '/icon-192x192.png',
-            badge: '/icon-72x72.png',
-            tag: 'nyem-test-notification',
-            requireInteraction: false,
-          });
-        }
-      });
-    }
-  };
-
-  const handleTestNotification = async () => {
-    try {
-      setIsSendingTestNotification(true);
-      const token = getStoredToken();
-      if (!token) {
-        alert('Please log in to test notifications');
-        return;
-      }
-
-      // Try to send notification directly first
-      // If user doesn't have player ID, the API will return an error and we'll show the modal
-      try {
-        const response = await apiFetch(ENDPOINTS.notifications.testMe, {
-          method: 'POST',
-          token,
-          body: {
-            title: 'Test Notification',
-            message: 'This is a test notification from Nyem! 🎉',
-          },
-        });
-
-        if (response.success) {
-          // Show browser notification immediately so user can see it
-          showBrowserNotification('Test Notification', 'This is a test notification from Nyem! 🎉');
-          // Also show alert as backup
-          alert('✅ Test notification sent successfully! Check your device for the browser notification.');
-          return;
-        } else {
-          // If it failed for a reason other than missing player ID, show error
-          if (!response.message?.includes('OneSignal player ID') && !response.message?.includes('player ID')) {
-            alert(`❌ Failed to send notification: ${response.message || 'Unknown error'}`);
-            return;
-          }
-          // Otherwise, fall through to show modal
-        }
-      } catch (error: any) {
-        // Check if error is about missing player ID
-        if (error.message?.includes('OneSignal player ID') || error.message?.includes('player ID')) {
-          // User doesn't have player ID, show modal to register
-          setShowNotificationModal(true);
-          return;
-        }
-        // Other errors - show error message
-        console.error('Failed to send test notification:', error);
-        alert(`❌ Error: ${error.message || 'Failed to send test notification'}`);
-        return;
-      }
-
-      // If we get here, user doesn't have player ID, show modal
-      setShowNotificationModal(true);
-    } catch (error: any) {
-      console.error('Failed to send test notification:', error);
-      alert(`❌ Error: ${error.message || 'Failed to send test notification'}`);
-    } finally {
-      setIsSendingTestNotification(false);
-    }
-  };
-
   const handleNotificationRegistered = async (playerId: string) => {
-    // After player ID is registered, send test notification
-    try {
-      const token = getStoredToken();
-      if (!token) return;
-
-      const response = await apiFetch(ENDPOINTS.notifications.testMe, {
-        method: 'POST',
-        token,
-        body: {
-          title: 'Test Notification',
-          message: 'This is a test notification from Nyem! 🎉',
-        },
-      });
-
-      if (response.success) {
-        // Show browser notification immediately
-        showBrowserNotification('Test Notification', 'This is a test notification from Nyem! 🎉');
-        // Also show alert as backup
-        alert('✅ Test notification sent successfully! Check your device.');
-      } else {
-        alert(`❌ Failed to send notification: ${response.message || 'Unknown error'}`);
-      }
-    } catch (error: any) {
-      console.error('Failed to send test notification after registration:', error);
-      alert(`❌ Error: ${error.message || 'Failed to send test notification'}`);
-    }
+    // Refresh to ensure we have the latest
+    fetchConversations();
   };
 
   // Show chat view if a chat is selected
@@ -283,28 +178,14 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
           className={`relative px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'requests' ? 'bg-[#830e4c] text-white shadow-lg' : 'bg-white text-neutral-400 border border-neutral-100'}`}
         >
           Requests
-          {requests.length > 0 && (
+          {(requests.length + tradeOffers.length) > 0 && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#830e4c] text-white text-[9px] flex items-center justify-center rounded-full border-2 border-white font-black">
-              {requests.length}
+              {requests.length + tradeOffers.length}
             </span>
           )}
         </button>
       </div>
 
-      {/* Test OneSignal Notification Button */}
-      <div className="px-4 mb-4">
-        <button
-          onClick={handleTestNotification}
-          disabled={isSendingTestNotification}
-          className={`w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-black uppercase tracking-widest text-xs transition-all ${isSendingTestNotification
-            ? 'bg-neutral-300 text-neutral-500 cursor-wait'
-            : 'bg-[#830e4c] text-white shadow-lg active:scale-95 hover:bg-[#931e5c]'
-            }`}
-        >
-          <Bell size={18} strokeWidth={2.5} />
-          {isSendingTestNotification ? 'Sending...' : 'Test Push Notification'}
-        </button>
-      </div>
 
       {/* Notification Permission Modal */}
       <NotificationPermissionModal
@@ -332,6 +213,7 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
               <RequestsList
                 key="requests-list"
                 requests={requests}
+                tradeOffers={tradeOffers}
                 onRequestAccepted={handleRequestAccepted}
                 onRequestDeclined={handleRequestDeclined}
                 onChatOpen={handleChatOpen}
