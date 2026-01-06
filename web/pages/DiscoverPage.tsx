@@ -243,11 +243,11 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
 
   return (
     <>
-      <div className="flex items-center justify-center pt-0 pb-1 shrink-0 mt-[-2px]">
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-neutral-100 rounded-full border border-neutral-200/50 shadow-sm">
-          <MapPin size={9} className="text-[#830e4c]" />
-          <span className="text-[8px] font-black uppercase tracking-[0.2em] text-neutral-900/60">
-            Discovery in <span className="text-[#830e4c] italic">{currentCity}</span>
+      <div className="flex items-center justify-center pt-0 pb-2 shrink-0">
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-white rounded-full border border-neutral-100 shadow-sm mb-1">
+          <MapPin size={10} className="text-[#830e4c]" />
+          <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
+            Discovery in <span className="text-[#830e4c] font-black italic">{currentCity}</span>
           </span>
         </div>
       </div>

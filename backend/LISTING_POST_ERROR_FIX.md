@@ -80,3 +80,4 @@ After running the migration, the listings table should have:
 - SQLite doesn't enforce enum types, so enum changes are handled in application logic
 - Existing data will be preserved during column renames
 
+

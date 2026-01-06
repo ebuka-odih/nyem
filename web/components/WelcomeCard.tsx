@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, useMotionValue, useTransform, useAnimation } from 'framer-motion';
-import { ArrowLeftRight, ChevronRight, Zap } from 'lucide-react';
+import { Zap, Heart, X, Star, ChevronRight, Sparkles, Navigation, MapPin } from 'lucide-react';
 
 interface WelcomeCardProps {
     onSwipe: (dir: 'left' | 'right' | 'up') => void;
@@ -9,7 +9,6 @@ interface WelcomeCardProps {
     triggerDirection: 'left' | 'right' | 'up' | null;
 }
 
-// Fix: Casting to any to bypass environment-specific type errors for motion components
 const MotionDiv = motion.div as any;
 
 export const WelcomeCard: React.FC<WelcomeCardProps> = ({
@@ -48,19 +47,10 @@ export const WelcomeCard: React.FC<WelcomeCardProps> = ({
 
     const handleDragEnd = (_: any, info: any) => {
         if (!isTop) return;
-
-        const absX = Math.abs(info.offset.x);
-        const velocityX = Math.abs(info.velocity.x);
-        const velocityY = Math.abs(info.velocity.y);
-
-        if (absX > 100 || velocityX > 500) {
-            const dir = info.offset.x > 0 ? 'right' : 'left';
-            controls.start({ x: info.offset.x > 0 ? 800 : -800, opacity: 0, transition: { duration: 0.3 } }).then(() => onSwipe(dir));
-        } else if (info.offset.y < -150 || velocityY > 500) {
-            controls.start({ y: -1000, opacity: 0, transition: { duration: 0.3 } }).then(() => onSwipe('up'));
-        } else {
-            controls.start({ x: 0, y: 0, rotate: 0, transition: { type: 'spring', stiffness: 300, damping: 25 } });
-        }
+        if (info.offset.x > 100) controls.start({ x: 800, opacity: 0 }).then(() => onSwipe('right'));
+        else if (info.offset.x < -100) controls.start({ x: -800, opacity: 0 }).then(() => onSwipe('left'));
+        else if (info.offset.y < -150) controls.start({ y: -1000, opacity: 0 }).then(() => onSwipe('up'));
+        else controls.start({ x: 0, y: 0, rotate: 0 });
     };
 
     return (
@@ -77,78 +67,99 @@ export const WelcomeCard: React.FC<WelcomeCardProps> = ({
                 height: '100%',
                 willChange: 'transform'
             }}
-            drag={isTop ? "x" : false}
-            dragElastic={0.2}
-            dragConstraints={{ left: -300, right: 300 }}
+            drag={isTop ? true : false}
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             onDragEnd={handleDragEnd}
             className={`touch-pan-y ${isTop ? 'cursor-grab active:cursor-grabbing' : 'pointer-events-none'}`}
         >
-            <div className="w-full h-full flex flex-col rounded-[2.2rem] overflow-hidden bg-[#830e4c] shadow-2xl shadow-[#830e4c]/20 border border-white/10 relative">
+            <div className="relative w-full h-full bg-white rounded-[2.8rem] shadow-[0_30px_70px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col border border-neutral-100/50">
 
-                {/* Decorative background */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                    <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
-                    <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-white/5 rounded-full blur-3xl" />
-                </div>
+                {/* Animated Background Gradients */}
+                <div className="absolute top-[-20%] left-[-20%] w-full h-full bg-[#830e4c]/5 rounded-full blur-[100px] animate-pulse" />
+                <div className="absolute bottom-[-20%] right-[-20%] w-full h-full bg-indigo-500/5 rounded-full blur-[100px]" />
 
-                {/* Main Content */}
-                <div className="relative flex-1 flex flex-col justify-center px-8 py-10">
-
-                    {/* Branding */}
-                    <div className="flex items-center gap-3 mb-8 justify-center">
-                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[#830e4c] shadow-lg">
-                            <Zap size={20} fill="currentColor" />
+                <div className="flex-1 flex flex-col p-7 sm:p-9 relative z-10">
+                    {/* Header */}
+                    <div className="flex items-center gap-3.5 mb-8">
+                        <div className="w-11 h-11 bg-[#830e4c] rounded-xl flex items-center justify-center text-white shadow-xl shadow-[#830e4c]/20">
+                            <Zap size={22} fill="currentColor" />
                         </div>
-                        <span className="text-2xl font-black tracking-tighter uppercase italic text-white leading-none">
-                            Nyem <span className="text-white/70 ml-1">Marketplace</span>
-                        </span>
+                        <div className="flex flex-col">
+                            <h2 className="text-2xl font-black text-neutral-900 tracking-tight uppercase italic leading-none">Welcome</h2>
+                            <p className="text-[10px] font-black text-[#830e4c] uppercase tracking-[0.2em] mt-1.5 opacity-80">To Nyem Marketplace</p>
+                        </div>
                     </div>
 
-                    {/* Headline */}
-                    <div className="mb-8 text-center">
-                        <h1 className="text-[32px] font-black text-white leading-[1.1] tracking-tighter uppercase italic mb-4">
-                            Swipe right <br /> on things you like
+                    <div className="space-y-8 flex-1">
+                        <h1 className="text-[38px] font-black text-neutral-900 tracking-tighter uppercase italic leading-[0.85]">
+                            Let's get you <br /> <span className="text-[#830e4c]">Started.</span>
                         </h1>
-                        <p className="text-white/70 text-xs font-black uppercase tracking-[0.2em] leading-relaxed">
-                            See something you want? Swipe right to show interest. The seller gets notified instantly.
-                        </p>
+
+                        <div className="space-y-5">
+                            {/* Tutorial Items */}
+                            <div className="flex items-center gap-7">
+                                <div className="w-11 h-11 rounded-full bg-rose-50 flex items-center justify-center text-rose-500 shrink-0 border border-rose-100 shadow-sm">
+                                    <X size={22} strokeWidth={3} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h4 className="text-[13px] font-black text-neutral-900 uppercase tracking-tight">Swipe Left</h4>
+                                    <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.1em] mt-0.5">To pass on items you don't like</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-7">
+                                <div className="w-11 h-11 rounded-full bg-[#830e4c]/5 flex items-center justify-center text-[#830e4c] shrink-0 border border-[#830e4c]/10 shadow-sm">
+                                    <Heart size={20} fill="currentColor" strokeWidth={0} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h4 className="text-[13px] font-black text-neutral-900 uppercase tracking-tight">Swipe Right</h4>
+                                    <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.1em] mt-0.5">LIKE AND SAVE ITEM TO WISHLIST</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-7">
+                                <div className="w-11 h-11 rounded-full bg-[#830e4c]/5 flex items-center justify-center text-[#830e4c] shrink-0 border border-[#830e4c]/10 shadow-sm">
+                                    <Star size={20} fill="currentColor" strokeWidth={0} />
+                                </div>
+                                <div className="flex flex-col">
+                                    <h4 className="text-[13px] font-black text-neutral-900 uppercase tracking-tight">Swipe Up</h4>
+                                    <p className="text-[11px] font-bold text-neutral-400 uppercase tracking-[0.1em] mt-0.5">To notify seller immediately</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Visual hint */}
-                    <div className="flex items-center justify-center gap-6 mb-8">
-                        <div className="flex flex-col items-center">
-                            <div className="w-16 h-16 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center mb-2">
-                                <span className="text-3xl">👈</span>
+                    <div className="flex-1" />
+
+                    {/* Footer group pushed up */}
+                    <div className="mt-auto space-y-6 pb-12">
+                        {/* Prompt to begin */}
+                        <div className="bg-neutral-50/80 backdrop-blur-sm rounded-3xl p-5 flex items-center justify-between border border-neutral-100 shadow-sm">
+                            <div className="flex items-center gap-4">
+                                <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center text-[#830e4c] shadow-md animate-bounce">
+                                    <Navigation size={20} fill="currentColor" className="rotate-[25deg]" />
+                                </div>
+                                <span className="text-[11px] font-black text-neutral-400 uppercase tracking-[0.2em]">Try it now</span>
                             </div>
-                            <span className="text-white/50 text-[10px] font-black uppercase tracking-widest">Pass</span>
+                            <div className="flex items-center gap-1.5 text-[#830e4c]">
+                                <ChevronRight size={20} strokeWidth={4} />
+                                <ChevronRight size={20} strokeWidth={4} className="opacity-40" />
+                                <ChevronRight size={20} strokeWidth={4} className="opacity-10" />
+                            </div>
                         </div>
 
-                        <ArrowLeftRight size={24} className="text-white/20" />
-
-                        <div className="flex flex-col items-center">
-                            <div className="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-400/30 flex items-center justify-center mb-2">
-                                <span className="text-3xl">👉</span>
+                        {/* Integrated Footer info */}
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-3">
+                                <Sparkles size={13} className="text-[#830e4c]" />
+                                <span className="text-[10px] font-black text-neutral-400 uppercase tracking-widest italic opacity-80">Happy Discovering</span>
                             </div>
-                            <span className="text-emerald-400 text-[10px] font-black uppercase tracking-widest">Interested</span>
                         </div>
-                    </div>
-
-                    {/* Simple instruction */}
-                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
-                        <p className="text-white text-xs font-black uppercase tracking-widest leading-relaxed text-center">
-                            Browse items from people nearby. Swipe up to show high interest!
-                        </p>
                     </div>
                 </div>
 
-                {/* Bottom CTA hint */}
-                <div className="relative px-8 pb-8">
-                    <div className="flex items-center justify-center gap-2 text-white/40 text-[10px] font-black uppercase tracking-[0.3em]">
-                        <span>Swipe to continue</span>
-                        <ChevronRight size={14} className="animate-pulse" />
-                    </div>
-                </div>
             </div>
         </MotionDiv>
     );
 };
+

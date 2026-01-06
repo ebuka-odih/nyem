@@ -71,3 +71,4 @@ export const WishlistModal: React.FC<WishlistModalProps> = ({
   );
 };
 
+

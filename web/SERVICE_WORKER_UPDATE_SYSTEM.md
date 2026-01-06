@@ -104,3 +104,4 @@ Supported browsers:
 - The update banner auto-dismisses and reloads after 2 seconds
 - OneSignal push notifications are integrated and work with the service worker
 
+

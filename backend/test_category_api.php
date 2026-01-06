@@ -110,3 +110,4 @@ echo "   Bindings: " . json_encode($query->getBindings()) . "\n";
 
 echo "\n=== END DIAGNOSTIC ===\n";
 
+

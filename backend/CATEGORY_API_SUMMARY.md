@@ -147,3 +147,4 @@ This will show:
 - What API returns
 - Any missing or extra categories
 
+
