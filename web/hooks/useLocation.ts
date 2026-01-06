@@ -1,0 +1,57 @@
+import { useState, useEffect } from 'react';
+import { getStoredToken, apiFetch } from '../utils/api';
+import { ENDPOINTS } from '../constants/endpoints';
+
+export const useLocation = () => {
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [locationPermissionChecked, setLocationPermissionChecked] = useState(false);
+  const [currentCity, setCurrentCity] = useState("All Locations");
+  const [cities, setCities] = useState<Array<{ id: number; name: string }>>([]);
+
+  // Fetch cities from backend on mount
+  useEffect(() => {
+    const fetchCities = async () => {
+      try {
+        const citiesResponse = await apiFetch(ENDPOINTS.locationsCities);
+        const citiesData = citiesResponse.data?.cities || citiesResponse.cities || [];
+        setCities(citiesData);
+      } catch (error) {
+        console.error('Failed to fetch cities:', error);
+      }
+    };
+
+    fetchCities();
+  }, []);
+
+  // Check location status and show modal if needed
+  const checkLocationAndShowModal = async () => {
+    if (locationPermissionChecked) return;
+
+    const token = getStoredToken();
+    if (!token) return;
+
+    try {
+      const { apiFetch } = await import('../utils/api');
+      const response = await apiFetch(ENDPOINTS.location.status, { token }) as any;
+      if (!response.data?.has_location) {
+        setShowLocationModal(true);
+      }
+    } catch (err) {
+      // If location status check fails, show modal anyway to be safe
+      console.error('Failed to check location status:', err);
+      setShowLocationModal(true);
+    } finally {
+      setLocationPermissionChecked(true);
+    }
+  };
+
+  return {
+    showLocationModal,
+    setShowLocationModal,
+    currentCity,
+    setCurrentCity,
+    cities,
+    checkLocationAndShowModal
+  };
+};
+

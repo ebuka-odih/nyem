@@ -19,21 +19,47 @@ class SwipeController extends Controller
     public function store(Request $request)
     {
         $listingTable = (new Listing())->getTable();
-        $data = $request->validate([
-            'target_listing_id' => "required|exists:{$listingTable},id",
-            'target_item_id' => "sometimes|exists:{$listingTable},id", // Backward compatibility alias
+        
+        // Manual validation for better error messages and logging
+        $validator = \Validator::make($request->all(), [
+            'target_listing_id' => 'required',
+            'target_item_id' => 'sometimes',
             'direction' => 'required|in:left,right,up',
-            'offered_listing_id' => "nullable|exists:{$listingTable},id",
-            'offered_item_id' => "nullable|exists:{$listingTable},id", // Backward compatibility alias
+            'offered_listing_id' => 'nullable',
+            'offered_item_id' => 'nullable',
         ]);
 
+        if ($validator->fails()) {
+            return response()->json(['message' => 'The given data was invalid.', 'errors' => $validator->errors()], 422);
+        }
+
+        $data = $validator->validated();
+        $targetListingId = $data['target_listing_id'] ?? $data['target_item_id'] ?? $request->input('target_listing_id');
+        $offeredListingId = $data['offered_listing_id'] ?? $data['offered_item_id'] ?? $request->input('offered_listing_id');
+
+        // Check if listing exists in either items or listings table
+        $targetListing = Listing::with('user')->find($targetListingId);
+        
+        if (!$targetListing) {
+            // Fallback: search explicitly by ID in both tables if model find failed
+            $existsInItems = \DB::table('items')->where('id', $targetListingId)->exists();
+            $existsInListings = \DB::table('listings')->where('id', $targetListingId)->exists();
+            
+            \Log::error('Swipe Failed: Listing not found', [
+                'id_attempted' => $targetListingId,
+                'exists_in_items' => $existsInItems,
+                'exists_in_listings' => $existsInListings,
+                'listing_table_prop' => $listingTable,
+                'payload' => $request->all()
+            ]);
+            
+            return response()->json([
+                'message' => 'The selected target listing id is invalid.',
+                'errors' => ['target_listing_id' => ["The selected target listing id [{$targetListingId}] is invalid."]]
+            ], 422);
+        }
+
         $user = $request->user();
-        
-        // Support both new and old parameter names for backward compatibility
-        $targetListingId = $data['target_listing_id'] ?? $data['target_item_id'] ?? null;
-        $offeredListingId = $data['offered_listing_id'] ?? $data['offered_item_id'] ?? null;
-        
-        $targetListing = Listing::with('user')->findOrFail($targetListingId);
 
         if (!$targetListing->user_id || !$targetListing->user) {
             return response()->json(['message' => 'Listing owner not found'], 404);
