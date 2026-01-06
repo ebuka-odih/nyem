@@ -82,7 +82,15 @@ export const transformListingToProduct = (listing: any): Product => {
       verified: !!user.phone_verified_at,
       reviews: []
     },
-    isSuper: false
+    isSuper: false,
+    userId: listing.user_id || user.id || listing.owner?.id || null, // Store user ID for ownership check
+    stats: {
+      views: listing.views || 0,
+      likes: listing.likes || 0,
+      stars: listing.stars || listing.super_interest || 0, // Super interest / wishlist count
+      super_interest: listing.super_interest || listing.stars || 0, // Alias for better naming
+      shares: listing.shares || 0
+    }
   };
 };
 
@@ -112,6 +120,35 @@ export const createAdItem = (): Product => {
       followers: 10000
     },
     isAd: true
+  };
+};
+
+/**
+ * Create a special Welcome onboarding item
+ */
+export const createWelcomeItem = (): Product => {
+  return {
+    id: 'welcome-card',
+    name: 'Welcome to Nyem',
+    description: 'Learn how to use Nyem to discover amazing local items.',
+    price: 'INFO',
+    category: 'ONBOARDING',
+    images: [], // Not used for welcome card
+    color: '#830e4c',
+    longDescription: '',
+    distance: 'System',
+    vendor: {
+      name: 'Nyem Guide',
+      avatar: '',
+      location: 'Local',
+      rating: 5,
+      reviewCount: 0,
+      joinedDate: '2024',
+      bio: 'Your personal guide to Nyem.',
+      verified: true,
+      followers: 10000
+    },
+    isWelcome: true
   };
 };
 

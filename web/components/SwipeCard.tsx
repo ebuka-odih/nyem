@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
-import { MapPin, Star, ShieldCheck, Zap, MoreHorizontal, ChevronRight } from 'lucide-react';
+import { MapPin, Star, ShieldCheck, Zap, MoreHorizontal, ChevronRight, Eye, Heart } from 'lucide-react';
 import { Product } from '../types';
+import { getStoredUser } from '../utils/api';
 
 interface SwipeCardProps {
   product: Product;
@@ -33,6 +34,11 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const dragStartPointRef = useRef<{ x: number; y: number } | null>(null);
   const isHorizontalDragRef = useRef(false);
+
+  // Check if this is the user's own listing
+  const currentUser = getStoredUser();
+  const isOwnListing = currentUser && product.userId && String(currentUser.id) === String(product.userId);
+  const stats = product.stats || {};
 
   React.useEffect(() => {
     if (isTop) {
@@ -200,12 +206,31 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
             {/* Bottom Gradient for Text Legibility */}
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
             
-            {/* Top Bar: Verified Badge only */}
+            {/* Top Bar: Verified Badge and Stats (if own listing) */}
             <div className="absolute top-6 left-6 right-6 flex justify-between items-start pointer-events-none z-20">
               <div className="flex items-center gap-2">
               {product.vendor.verified && (
                   <div className="bg-[#29B3F0] p-1 rounded-full text-white shadow-lg border border-white/20">
                     <ShieldCheck size={14} fill="currentColor" />
+                </div>
+              )}
+              {/* Show stats if this is the user's own listing */}
+              {isOwnListing && (
+                <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+                  <div className="flex items-center gap-1">
+                    <Eye size={12} className="text-white" />
+                    <span className="text-[10px] font-black text-white">{stats.views || 0}</span>
+                  </div>
+                  <div className="w-px h-3 bg-white/30" />
+                  <div className="flex items-center gap-1">
+                    <Heart size={12} className="text-white" fill="currentColor" />
+                    <span className="text-[10px] font-black text-white">{stats.likes || 0}</span>
+                  </div>
+                  <div className="w-px h-3 bg-white/30" />
+                  <div className="flex items-center gap-1">
+                    <Star size={12} className="text-white" fill="currentColor" />
+                    <span className="text-[10px] font-black text-white">{stats.super_interest || stats.stars || 0}</span>
+                  </div>
                 </div>
               )}
               </div>

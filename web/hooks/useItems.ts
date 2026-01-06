@@ -1,14 +1,103 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { Product } from '../types';
 import { getStoredToken, apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
-import { transformListingToProduct, createAdItem } from '../utils/productTransformers';
+import { transformListingToProduct, createAdItem, createWelcomeItem } from '../utils/productTransformers';
+
+// Storage key generator based on filters
+const getStorageKey = (activeTab: string, activeCategory: string, currentCity: string) => {
+  return `discover_state_${activeTab}_${activeCategory}_${currentCity}`;
+};
+
+// Interface for persisted state
+interface PersistedState {
+  items: Product[];
+  history: Product[];
+  swipeCount: number;
+  timestamp: number;
+  filters: {
+    activeTab: string;
+    activeCategory: string;
+    currentCity: string;
+  };
+}
 
 export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activeCategory: string, currentCity: string) => {
-  const [items, setItems] = useState<Product[]>([]);
-  const [history, setHistory] = useState<Product[]>([]);
+  // Try to restore from localStorage on initial mount
+  const storageKey = getStorageKey(activeTab, activeCategory, currentCity);
+  const restoredState = (() => {
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed: PersistedState = JSON.parse(stored);
+        // Check if stored state matches current filters and is not too old (24 hours)
+        const isExpired = Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000;
+        const filtersMatch =
+          parsed.filters.activeTab === activeTab &&
+          parsed.filters.activeCategory === activeCategory &&
+          parsed.filters.currentCity === currentCity;
+
+        if (!isExpired && filtersMatch && parsed.items.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to restore discover state:', e);
+    }
+    return null;
+  })();
+
+  const [items, setItems] = useState<Product[]>(restoredState?.items || []);
+  const [history, setHistory] = useState<Product[]>(restoredState?.history || []);
   const [loadingItems, setLoadingItems] = useState(false);
-  const [swipeCount, setSwipeCount] = useState(0);
+  const [swipeCount, setSwipeCount] = useState(restoredState?.swipeCount || 0);
+
+  // Track previous filters to detect changes
+  const prevFiltersRef = useRef({ activeTab, activeCategory, currentCity });
+  const hasRestoredRef = useRef(!!restoredState);
+
+  // Persist state to localStorage whenever it changes
+  useEffect(() => {
+    const stateToPersist: PersistedState = {
+      items,
+      history,
+      swipeCount,
+      timestamp: Date.now(),
+      filters: { activeTab, activeCategory, currentCity }
+    };
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(stateToPersist));
+    } catch (e) {
+      console.warn('Failed to persist discover state:', e);
+    }
+  }, [items, history, swipeCount, activeTab, activeCategory, currentCity, storageKey]);
+
+  // Clear persisted state when filters change
+  useEffect(() => {
+    const prevFilters = prevFiltersRef.current;
+    const filtersChanged =
+      prevFilters.activeTab !== activeTab ||
+      prevFilters.activeCategory !== activeCategory ||
+      prevFilters.currentCity !== currentCity;
+
+    if (filtersChanged) {
+      // Clear old storage key
+      try {
+        const oldKey = getStorageKey(prevFilters.activeTab, prevFilters.activeCategory, prevFilters.currentCity);
+        localStorage.removeItem(oldKey);
+      } catch (e) {
+        console.warn('Failed to clear old discover state:', e);
+      }
+
+      // Reset state when filters change
+      setItems([]);
+      setHistory([]);
+      setSwipeCount(0);
+      hasRestoredRef.current = false;
+      prevFiltersRef.current = { activeTab, activeCategory, currentCity };
+    }
+  }, [activeTab, activeCategory, currentCity]);
 
   // Fetch items from API - matches the approach used in UploadPage
   const fetchItems = useCallback(async () => {
@@ -88,12 +177,20 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
 
       console.log('[Discover] Transformed items for display:', transformedItems.length);
 
+      // Add Welcome Card for new users or if not seen
+      const hasSeenWelcome = localStorage.getItem('has_seen_welcome_card') === 'true';
+      if (!hasSeenWelcome && transformedItems.length > 0) {
+        transformedItems.push(createWelcomeItem());
+      }
+
       setItems(transformedItems);
       setHistory([]);
       setSwipeCount(0);
+      hasRestoredRef.current = false; // Mark as fresh fetch
     } catch (error) {
       console.error('[Discover] Failed to fetch items:', error);
       setItems([]);
+      hasRestoredRef.current = false;
     } finally {
       setLoadingItems(false);
     }
@@ -107,8 +204,11 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
   }, [history]);
 
   const removeItem = useCallback((item: Product) => {
-    // If it's an ad, just remove it and return
-    if (item.isAd) {
+    // If it's an ad or welcome card, just remove it and return
+    if (item.isAd || item.isWelcome) {
+      if (item.isWelcome) {
+        localStorage.setItem('has_seen_welcome_card', 'true');
+      }
       setItems(prev => prev.slice(0, -1));
       return;
     }

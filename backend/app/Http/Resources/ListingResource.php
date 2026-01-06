@@ -30,6 +30,7 @@ class ListingResource extends JsonResource
         // Calculate listing stats
         $views = $this->views()->count();
         $likes = $this->likes()->count();
+        $stars = $this->stars()->count(); // Super interest / wishlist count
         $shares = $this->shares()->count();
         
         // Format distance for display
@@ -98,6 +99,8 @@ class ListingResource extends JsonResource
             // Stats
             'views' => $views,
             'likes' => $likes,
+            'stars' => $stars, // Super interest / wishlist count
+            'super_interest' => $stars, // Alias for better naming
             'shares' => $shares,
         ];
     }

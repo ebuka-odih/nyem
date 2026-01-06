@@ -162,6 +162,14 @@ class Listing extends Model
     }
 
     /**
+     * Get stars (super interest/wishlist) for this listing
+     */
+    public function stars()
+    {
+        return $this->stats()->where('type', 'star');
+    }
+
+    /**
      * City accessor with fallback to location
      */
     protected function city(): Attribute

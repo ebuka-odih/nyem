@@ -4,6 +4,7 @@ import { Compass, RotateCcw, MapPin, Zap } from 'lucide-react';
 import { Product, Vendor } from '../types';
 import { SwipeCard } from '../components/SwipeCard';
 import { AdSwipeCard } from '../components/AdSwipeCard';
+import { WelcomeCard } from '../components/WelcomeCard';
 import { SwipeControls } from '../components/SwipeControls';
 import { SellerProfileView } from '../components/SellerProfileView';
 import { ComingSoonState } from '../components/ComingSoonState';
@@ -96,9 +97,12 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   }, [selectedProduct, viewingSeller, onModalStateChange]);
 
   // Fetch items when discover page is active and filters change
+  // Only fetch if we don't have items (i.e., no restored state)
   useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
+    if (items.length === 0) {
+      fetchItems();
+    }
+  }, [fetchItems, items.length]);
 
   // Fetch wishlist when authenticated
   useEffect(() => {
@@ -120,8 +124,8 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
       setTriggerDir(null);
     };
 
-    // If it's an ad card, just remove it
-    if (swipedItem.isAd) {
+    // If it's an ad card or welcome card, just remove it
+    if (swipedItem.isAd || swipedItem.isWelcome) {
       finalizeSwipe();
       return;
     }
@@ -261,7 +265,15 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
               </motion.div>
             ) : items.length > 0 ? (
               items.map((product: Product, idx: number) => (
-                product.isAd ? (
+                product.isWelcome ? (
+                  <WelcomeCard
+                    key={product.id}
+                    index={activeIndex - idx}
+                    isTop={idx === activeIndex}
+                    onSwipe={handleSwipe}
+                    triggerDirection={idx === activeIndex ? triggerDir : null}
+                  />
+                ) : product.isAd ? (
                   <AdSwipeCard
                     key={product.id}
                     index={activeIndex - idx}

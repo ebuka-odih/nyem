@@ -46,7 +46,7 @@ export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({
               onClick={() => setActiveTab(tab)} 
               className={`relative z-10 flex-1 flex items-center justify-center text-[10px] sm:text-[14px] font-black transition-all duration-300 uppercase px-2.5 sm:px-4 min-w-0 ${activeTab === tab ? 'text-[#830e4c]' : 'text-neutral-400'}`}
             >
-              <span className="whitespace-nowrap tracking-tighter sm:tracking-widest">{tab}</span>
+              <span className="whitespace-nowrap tracking-tighter sm:tracking-widest">{tab === 'marketplace' ? 'SHOP' : tab}</span>
               {activeTab === tab && (
                 <motion.div 
                   layoutId="activeTab" 

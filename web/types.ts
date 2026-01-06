@@ -36,6 +36,15 @@ export interface Product {
   distance: string;
   isSuper?: boolean;
   isAd?: boolean;
+  isWelcome?: boolean;
+  userId?: string | number; // User ID of the listing owner
+  stats?: {
+    views?: number;
+    likes?: number;
+    stars?: number; // Super interest / wishlist count
+    super_interest?: number; // Alias for stars
+    shares?: number;
+  };
 }
 
 export interface CityData {

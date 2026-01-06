@@ -4,10 +4,15 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 // Import PushAlert service worker - COMMENTED OUT FOR TESTING
 // importScripts("https://cdn.pushalert.co/sw-86989.js");
 
-// Versioned cache names for easy updates
-const STATIC_CACHE = 'nyem-static-v2';
-const RUNTIME_CACHE = 'nyem-runtime-v2';
-const API_CACHE = 'nyem-api-v2';
+// Service Worker Version - Auto-updated on each build by vite-plugin-sw-version
+// This ensures cache invalidation when new builds are deployed
+const SW_VERSION = 'v3-1767692988438';
+const STATIC_CACHE = `nyem-static-${SW_VERSION}`;
+const RUNTIME_CACHE = `nyem-runtime-${SW_VERSION}`;
+const API_CACHE = `nyem-api-${SW_VERSION}`;
+
+// Cache version prefix for cleanup
+const CACHE_PREFIX = 'nyem-';
 
 // Critical assets to cache on install (App Shell)
 // These are cached with Cache-First strategy for instant loading
@@ -19,6 +24,7 @@ const CRITICAL_ASSETS = [
 
 // Install event - cache essential resources (App Shell)
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing service worker version:', SW_VERSION);
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
@@ -36,18 +42,21 @@ self.addEventListener('install', (event) => {
         console.error('[SW] Cache install failed:', error);
       })
   );
-  // Skip waiting to activate immediately (non-blocking)
+  // Skip waiting to activate immediately - this ensures updates apply right away
   self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and notify clients
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating service worker version:', SW_VERSION);
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       // Delete old caches that don't match current version
       const deletePromises = cacheNames
         .filter((cacheName) => {
-          return cacheName !== STATIC_CACHE && 
+          // Delete all caches that start with our prefix but aren't current version
+          return cacheName.startsWith(CACHE_PREFIX) && 
+                 cacheName !== STATIC_CACHE && 
                  cacheName !== RUNTIME_CACHE && 
                  cacheName !== API_CACHE;
         })
@@ -58,8 +67,19 @@ self.addEventListener('activate', (event) => {
       
       return Promise.all(deletePromises);
     }).then(() => {
-      // Take control of all pages immediately (non-blocking)
+      // Take control of all pages immediately
       return self.clients.claim();
+    }).then(() => {
+      // Notify all clients that the service worker has been updated
+      return self.clients.matchAll({ includeUncontrolled: true }).then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SW_UPDATED',
+            version: SW_VERSION,
+            message: 'Service worker updated successfully'
+          });
+        });
+      });
     })
   );
 });
@@ -244,5 +264,38 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     clients.openWindow('/')
   );
+});
+
+// Handle messages from clients (for update checking and control)
+self.addEventListener('message', (event) => {
+  console.log('[SW] Received message:', event.data);
+  
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    // Client is requesting to skip waiting and activate immediately
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'GET_VERSION') {
+    // Client is requesting the current service worker version
+    event.ports[0].postMessage({
+      type: 'VERSION',
+      version: SW_VERSION
+    });
+  }
+  
+  if (event.data && event.data.type === 'CHECK_UPDATE') {
+    // Client is requesting to check for updates
+    self.registration.update().then(() => {
+      event.ports[0].postMessage({
+        type: 'UPDATE_CHECKED',
+        message: 'Update check completed'
+      });
+    }).catch((error) => {
+      event.ports[0].postMessage({
+        type: 'UPDATE_ERROR',
+        error: error.message
+      });
+    });
+  }
 });
 

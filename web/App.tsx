@@ -21,8 +21,10 @@ import { BottomNav } from './components/BottomNav';
 import { useAuth } from './hooks/useAuth';
 import { useLocation } from './hooks/useLocation';
 import { useWishlist } from './hooks/useWishlist';
-import { apiFetch } from './utils/api';
+import { useServiceWorker } from './hooks/useServiceWorker';
+import { apiFetch, getStoredUser } from './utils/api';
 import { ENDPOINTS } from './constants/endpoints';
+import { ServiceWorkerUpdate } from './components/ServiceWorkerUpdate';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState<'marketplace' | 'services' | 'barter'>('marketplace');
@@ -59,11 +61,25 @@ const App = () => {
   } = useLocation();
 
   const { likedItems, fetchWishlist } = useWishlist();
+  
+  // Service worker update handling
+  const { isUpdateReady, activateUpdate } = useServiceWorker();
 
   // Items and history are managed in DiscoverPage, but we need them here for SwipeControls
   const [discoverItems, setDiscoverItems] = useState<Product[]>([]);
   const [discoverHistory, setDiscoverHistory] = useState<Product[]>([]);
   const [discoverUndoLast, setDiscoverUndoLast] = useState<(() => void) | null>(null);
+  
+  // Auto-reload when update is ready (after a short delay)
+  useEffect(() => {
+    if (isUpdateReady) {
+      // Auto-reload after 2 seconds to apply update
+      const timer = setTimeout(() => {
+        activateUpdate();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isUpdateReady, activateUpdate]);
 
   // Request notification permission on mount
   useEffect(() => {
@@ -108,10 +124,31 @@ const App = () => {
     setHasOpenModal(hasOpenModal);
   }, []);
 
+  // Get current user ID to check if listing belongs to user
+  const getCurrentUserId = (): string | number | null => {
+    const user = getStoredUser();
+    return user?.id || null;
+  };
+
+  // Check if current item belongs to the user
+  const currentItemIsOwn = (): boolean => {
+    if (discoverItems.length === 0) return false;
+    const activeIndex = discoverItems.length - 1;
+    const currentItem = discoverItems[activeIndex];
+    if (!currentItem || currentItem.isAd) return false;
+
+    const currentUserId = getCurrentUserId();
+    if (!currentUserId || !currentItem.userId) return false;
+
+    // Compare user IDs (handle both string and number types)
+    return String(currentItem.userId) === String(currentUserId);
+  };
+
   // Show auth pages (welcome, login, register, etc.)
   if (authState === 'welcome' || authState === 'login' || authState === 'register' || authState === 'otp' || authState === 'forgot') {
     return (
       <>
+        <ServiceWorkerUpdate />
         {showLocationModal && (
           <LocationPermissionModal
             onAllow={async () => {
@@ -171,6 +208,7 @@ const App = () => {
                 onVerify={async () => {
                   setTempRegisterData(null);
                   await checkLocationAndShowModal();
+                  localStorage.removeItem('has_seen_welcome_card');
                   setAuthState('discover');
                   setActivePage('discover');
                 }}
@@ -202,6 +240,7 @@ const App = () => {
   if (activePage === 'discover' || authState === 'discover') {
     return (
       <>
+        <ServiceWorkerUpdate />
         {showLocationModal && (
           <LocationPermissionModal
             onAllow={async () => {
@@ -253,6 +292,8 @@ const App = () => {
                 // Share handled in DiscoverPage via handleShare
               }}
               canUndo={discoverHistory.length > 0}
+              disableStar={currentItemIsOwn()}
+              disableLike={currentItemIsOwn()}
             />
           ) : undefined}
         >
@@ -295,6 +336,7 @@ const App = () => {
   if ((activePage === 'upload' || activePage === 'matches' || activePage === 'profile') && !hasValidToken) {
     return (
       <>
+        <ServiceWorkerUpdate />
         {showLocationModal && (
           <LocationPermissionModal
             onAllow={async () => {
@@ -331,6 +373,7 @@ const App = () => {
 
   return (
     <>
+      <ServiceWorkerUpdate />
       {showLocationModal && (
         <LocationPermissionModal
           onAllow={async () => {

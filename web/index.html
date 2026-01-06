@@ -39,7 +39,7 @@
       // Store registration promise globally for PushAlert
       window.serviceWorkerRegistrationPromise = navigator.serviceWorker
         .register('/sw.js', { 
-          updateViaCache: 'none',
+          updateViaCache: 'none', // Always check for updates, don't use cache
           scope: '/'
         })
         .then(function(registration) {
@@ -47,8 +47,41 @@
           // Store registration globally for PushAlert
           window.serviceWorkerRegistration = registration;
           
+          // Check for updates immediately
+          registration.update();
+          
+          // Listen for updates
+          registration.addEventListener('updatefound', function() {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', function() {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New service worker is waiting
+                  console.log('[SW] New service worker available');
+                  // Notify the app
+                  if (window.dispatchEvent) {
+                    window.dispatchEvent(new CustomEvent('sw-update-available'));
+                  }
+                } else if (newWorker.state === 'activated') {
+                  // New service worker activated
+                  console.log('[SW] New service worker activated');
+                  // Reload to use new service worker
+                  if (window.dispatchEvent) {
+                    window.dispatchEvent(new CustomEvent('sw-update-activated'));
+                  }
+                }
+              });
+            }
+          });
+          
+          // Listen for controller change (service worker updated)
+          navigator.serviceWorker.addEventListener('controllerchange', function() {
+            console.log('[SW] Controller changed');
+            // Reload to use new service worker
+            window.location.reload();
+          });
+          
           // Also make it available via navigator.serviceWorker.ready for PushAlert compatibility
-          // PushAlert may try to access it via navigator.serviceWorker.getRegistration()
           navigator.serviceWorker.ready.then(function(reg) {
             console.log('Service Worker ready:', reg.scope);
           });
@@ -68,6 +101,17 @@
       }).catch(function() {
         // Ignore errors
       });
+      
+      // Check for updates periodically (every 10 minutes)
+      setInterval(function() {
+        navigator.serviceWorker.getRegistration().then(function(registration) {
+          if (registration) {
+            registration.update();
+          }
+        }).catch(function() {
+          // Ignore errors
+        });
+      }, 10 * 60 * 1000);
     }
   </script>
   

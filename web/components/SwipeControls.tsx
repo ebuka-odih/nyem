@@ -9,13 +9,15 @@ interface SwipeControlsProps {
   onLike: () => void;
   onShare: () => void;
   canUndo: boolean;
+  disableStar?: boolean;
+  disableLike?: boolean;
 }
 
 // Fix: Casting to any to bypass environment-specific type errors for motion components
 const MotionButton = motion.button as any;
 
 export const SwipeControls: React.FC<SwipeControlsProps> = ({
-  onUndo, onNope, onStar, onLike, onShare, canUndo,
+  onUndo, onNope, onStar, onLike, onShare, canUndo, disableStar = false, disableLike = false,
 }) => {
   return (
     <div className="flex justify-center w-full pointer-events-none pb-1">
@@ -42,9 +44,14 @@ export const SwipeControls: React.FC<SwipeControlsProps> = ({
 
         {/* Super / Send Interest */}
         <MotionButton 
-          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}
-          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onStar(); }} 
-          className="w-14 h-14 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm text-[#830e4c] shadow-xl border border-white relative overflow-hidden"
+          whileHover={disableStar ? {} : { scale: 1.1 }} 
+          whileTap={disableStar ? {} : { scale: 0.95 }}
+          onClick={(e: React.MouseEvent) => { 
+            e.stopPropagation(); 
+            if (!disableStar) onStar(); 
+          }} 
+          disabled={disableStar}
+          className={`w-14 h-14 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm text-[#830e4c] shadow-xl border border-white relative overflow-hidden transition-opacity ${disableStar ? 'opacity-40 grayscale cursor-not-allowed pointer-events-none' : 'opacity-100'}`}
         >
           <Star size={24} strokeWidth={0} fill="currentColor" />
           <div className="absolute inset-0 bg-[#830e4c] blur-xl opacity-10 rounded-full" />
@@ -52,9 +59,14 @@ export const SwipeControls: React.FC<SwipeControlsProps> = ({
 
         {/* Like */}
         <MotionButton 
-          whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.85 }}
-          onClick={(e: React.MouseEvent) => { e.stopPropagation(); onLike(); }} 
-          className="w-16 h-16 flex items-center justify-center rounded-full bg-[#830e4c]/90 backdrop-blur-sm text-white shadow-[0_12px_40px_rgba(131,14,76,0.4)] border border-white/20"
+          whileHover={disableLike ? {} : { scale: 1.15 }} 
+          whileTap={disableLike ? {} : { scale: 0.85 }}
+          onClick={(e: React.MouseEvent) => { 
+            e.stopPropagation(); 
+            if (!disableLike) onLike(); 
+          }} 
+          disabled={disableLike}
+          className={`w-16 h-16 flex items-center justify-center rounded-full bg-[#830e4c]/90 backdrop-blur-sm text-white shadow-[0_12px_40px_rgba(131,14,76,0.4)] border border-white/20 transition-opacity ${disableLike ? 'opacity-40 grayscale cursor-not-allowed pointer-events-none' : 'opacity-100'}`}
         >
           <Heart size={32} strokeWidth={0} fill="currentColor" />
         </MotionButton>
