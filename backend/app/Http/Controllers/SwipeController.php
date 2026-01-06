@@ -10,9 +10,12 @@ use App\Models\Swipe;
 use App\Models\TradeOffer;
 use App\Models\UserMatch;
 use App\Models\UserConversation;
+use App\Models\MessageRequest;
+use App\Mail\ItemStarredEmail;
 use App\Services\OneSignalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class SwipeController extends Controller
 {
@@ -168,18 +171,37 @@ class SwipeController extends Controller
                     ->delete();
             }
 
-            // Handle 'up' direction (star action) - send notification to seller
+            // Handle 'up' direction (star action) - send notification to seller and create message request
             if ($data['direction'] === 'up') {
-                // Send OneSignal push notification to seller
+                // Create a message request so it appears in the Match screen "Requests" tab
+                MessageRequest::firstOrCreate(
+                    [
+                        'from_user_id' => $user->id,
+                        'to_user_id' => $targetListing->user_id,
+                        'listing_id' => $targetListing->id,
+                    ],
+                    [
+                        'message_text' => 'Interested in your item!',
+                        'status' => 'pending',
+                    ]
+                );
+
+                // Send OneSignal push notification and Email to seller
                 DB::afterCommit(function () use ($targetListing, $user) {
                     try {
                         $seller = $targetListing->user;
                         if ($seller) {
+                            // 1. Send Push Notification
                             $oneSignalService = new OneSignalService();
                             $oneSignalService->sendStarNotification($seller, $targetListing, $user);
+
+                            // 2. Send Email Notification
+                            if ($seller->email) {
+                                Mail::to($seller->email)->send(new ItemStarredEmail($seller, $targetListing, $user));
+                            }
                         }
                     } catch (\Exception $e) {
-                        \Log::error('Failed to send star notification: ' . $e->getMessage());
+                        \Log::error('Failed to send star notifications: ' . $e->getMessage());
                     }
                 });
             }

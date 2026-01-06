@@ -114,8 +114,8 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
 
   const activeIndex = items.length - 1;
 
-  const handleSwipe = useCallback(async (direction: 'left' | 'right' | 'up') => {
-    const swipedItem = items[activeIndex];
+  const handleSwipe = useCallback(async (direction: 'left' | 'right' | 'up', productOverride?: Product) => {
+    const swipedItem = productOverride || items[activeIndex];
     if (!swipedItem) return;
 
     // Use removeItem to handle state updates including ad injection
@@ -320,7 +320,10 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
         onShare={handleShare}
         onSellerClick={openSellerProfile}
         onSendRequest={() => {
-          // TODO: Implement send request functionality for authenticated users
+          if (selectedProduct) {
+            handleSwipe('up', selectedProduct);
+            setSelectedProduct(null);
+          }
         }}
         hasValidToken={hasValidToken}
         onLogin={onLogin}
