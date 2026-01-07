@@ -157,7 +157,10 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
     loadingItems,
     swipeCount,
     setSwipeCount,
-    fetchItems,
+    fetchItems: useCallback(() => {
+      hasRestoredRef.current = false;
+      return fetchItems();
+    }, [fetchItems]),
     undoLast,
     removeItem
   };

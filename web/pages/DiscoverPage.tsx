@@ -244,6 +244,12 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
           <MapPin size={10} className="text-[#830e4c]" />
           <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
             Discovery in <span className="text-[#830e4c] font-black italic">{currentCity}</span>
+            {activeCategory !== 'All' && (
+              <>
+                <span className="mx-1 text-neutral-300">•</span>
+                <span className="text-[#830e4c] font-black italic">{activeCategory}</span>
+              </>
+            )}
           </span>
         </div>
       </div>
