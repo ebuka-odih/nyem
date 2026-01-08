@@ -8,11 +8,12 @@ interface ServiceWorkerState {
 }
 
 export const useServiceWorker = () => {
-  const [swState, setSwState] = useState<ServiceWorkerState>({
+  const [swState, setSwState] = useState<ServiceWorkerState & { isRefreshing: boolean }>({
     isUpdateAvailable: false,
     isUpdateReady: false,
     isInstalling: false,
     registration: null,
+    isRefreshing: false,
   });
 
   // Check for updates
@@ -102,24 +103,25 @@ export const useServiceWorker = () => {
     }
   }, []);
 
-  // Activate update (skip waiting and reload)
+  // Activate update
   const activateUpdate = useCallback(async () => {
-    if (!swState.registration || !swState.registration.waiting) return;
+    if (!swState.registration || !swState.registration.waiting || swState.isRefreshing) return;
 
     try {
-      // Send message to waiting service worker to skip waiting
+      setSwState(prev => ({ ...prev, isRefreshing: true }));
+      console.log('[SW] Sending SKIP_WAITING to waiting worker...');
       swState.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-
-      // The controllerchange listener in useEffect will handle the reload
-      // to ensure all tabs are synchronized and the new worker is actually in control.
     } catch (error) {
       console.error('Error activating service worker update:', error);
+      setSwState(prev => ({ ...prev, isRefreshing: false }));
     }
-  }, [swState.registration]);
+  }, [swState.registration, swState.isRefreshing]);
 
   // Initialize service worker monitoring
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
+
+    let refreshLock = false;
 
     // Get initial registration
     navigator.serviceWorker.getRegistration().then((registration) => {
@@ -137,6 +139,8 @@ export const useServiceWorker = () => {
 
         // Listen for controller change (service worker updated)
         navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshLock) return;
+          refreshLock = true;
           console.log('[SW] Controller changed, reloading page');
           window.location.reload();
         });
@@ -144,10 +148,8 @@ export const useServiceWorker = () => {
         // Listen for messages from service worker
         navigator.serviceWorker.addEventListener('message', (event) => {
           if (event.data && event.data.type === 'SW_UPDATED') {
-            console.log('[SW] Service worker updated:', event.data.version);
-            // Optionally show a notification or automatically reload
-            // For now, we'll check for updates
-            checkForUpdates();
+            console.log('[SW] Service worker active:', event.data.version);
+            // We no longer call checkForUpdates() here to avoid potential loops
           }
         });
       }

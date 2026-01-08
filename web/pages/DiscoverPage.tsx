@@ -19,7 +19,7 @@ import { useItems } from '../hooks/useItems';
 import { useWishlist } from '../hooks/useWishlist';
 import { createAdItem, sendNativeNotification, transformListingToProduct } from '../utils/productTransformers';
 import { getStoredToken } from '../utils/api';
-import { useCreateSwipe } from '../hooks/api/useListings';
+import { useCreateSwipe, useTrackView, useTrackShare } from '../hooks/api/useListings';
 import { ENDPOINTS } from '../constants/endpoints';
 
 interface DiscoverPageProps {
@@ -79,9 +79,38 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   } = useItems(activeTab, activeCategory, currentCity);
 
   const { fetchWishlist, removeFromWishlist } = useWishlist();
+  const trackViewMutation = useTrackView();
+  const trackShareMutation = useTrackShare();
+  const trackedViews = useRef<Set<string | number>>(new Set());
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [viewingSeller, setViewingSeller] = useState<Vendor | null>(null);
+
+  // Track view when details are opened
+  useEffect(() => {
+    if (selectedProduct && !selectedProduct.isAd && !selectedProduct.isWelcome) {
+      if (!trackedViews.current.has(selectedProduct.id)) {
+        trackViewMutation.mutate(selectedProduct.id);
+        trackedViews.current.add(selectedProduct.id);
+      }
+    }
+  }, [selectedProduct, trackViewMutation]);
+
+  // Track view for the top stack item
+  useEffect(() => {
+    const activeItem = items[items.length - 1];
+    if (activeItem && !activeItem.isAd && !activeItem.isWelcome) {
+      if (!trackedViews.current.has(activeItem.id)) {
+        // Delay view tracking for cards in stack to ensure they aren't just swiping past
+        const timer = setTimeout(() => {
+          trackViewMutation.mutate(activeItem.id);
+          trackedViews.current.add(activeItem.id);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [items, trackViewMutation]);
+
   const [showSellerToast, setShowSellerToast] = useState(false);
   const [lastSparkedItem, setLastSparkedItem] = useState<Product | null>(null);
   const notifiedItems = useRef<Set<string | number>>(new Set());
@@ -230,6 +259,11 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   const handleShare = async (product: Product | null = null) => {
     const itemToShare = product || items[activeIndex] || selectedProduct;
     if (!itemToShare) return;
+
+    // Track share count
+    if (!itemToShare.isAd && !itemToShare.isWelcome) {
+      trackShareMutation.mutate(itemToShare.id);
+    }
 
     // Generate a shareable link that opens the item
     const deepLink = `${window.location.origin}/discover?item=${itemToShare.id}`;

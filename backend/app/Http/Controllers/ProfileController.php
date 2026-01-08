@@ -64,7 +64,9 @@ class ProfileController extends Controller
                 'cityLocation', 
                 'areaLocation',
                 'listings' => function ($query) {
-                    $query->with('category')->latest();
+                    $query->with('category')
+                        ->withCount(['views', 'likes', 'stars', 'shares'])
+                        ->latest();
                 }
             ]);
         
