@@ -34,7 +34,7 @@ const DiscoverRoute: React.FC = () => {
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
   const activeTab = (tab === 'services' || tab === 'barter' ? tab : 'marketplace') as 'marketplace' | 'services' | 'barter';
-  
+
   const [activeCategory, setActiveCategory] = useState("All");
   const [showFilterDialog, setShowFilterDialog] = useState(false);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
@@ -50,10 +50,10 @@ const DiscoverRoute: React.FC = () => {
     setCurrentCity,
     cities,
   } = useLocationHook();
-  
+
   const { likedItems } = useWishlist();
   const { data: profile } = useProfile();
-  
+
   const [discoverItems, setDiscoverItems] = useState<Product[]>([]);
   const [discoverHistory, setDiscoverHistory] = useState<Product[]>([]);
   const [discoverUndoLast, setDiscoverUndoLast] = useState<(() => void) | null>(null);
@@ -82,6 +82,33 @@ const DiscoverRoute: React.FC = () => {
     if (!currentUserId || !currentItem.userId) return false;
 
     return String(currentItem.userId) === String(currentUserId);
+  };
+
+  const handleShare = async () => {
+    if (discoverItems.length === 0) return;
+    const currentItem = discoverItems[discoverItems.length - 1]; // Active item is at the end
+    if (!currentItem) return;
+
+    const deepLink = `${window.location.origin}/discover?item=${currentItem.id}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: currentItem.name,
+          text: `Check out this ${currentItem.name} on Nyem! It's going for ${currentItem.price}.`,
+          url: deepLink
+        });
+      } catch (err) {
+        // ignore abort
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(deepLink);
+        alert('Item link copied to clipboard!');
+      } catch (e) {
+        alert('Item link copied!');
+      }
+    }
   };
 
   const setActiveTab = (tab: 'marketplace' | 'services' | 'barter') => {
@@ -131,7 +158,7 @@ const DiscoverRoute: React.FC = () => {
                 setTriggerDir('right');
               }
             }}
-            onShare={() => {}}
+            onShare={handleShare}
             canUndo={discoverHistory.length > 0}
             disableStar={currentItemIsOwn()}
             disableLike={currentItemIsOwn()}
@@ -192,7 +219,7 @@ const UploadRoute: React.FC = () => {
       <ServiceWorkerUpdate />
       <GeneralLayout
         title="Studio"
-        rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => {} }}
+        rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } }}
         bottomNav={<BottomNav />}
       >
         <ProtectedRoute title="Studio">
@@ -206,13 +233,13 @@ const UploadRoute: React.FC = () => {
 // Matches Route Component
 const MatchesRoute: React.FC = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
-  
+
   return (
     <>
       <ServiceWorkerUpdate />
       <GeneralLayout
         title="Inbox"
-        rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => {} }}
+        rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } }}
         bottomNav={<BottomNav />}
       >
         <ProtectedRoute title="Inbox">
@@ -269,7 +296,7 @@ const AuthRoutes: React.FC = () => {
     tempRegisterData,
     setTempRegisterData,
   } = useAuth();
-  
+
   const {
     showLocationModal,
     setShowLocationModal,
@@ -393,14 +420,14 @@ const App = () => {
       <Route path="/register" element={<AuthRoutes />} />
       <Route path="/otp" element={<AuthRoutes />} />
       <Route path="/forgot" element={<AuthRoutes />} />
-      
+
       {/* Main App Routes */}
       <Route path="/discover" element={<DiscoverRoute />} />
       <Route path="/discover/:tab" element={<DiscoverRoute />} />
       <Route path="/upload" element={<UploadRoute />} />
       <Route path="/matches" element={<MatchesRoute />} />
       <Route path="/profile" element={<ProfileRoute />} />
-      
+
       {/* Default redirect */}
       <Route path="/" element={<Navigate to="/discover" replace />} />
       <Route path="*" element={<Navigate to="/discover" replace />} />

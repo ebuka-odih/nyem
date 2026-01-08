@@ -95,5 +95,22 @@ class OneSignalService
 
         return $this->sendNotificationToUser($seller, $title, $message, $data, $url);
     }
+    /**
+     * Send confirmation notification to buyer when they star an item
+     */
+    public function sendStarConfirmation(User $buyer, Listing $listing)
+    {
+        $title = "Request Sent! 🚀";
+        $message = "You've expressed super interest in " . ($listing->title ?? 'this item') . ". The seller has been notified!";
+        
+        $url = config('app.frontend_url', 'https://nyem.app') . '/matches';
+        
+        $data = [
+            'type' => 'star_confirmation',
+            'listing_id' => $listing->id,
+        ];
+
+        return $this->sendNotificationToUser($buyer, $title, $message, $data, $url);
+    }
 }
 

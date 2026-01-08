@@ -50,6 +50,7 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
   const [items, setItems] = useState<Product[]>(restoredState?.items || []);
   const [history, setHistory] = useState<Product[]>(restoredState?.history || []);
   const [swipeCount, setSwipeCount] = useState(restoredState?.swipeCount || 0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Track previous filters to detect changes
   const prevFiltersRef = useRef({ activeTab, activeCategory, currentCity });
@@ -116,7 +117,7 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
       }
       setItems(finalItems);
     }
-  }, [fetchedItems, items.length]);
+  }, [fetchedItems, items.length, refreshTrigger]);
 
   const undoLast = useCallback(() => {
     if (history.length === 0) return;
@@ -159,6 +160,7 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
     setSwipeCount,
     fetchItems: useCallback(() => {
       hasRestoredRef.current = false;
+      setRefreshTrigger(p => p + 1);
       return fetchItems();
     }, [fetchItems]),
     undoLast,

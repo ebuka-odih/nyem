@@ -191,11 +191,14 @@ class SwipeController extends Controller
                     try {
                         $seller = $targetListing->user;
                         if ($seller) {
-                            // 1. Send Push Notification
+                            // 1. Send Push Notification to Seller
                             $oneSignalService = new OneSignalService();
                             $oneSignalService->sendStarNotification($seller, $targetListing, $user);
 
-                            // 2. Send Email Notification
+                            // 2. Send Confirmation Push to Buyer
+                            $oneSignalService->sendStarConfirmation($user, $targetListing);
+
+                            // 3. Send Email Notification
                             if ($seller->email) {
                                 Mail::to($seller->email)->send(new ItemStarredEmail($seller, $targetListing, $user));
                             }

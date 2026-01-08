@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { Compass, RotateCcw, MapPin, Zap } from 'lucide-react';
 import { Product, Vendor } from '../types';
+import { fetcher } from '../hooks/api/fetcher';
 import { SwipeCard } from '../components/SwipeCard';
 import { AdSwipeCard } from '../components/AdSwipeCard';
 import { WelcomeCard } from '../components/WelcomeCard';
@@ -15,7 +17,7 @@ import { LocationModal } from '../components/modals/LocationModal';
 import { Modal } from '../components/Modal';
 import { useItems } from '../hooks/useItems';
 import { useWishlist } from '../hooks/useWishlist';
-import { createAdItem, sendNativeNotification } from '../utils/productTransformers';
+import { createAdItem, sendNativeNotification, transformListingToProduct } from '../utils/productTransformers';
 import { getStoredToken } from '../utils/api';
 import { useCreateSwipe } from '../hooks/api/useListings';
 import { ENDPOINTS } from '../constants/endpoints';
@@ -115,6 +117,35 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
     }
   }, [fetchWishlist]);
 
+  // Deep linking handling
+  const location = useLocation();
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const itemId = params.get('item');
+
+    if (itemId) {
+      const fetchSharedItem = async () => {
+        try {
+          // Check if item is already in current stack to avoid fetch
+          const existingItem = items.find(i => String(i.id) === String(itemId));
+          if (existingItem) {
+            setSelectedProduct(existingItem);
+          } else {
+            // Fetch single item
+            const data = await fetcher<any>(ENDPOINTS.items.show(itemId));
+            if (data && data.data) {
+              const product = transformListingToProduct(data.data);
+              setSelectedProduct(product);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to load shared item", e);
+        }
+      };
+      fetchSharedItem();
+    }
+  }, [location.search, items]);
+
   const activeIndex = items.length - 1;
 
   const handleSwipe = useCallback(async (direction: 'left' | 'right' | 'up', productOverride?: Product) => {
@@ -164,11 +195,6 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
     if (direction === 'up') {
       setLastSparkedItem(swipedItem);
       setShowSellerToast(true);
-      sendNativeNotification(
-        "New Super Interest!",
-        `A buyer is highly interested in your "${swipedItem.name}". Open Nyem to chat!`,
-        swipedItem.images[0]
-      );
       setTimeout(() => setShowSellerToast(false), 3500);
 
       // Refresh wishlist
@@ -193,7 +219,8 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
     const itemToShare = product || items[activeIndex] || selectedProduct;
     if (!itemToShare) return;
 
-    const deepLink = `https://nyem.app/item/${itemToShare.id}`;
+    // Generate a shareable link that opens the item
+    const deepLink = `${window.location.origin}/discover?item=${itemToShare.id}`;
 
     window.focus();
 
@@ -266,36 +293,37 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
                 <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-2">Discovering amazing items</p>
               </motion.div>
             ) : items.length > 0 ? (
-              items.map((product: Product, idx: number) => (
-                product.isWelcome ? (
+              items.slice(-4).map((product: Product, idx: number, arr: Product[]) => {
+                const activeVisibleIndex = arr.length - 1;
+                return product.isWelcome ? (
                   <WelcomeCard
                     key={product.id}
-                    index={activeIndex - idx}
-                    isTop={idx === activeIndex}
+                    index={activeVisibleIndex - idx}
+                    isTop={idx === activeVisibleIndex}
                     onSwipe={handleSwipe}
-                    triggerDirection={idx === activeIndex ? triggerDir : null}
+                    triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
                   />
                 ) : product.isAd ? (
                   <AdSwipeCard
                     key={product.id}
-                    index={activeIndex - idx}
-                    isTop={idx === activeIndex}
+                    index={activeVisibleIndex - idx}
+                    isTop={idx === activeVisibleIndex}
                     onSwipe={handleSwipe}
                     onAction={onNavigateToUpload}
-                    triggerDirection={idx === activeIndex ? triggerDir : null}
+                    triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
                   />
                 ) : (
                   <SwipeCard
                     key={`${product.id}-${items.length}`}
                     product={product}
-                    index={activeIndex - idx}
-                    isTop={idx === activeIndex}
+                    index={activeVisibleIndex - idx}
+                    isTop={idx === activeVisibleIndex}
                     onSwipe={handleSwipe}
-                    triggerDirection={idx === activeIndex ? triggerDir : null}
+                    triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
                     onShowDetail={(p) => { setSelectedProduct(p); }}
                   />
-                )
-              ))
+                );
+              })
             ) : (
               <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center px-8">
                 <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-6 border border-neutral-100 shadow-inner">
