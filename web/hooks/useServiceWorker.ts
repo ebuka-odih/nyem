@@ -110,11 +110,8 @@ export const useServiceWorker = () => {
       // Send message to waiting service worker to skip waiting
       swState.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
 
-      // Wait a bit for the service worker to activate
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Reload the page to use the new service worker
-      window.location.reload();
+      // The controllerchange listener in useEffect will handle the reload
+      // to ensure all tabs are synchronized and the new worker is actually in control.
     } catch (error) {
       console.error('Error activating service worker update:', error);
     }

@@ -42,8 +42,8 @@ self.addEventListener('install', (event) => {
         console.error('[SW] Cache install failed:', error);
       })
   );
-  // Skip waiting to activate immediately - this ensures updates apply right away
-  self.skipWaiting();
+  // We'll call skipWaiting() only when requested by the client (activateUpdate)
+  // to ensure a smooth transition and avoid reload loops.
 });
 
 // Activate event - clean up old caches and notify clients

@@ -9,14 +9,8 @@ export const ServiceWorkerUpdate: React.FC = () => {
   useEffect(() => {
     if (isUpdateReady) {
       setShowBanner(true);
-      // Auto-reload after 3 seconds if user doesn't interact
-      const autoReloadTimer = setTimeout(() => {
-        activateUpdate();
-      }, 3000);
-
-      return () => clearTimeout(autoReloadTimer);
     }
-  }, [isUpdateReady, activateUpdate]);
+  }, [isUpdateReady]);
 
   if (!showBanner || !isUpdateReady) {
     return null;
@@ -28,7 +22,7 @@ export const ServiceWorkerUpdate: React.FC = () => {
         <RefreshCw className="w-5 h-5 animate-spin" />
         <div className="flex-1">
           <p className="font-semibold text-sm">New version available</p>
-          <p className="text-xs opacity-90">Updating in a few seconds...</p>
+          <p className="text-xs opacity-90">Click Update to refresh the app.</p>
         </div>
       </div>
       <button

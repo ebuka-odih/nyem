@@ -118,7 +118,7 @@ const DiscoverRoute: React.FC = () => {
 
   return (
     <>
-      <ServiceWorkerUpdate />
+      {/* ServiceWorkerUpdate moved to root */}
       {showLocationModal && (
         <LocationPermissionModal
           onAllow={async () => {
@@ -216,7 +216,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; title: string }> = (
 const UploadRoute: React.FC = () => {
   return (
     <>
-      <ServiceWorkerUpdate />
+      {/* ServiceWorkerUpdate moved to root */}
       <GeneralLayout
         title="Studio"
         rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } }}
@@ -236,7 +236,7 @@ const MatchesRoute: React.FC = () => {
 
   return (
     <>
-      <ServiceWorkerUpdate />
+      {/* ServiceWorkerUpdate moved to root */}
       <GeneralLayout
         title="Inbox"
         rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } }}
@@ -262,7 +262,7 @@ const ProfileRoute: React.FC = () => {
 
   return (
     <>
-      <ServiceWorkerUpdate />
+      {/* ServiceWorkerUpdate moved to root */}
       <GeneralLayout
         title="Account"
         rightAction={{ icon: <Settings size={20} strokeWidth={2.5} />, onClick: handleProfileSettingsClick }}
@@ -315,7 +315,7 @@ const AuthRoutes: React.FC = () => {
 
   return (
     <>
-      <ServiceWorkerUpdate />
+      {/* ServiceWorkerUpdate moved to root */}
       {showLocationModal && (
         <LocationPermissionModal
           onAllow={async () => {
@@ -396,15 +396,7 @@ const App = () => {
   // Service worker update handling
   const { isUpdateReady, activateUpdate } = useServiceWorker();
 
-  // Auto-reload when update is ready (after a short delay)
-  useEffect(() => {
-    if (isUpdateReady) {
-      const timer = setTimeout(() => {
-        activateUpdate();
-      }, 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [isUpdateReady, activateUpdate]);
+  // Auto-reload is now handled inside ServiceWorkerUpdate component only
 
   // Request notification permission on mount
   useEffect(() => {
@@ -414,25 +406,28 @@ const App = () => {
   }, []);
 
   return (
-    <Routes>
-      {/* Auth Routes */}
-      <Route path="/welcome" element={<AuthRoutes />} />
-      <Route path="/login" element={<AuthRoutes />} />
-      <Route path="/register" element={<AuthRoutes />} />
-      <Route path="/otp" element={<AuthRoutes />} />
-      <Route path="/forgot" element={<AuthRoutes />} />
+    <>
+      <ServiceWorkerUpdate />
+      <Routes>
+        {/* Auth Routes */}
+        <Route path="/welcome" element={<AuthRoutes />} />
+        <Route path="/login" element={<AuthRoutes />} />
+        <Route path="/register" element={<AuthRoutes />} />
+        <Route path="/otp" element={<AuthRoutes />} />
+        <Route path="/forgot" element={<AuthRoutes />} />
 
-      {/* Main App Routes */}
-      <Route path="/discover" element={<DiscoverRoute />} />
-      <Route path="/discover/:tab" element={<DiscoverRoute />} />
-      <Route path="/upload" element={<UploadRoute />} />
-      <Route path="/matches" element={<MatchesRoute />} />
-      <Route path="/profile" element={<ProfileRoute />} />
+        {/* Main App Routes */}
+        <Route path="/discover" element={<DiscoverRoute />} />
+        <Route path="/discover/:tab" element={<DiscoverRoute />} />
+        <Route path="/upload" element={<UploadRoute />} />
+        <Route path="/matches" element={<MatchesRoute />} />
+        <Route path="/profile" element={<ProfileRoute />} />
 
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to={hasValidToken ? "/discover" : "/welcome"} replace />} />
-      <Route path="*" element={<Navigate to={hasValidToken ? "/discover" : "/welcome"} replace />} />
-    </Routes>
+        {/* Default redirect */}
+        <Route path="/" element={<Navigate to={hasValidToken ? "/discover" : "/welcome"} replace />} />
+        <Route path="*" element={<Navigate to={hasValidToken ? "/discover" : "/welcome"} replace />} />
+      </Routes>
+    </>
   );
 };
 

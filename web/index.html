@@ -35,86 +35,23 @@
   <!-- Favicon -->
   <link rel="shortcut icon" href="/favicon.ico" />
 
-  <!-- Register Service Worker Early (before PushAlert) -->
+  <!-- Register Service Worker for Early Boot -->
   <script>
-    // Register service worker immediately so PushAlert can access it
     if ('serviceWorker' in navigator) {
-      // Store registration promise globally for PushAlert
       window.serviceWorkerRegistrationPromise = navigator.serviceWorker
         .register(new URL('/sw.js', window.location.origin).href, {
           updateViaCache: 'none',
           scope: '/'
         })
         .then(function (registration) {
-          console.log('Service Worker registered successfully:', registration.scope);
-          // Store registration globally for PushAlert
+          console.log('Service Worker registered:', registration.scope);
           window.serviceWorkerRegistration = registration;
-
-          // Check for updates immediately
-          registration.update();
-
-          // Listen for updates
-          registration.addEventListener('updatefound', function () {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', function () {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New service worker is waiting
-                  console.log('[SW] New service worker available');
-                  // Notify the app
-                  if (window.dispatchEvent) {
-                    window.dispatchEvent(new CustomEvent('sw-update-available'));
-                  }
-                } else if (newWorker.state === 'activated') {
-                  // New service worker activated
-                  console.log('[SW] New service worker activated');
-                  // Reload to use new service worker
-                  if (window.dispatchEvent) {
-                    window.dispatchEvent(new CustomEvent('sw-update-activated'));
-                  }
-                }
-              });
-            }
-          });
-
-          // Listen for controller change (service worker updated)
-          navigator.serviceWorker.addEventListener('controllerchange', function () {
-            console.log('[SW] Controller changed');
-            // Reload to use new service worker
-            window.location.reload();
-          });
-
-          // Also make it available via navigator.serviceWorker.ready for PushAlert compatibility
-          navigator.serviceWorker.ready.then(function (reg) {
-            console.log('Service Worker ready:', reg.scope);
-          });
-
           return registration;
         })
         .catch(function (error) {
           console.warn('Service Worker registration failed:', error);
           return null;
         });
-
-      // Also expose via getRegistration for PushAlert
-      navigator.serviceWorker.getRegistration().then(function (registration) {
-        if (registration) {
-          window.serviceWorkerRegistration = registration;
-        }
-      }).catch(function () {
-        // Ignore errors
-      });
-
-      // Check for updates periodically (every 10 minutes)
-      setInterval(function () {
-        navigator.serviceWorker.getRegistration().then(function (registration) {
-          if (registration) {
-            registration.update();
-          }
-        }).catch(function () {
-          // Ignore errors
-        });
-      }, 10 * 60 * 1000);
     }
   </script>
 
