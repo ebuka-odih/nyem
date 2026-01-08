@@ -23,11 +23,6 @@ class OneSignalService
      */
     public function sendNotificationToUser(User $user, string $title, string $message, array $data = [], string $url = null)
     {
-        if (!$user->onesignal_player_id) {
-            Log::warning("User {$user->id} does not have OneSignal player ID");
-            return false;
-        }
-
         if (!$this->restApiKey) {
             Log::error('OneSignal REST API Key is not configured');
             return false;
@@ -35,11 +30,21 @@ class OneSignalService
 
         $payload = [
             'app_id' => $this->appId,
-            'include_player_ids' => [$user->onesignal_player_id],
             'headings' => ['en' => $title],
             'contents' => ['en' => $message],
             'data' => $data,
         ];
+
+        // Target by Player ID if available, otherwise External User ID (User UUID)
+        if ($user->onesignal_player_id) {
+            $payload['include_player_ids'] = [$user->onesignal_player_id];
+        } else {
+            // Fallback: Try targeting by External User ID (assuming User ID is synced)
+            $payload['include_external_user_ids'] = [(string)$user->id];
+            
+            // Note: Targeting by email requires specific email auth hash in some setups, so we prefer UserID
+            Log::info("User {$user->id} has no player ID, attempting to send to External ID");
+        }
 
         // Add URL if provided (for deep linking back to app)
         if ($url) {

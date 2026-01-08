@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
 import { Compass, RotateCcw, MapPin, Zap } from 'lucide-react';
@@ -84,6 +84,7 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   const [viewingSeller, setViewingSeller] = useState<Vendor | null>(null);
   const [showSellerToast, setShowSellerToast] = useState(false);
   const [lastSparkedItem, setLastSparkedItem] = useState<Product | null>(null);
+  const notifiedItems = useRef<Set<string | number>>(new Set());
 
   const createSwipeMutation = useCreateSwipe();
 
@@ -195,6 +196,17 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
     if (direction === 'up') {
       setLastSparkedItem(swipedItem);
       setShowSellerToast(true);
+
+      // Send optimistic native notification (one-time per item session)
+      if (!notifiedItems.current.has(swipedItem.id)) {
+        sendNativeNotification(
+          "Request Sent!",
+          `You've sent a Super Interest for "${swipedItem.name}".`,
+          swipedItem.images[0]
+        );
+        notifiedItems.current.add(swipedItem.id);
+      }
+
       setTimeout(() => setShowSellerToast(false), 3500);
 
       // Refresh wishlist
