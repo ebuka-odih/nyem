@@ -26,3 +26,39 @@ export const useUpdateProfile = () => {
         },
     });
 };
+
+export const usePaymentSettings = () => {
+    const token = getStoredToken();
+    return useQuery({
+        queryKey: ['profile', 'payments'],
+        queryFn: () => fetcher<any>(ENDPOINTS.profile.payments),
+        enabled: !!token,
+    });
+};
+
+export const useUpdatePaymentSettings = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: any) => fetcher(ENDPOINTS.profile.payments, { method: 'PUT', body: data }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['profile', 'payments'] });
+        },
+    });
+};
+
+export const useBanks = () => {
+    const token = getStoredToken();
+    return useQuery({
+        queryKey: ['profile', 'banks'],
+        queryFn: () => fetcher<any>(ENDPOINTS.profile.getBanks),
+        enabled: !!token,
+        select: (data: any) => data.banks || [],
+    });
+};
+
+export const useVerifyBank = () => {
+    return useMutation({
+        mutationFn: (data: { account_number: string; bank_code: string }) =>
+            fetcher(ENDPOINTS.profile.verifyBank, { method: 'POST', body: data }),
+    });
+};

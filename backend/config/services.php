@@ -55,4 +55,10 @@ return [
         'guzzle_client_timeout' => env('ONESIGNAL_GUZZLE_CLIENT_TIMEOUT', 0),
     ],
 
+    'paystack' => [
+        'publicKey' => env('PAYSTACK_PUBLIC_KEY'),
+        'secretKey' => env('PAYSTACK_SECRET_KEY'),
+        'paymentUrl' => env('PAYSTACK_PAYMENT_URL', 'https://api.paystack.co'),
+    ],
+
 ];

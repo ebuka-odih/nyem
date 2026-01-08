@@ -14,8 +14,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
+use App\Services\PaystackService;
+
 class ProfileController extends Controller
 {
+    protected $paystackService;
+
+    public function __construct(PaystackService $paystackService)
+    {
+        $this->paystackService = $paystackService;
+    }
     /**
      * Check if a username is available (unique)
      * Public endpoint for real-time validation
@@ -596,6 +604,37 @@ class ProfileController extends Controller
             ],
             'message' => 'Payment settings updated successfully',
         ]);
+    }
+
+    /**
+     * Get list of banks for payments
+     */
+    public function getBanks()
+    {
+        $banks = $this->paystackService->getBanks();
+        return response()->json(['banks' => $banks]);
+    }
+
+    /**
+     * Verify bank account details
+     */
+    public function verifyBankAccount(Request $request)
+    {
+        $request->validate([
+            'account_number' => 'required|string',
+            'bank_code' => 'required|string',
+        ]);
+
+        $accountName = $this->paystackService->resolveAccountNumber(
+            $request->account_number, 
+            $request->bank_code
+        );
+
+        if (!$accountName) {
+             return response()->json(['message' => 'Could not verify account details.'], 400);
+        }
+
+        return response()->json(['account_name' => $accountName['account_name']]);
     }
 
     /**

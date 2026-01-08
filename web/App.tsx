@@ -387,6 +387,7 @@ const AuthRoutes: React.FC = () => {
 };
 
 const App = () => {
+  const { hasValidToken } = useAuth();
   const {
     showLocationModal,
     setShowLocationModal,
@@ -429,8 +430,8 @@ const App = () => {
       <Route path="/profile" element={<ProfileRoute />} />
 
       {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/discover" replace />} />
-      <Route path="*" element={<Navigate to="/discover" replace />} />
+      <Route path="/" element={<Navigate to={hasValidToken ? "/discover" : "/welcome"} replace />} />
+      <Route path="*" element={<Navigate to={hasValidToken ? "/discover" : "/welcome"} replace />} />
     </Routes>
   );
 };

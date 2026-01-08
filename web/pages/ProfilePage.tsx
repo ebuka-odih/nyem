@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { getStoredUser, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
-import { useProfile, useUpdateProfile } from '../hooks/api/useProfile';
+import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank } from '../hooks/api/useProfile';
 import { useCities, useAreas } from '../hooks/api/useLocations';
 
 const subtleTransition = {
@@ -98,6 +98,215 @@ interface Drop {
   status: string;
 }
 
+
+const PaymentSettingsView: React.FC = () => {
+  const { data: settings, isLoading } = usePaymentSettings();
+  const { data: banks = [], isLoading: loadingBanks } = useBanks();
+  const verifyBankMutation = useVerifyBank();
+  const updateSettingsMutation = useUpdatePaymentSettings();
+
+  const [escrowEnabled, setEscrowEnabled] = useState(false);
+  const [bankCode, setBankCode] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isverified, setIsVerified] = useState(false);
+
+  // Initialize state from fetched settings
+  useEffect(() => {
+    if (settings) {
+      setEscrowEnabled(settings.escrow_enabled);
+      if (settings.bank_details) {
+        setAccountNumber(settings.bank_details.account_number || '');
+        setAccountName(settings.bank_details.account_name || '');
+        // We do not have bank code stored, only bank name.
+      }
+    }
+  }, [settings]);
+
+  // Derive bank name from code
+  const selectedBankName = React.useMemo(() => {
+    const bank = banks.find((b: any) => b.code === bankCode);
+    return bank ? bank.name : '';
+  }, [bankCode, banks]);
+
+  // Find bank code if we have a bank name from settings but no code
+  useEffect(() => {
+    if (settings?.bank_details?.bank_name && banks.length > 0 && !bankCode) {
+      const bank = banks.find((b: any) => b.name === settings.bank_details.bank_name);
+      if (bank) {
+        setBankCode(bank.code);
+        setIsVerified(true); // Assume verified if loaded from DB
+      }
+    }
+  }, [settings, banks, bankCode]);
+
+  const handleVerify = async () => {
+    if (!bankCode || accountNumber.length < 10) return;
+
+    setIsVerifying(true);
+    setVerificationError(null);
+    setAccountName('');
+    setIsVerified(false);
+
+    try {
+      const result = await verifyBankMutation.mutateAsync({
+        account_number: accountNumber,
+        bank_code: bankCode
+      });
+      setAccountName((result as any).account_name);
+      setIsVerified(true);
+    } catch (err: any) {
+      setVerificationError('Could not verify account. Please check details.');
+      setIsVerified(false);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (escrowEnabled && !isverified) {
+      setVerificationError('Please verify your bank account before enabling escrow.');
+      return;
+    }
+
+    try {
+      await updateSettingsMutation.mutateAsync({
+        escrow_enabled: escrowEnabled,
+        bank_name: selectedBankName || settings?.bank_details?.bank_name,
+        account_number: accountNumber,
+        account_name: accountName || settings?.bank_details?.account_name
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-neutral-400 text-xs font-black uppercase tracking-widest">Loading settings...</div>;
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Escrow Activation Card */}
+      <div className="space-y-3">
+        <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Escrow Status</label>
+        <div
+          onClick={() => isverified && setEscrowEnabled(!escrowEnabled)}
+          className={`p-6 rounded-[2.5rem] border-2 transition-all cursor-pointer ${escrowEnabled ? 'bg-emerald-50 border-emerald-500 shadow-xl shadow-emerald-100' : 'bg-white border-neutral-100 shadow-sm'} ${!isverified ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className={`p-3 rounded-2xl ${escrowEnabled ? 'bg-emerald-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+              <Shield size={24} strokeWidth={2.5} />
+            </div>
+            <CustomToggle active={escrowEnabled} onClick={() => isverified && setEscrowEnabled(!escrowEnabled)} />
+          </div>
+          <div className="space-y-1">
+            <h4 className={`text-base font-black uppercase tracking-tight ${escrowEnabled ? 'text-emerald-900' : 'text-neutral-900'}`}>
+              {escrowEnabled ? 'Escrow Protection Active' : 'Escrow Protection Disabled'}
+            </h4>
+            <p className={`text-[10px] font-bold uppercase tracking-widest leading-relaxed ${escrowEnabled ? 'text-emerald-600' : 'text-neutral-400'}`}>
+              {escrowEnabled
+                ? 'Your deals are secured by Nyem Escrow. Funds are held until buyers confirm delivery.'
+                : 'Activate escrow to build trust and protect your transactions from disputes. You must add a verified bank account first.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Withdrawal Destination */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Withdrawal Destination</label>
+        </div>
+
+        <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-6 shadow-sm space-y-5">
+          {/* Bank Dropdown */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+              <Building2 size={12} /> Bank Name
+            </label>
+            <div className="relative">
+              <select
+                value={bankCode}
+                onChange={(e) => {
+                  setBankCode(e.target.value);
+                  setIsVerified(false);
+                }}
+                className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all appearance-none"
+                disabled={loadingBanks}
+              >
+                <option value="">Select Bank</option>
+                {banks.map((bank: any) => (
+                  <option key={bank.code} value={bank.code}>{bank.name}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-300 pointer-events-none" size={16} />
+            </div>
+          </div>
+
+          {/* Account Number */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+              <CreditCard size={12} /> Account Number
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={accountNumber}
+                onChange={(e) => {
+                  setAccountNumber(e.target.value.replace(/\D/g, ''));
+                  setIsVerified(false);
+                }}
+                maxLength={10}
+                placeholder="0123456789"
+                className="flex-1 bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all placeholder:text-neutral-300 tracking-widest"
+              />
+              <button
+                onClick={handleVerify}
+                disabled={!bankCode || accountNumber.length < 10 || isVerifying}
+                className="bg-neutral-900 text-white px-6 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isVerifying ? '...' : 'Verify'}
+              </button>
+            </div>
+          </div>
+
+          {/* Verification Result */}
+          {(accountName || verificationError) && (
+            <div className={`p-4 rounded-2xl ${verificationError ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'} flex items-center gap-3`}>
+              {verificationError ? (
+                <>
+                  <ShieldAlert size={18} />
+                  <span className="text-xs font-bold">{verificationError}</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={18} />
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest opacity-70">Verified Name</p>
+                    <p className="text-sm font-black uppercase">{accountName}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={updateSettingsMutation.isPending || !isverified}
+        className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <Banknote size={16} strokeWidth={2.5} />
+        {updateSettingsMutation.isPending ? 'Saving...' : 'Save Payment Settings'}
+      </button>
+    </div>
+  );
+};
+
 export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSignOut, onNavigateToUpload }) => {
   const [activeTab, setActiveTab] = useState<'drops' | 'settings'>('drops');
   const [currentView, setCurrentView] = useState<SubPageView>('main');
@@ -109,14 +318,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Settings States
-  // Settings States
   const [notifs, setNotifs] = useState({ push: true });
-  const [escrowActive, setEscrowActive] = useState(true);
-  const [bankDetails, setBankDetails] = useState({
-    bankName: "Kuda Microfinance Bank",
-    accountNumber: "2044291024",
-    accountName: ""
-  });
 
   // Local UI states for editing
   const [displayName, setDisplayName] = useState('');
@@ -442,80 +644,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
           </div>
         );
       case 'payments':
-        return (
-          <div className="space-y-6">
-            {/* Escrow Activation Card */}
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Escrow Status</label>
-              <div
-                onClick={() => setEscrowActive(!escrowActive)}
-                className={`p-6 rounded-[2.5rem] border-2 transition-all cursor-pointer ${escrowActive ? 'bg-emerald-50 border-emerald-500 shadow-xl shadow-emerald-100' : 'bg-white border-neutral-100 shadow-sm'}`}
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-3 rounded-2xl ${escrowActive ? 'bg-emerald-500 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
-                    <Shield size={24} strokeWidth={2.5} />
-                  </div>
-                  <CustomToggle active={escrowActive} onClick={() => setEscrowActive(!escrowActive)} />
-                </div>
-                <div className="space-y-1">
-                  <h4 className={`text-base font-black uppercase tracking-tight ${escrowActive ? 'text-emerald-900' : 'text-neutral-900'}`}>
-                    {escrowActive ? 'Escrow Protection Active' : 'Escrow Protection Disabled'}
-                  </h4>
-                  <p className={`text-[10px] font-bold uppercase tracking-widest leading-relaxed ${escrowActive ? 'text-emerald-600' : 'text-neutral-400'}`}>
-                    {escrowActive
-                      ? 'Your deals are secured by Nyem Escrow. Funds are held until buyers confirm delivery.'
-                      : 'Activate escrow to build trust and protect your transactions from disputes.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Withdrawal Destination */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Withdrawal Destination</label>
-                <button className="text-[10px] font-black text-[#830e4c] uppercase tracking-widest flex items-center gap-1">
-                  <Edit3 size={12} /> Edit
-                </button>
-              </div>
-
-              <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-6 shadow-sm space-y-5">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-[#830e4c] rounded-2xl flex items-center justify-center text-white">
-                    <Building2 size={24} />
-                  </div>
-                  <div className="min-w-0">
-                    <h5 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Bank Name</h5>
-                    <p className="text-sm font-black text-neutral-900 truncate">{bankDetails.bankName}</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="min-w-0">
-                    <h5 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Account Number</h5>
-                    <p className="text-sm font-black text-neutral-900 tracking-[0.1em]">{bankDetails.accountNumber}</p>
-                  </div>
-                  <div className="min-w-0">
-                    <h5 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest leading-none mb-1">Recipient Name</h5>
-                    <p className="text-sm font-black text-neutral-900 truncate uppercase">{bankDetails.accountName}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-neutral-50 rounded-3xl p-4 border border-neutral-100 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-emerald-500 shadow-sm">
-                  <CheckCircle2 size={16} strokeWidth={3} />
-                </div>
-                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">Account verified for instant settlement</p>
-              </div>
-            </div>
-
-            <button className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3">
-              <Banknote size={16} strokeWidth={2.5} />
-              Save Payment Settings
-            </button>
-          </div>
-        );
+        return <PaymentSettingsView />;
       case 'security':
         return (
           <div className="space-y-8">

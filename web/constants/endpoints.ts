@@ -20,6 +20,9 @@ export const ENDPOINTS = {
     updatePassword: '/profile/update-password',
     checkUsername: '/profile/check-username',
     updateOneSignalPlayerId: '/profile/onesignal-player-id',
+    payments: '/profile/payments',
+    getBanks: '/profile/banks',
+    verifyBank: '/profile/verify-bank',
   },
   items: {
     feed: '/items/feed',

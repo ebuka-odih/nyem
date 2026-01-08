@@ -80,6 +80,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Payment and escrow settings
     Route::get('/profile/payments', [ProfileController::class, 'getPaymentSettings']);
     Route::put('/profile/payments', [ProfileController::class, 'updatePaymentSettings']);
+    Route::get('/profile/banks', [ProfileController::class, 'getBanks']);
+    Route::post('/profile/verify-bank', [ProfileController::class, 'verifyBankAccount']);
     
     // Security settings
     Route::get('/profile/security', [ProfileController::class, 'getSecuritySettings']);
