@@ -19,6 +19,7 @@ use App\Http\Controllers\SwipeController;
 use App\Http\Controllers\TradeOfferController;
 use App\Http\Controllers\TestModelController;
 use App\Http\Controllers\TransactionController;
+use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -150,4 +151,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/test', [NotificationController::class, 'sendTestNotification']);
         Route::post('/test/me', [NotificationController::class, 'sendToMe']);
     });
+
+    // Escrow endpoints
+    Route::post('/escrows', [EscrowController::class, 'store']);
+    Route::post('/escrows/{escrow}/verify-payment', [EscrowController::class, 'verifyPayment']);
+    Route::post('/escrows/{escrow}/acknowledge', [EscrowController::class, 'acknowledge']);
+    Route::post('/escrows/{escrow}/complete', [EscrowController::class, 'complete']);
+    Route::post('/escrows/{escrow}/confirm', [EscrowController::class, 'confirm']);
+    Route::post('/escrows/{escrow}/dispute', [EscrowController::class, 'dispute']);
 });
