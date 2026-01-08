@@ -174,7 +174,7 @@ class SwipeController extends Controller
             // Handle 'up' direction (star action) - send notification to seller and create message request
             if ($data['direction'] === 'up') {
                 // Create a message request so it appears in the Match screen "Requests" tab
-                MessageRequest::firstOrCreate(
+                $messageRequest = MessageRequest::firstOrCreate(
                     [
                         'from_user_id' => $user->id,
                         'to_user_id' => $targetListing->user_id,
@@ -186,27 +186,29 @@ class SwipeController extends Controller
                     ]
                 );
 
-                // Send OneSignal push notification and Email to seller
-                DB::afterCommit(function () use ($targetListing, $user) {
-                    try {
-                        $seller = $targetListing->user;
-                        if ($seller) {
-                            // 1. Send Push Notification to Seller
-                            $oneSignalService = new OneSignalService();
-                            $oneSignalService->sendStarNotification($seller, $targetListing, $user);
+                // Send OneSignal push notification and Email to seller ONLY if this is a new request
+                if ($messageRequest->wasRecentlyCreated) {
+                    DB::afterCommit(function () use ($targetListing, $user) {
+                        try {
+                            $seller = $targetListing->user;
+                            if ($seller) {
+                                // 1. Send Push Notification to Seller
+                                $oneSignalService = new OneSignalService();
+                                $oneSignalService->sendStarNotification($seller, $targetListing, $user);
 
-                            // 2. Send Confirmation Push to Buyer
-                            $oneSignalService->sendStarConfirmation($user, $targetListing);
+                                // 2. Send Confirmation Push to Buyer
+                                $oneSignalService->sendStarConfirmation($user, $targetListing);
 
-                            // 3. Send Email Notification
-                            if ($seller->email) {
-                                Mail::to($seller->email)->send(new ItemStarredEmail($seller, $targetListing, $user));
+                                // 3. Send Email Notification
+                                if ($seller->email) {
+                                    Mail::to($seller->email)->send(new ItemStarredEmail($seller, $targetListing, $user));
+                                }
                             }
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to send star notifications: ' . $e->getMessage());
                         }
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to send star notifications: ' . $e->getMessage());
-                    }
-                });
+                    });
+                }
             }
 
             if ($data['direction'] === 'right') {
