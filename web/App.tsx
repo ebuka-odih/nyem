@@ -12,6 +12,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { OtpVerificationPage } from './pages/OtpVerificationPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { DiscoverPage } from './pages/DiscoverPage';
+import { SellerProfilePage } from './pages/SellerProfilePage';
 import { LoginPrompt } from './components/LoginPrompt';
 import { LocationPermissionModal } from './components/LocationPermissionModal';
 import { SwipeControls } from './components/SwipeControls';
@@ -419,6 +420,7 @@ const App = () => {
         {/* Main App Routes */}
         <Route path="/discover" element={<DiscoverRoute />} />
         <Route path="/discover/:tab" element={<DiscoverRoute />} />
+        <Route path="/seller/:id" element={<SellerProfilePage />} />
         <Route path="/upload" element={<UploadRoute />} />
         <Route path="/matches" element={<MatchesRoute />} />
         <Route path="/profile" element={<ProfileRoute />} />

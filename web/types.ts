@@ -11,6 +11,7 @@ export interface Review {
 }
 
 export interface Vendor {
+  id?: string | number;
   name: string;
   avatar: string;
   location: string;

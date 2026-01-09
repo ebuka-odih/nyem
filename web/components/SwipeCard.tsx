@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { MapPin, Star, ShieldCheck, Zap, MoreHorizontal, ChevronRight, Eye, Heart } from 'lucide-react';
 import { Product } from '../types';
 import { getStoredUser } from '../utils/api';
@@ -25,6 +26,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   onShowDetail
 }) => {
   const controls = useAnimation();
+  const navigate = useNavigate();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-10, 10]);
@@ -316,10 +318,13 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
               </div>
             </div>
 
-            {/* Seller Quick View */}
             <div className="pt-4">
               <button
-                onClick={(e) => { e.stopPropagation(); onShowDetail(product); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const sellerId = product.vendor.id || (product as any).userId;
+                  if (sellerId) navigate(`/seller/${sellerId}`);
+                }}
                 className="w-full bg-neutral-50 rounded-[4rem] p-4 flex items-center gap-5 border border-neutral-100 shadow-sm transition-all active:scale-[0.98]"
               >
                 <div className="shrink-0 relative">

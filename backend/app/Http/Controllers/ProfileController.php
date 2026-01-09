@@ -90,6 +90,29 @@ class ProfileController extends Controller
         ]);
     }
 
+    /**
+     * Show any user profile (public)
+     */
+    public function show($id)
+    {
+        $user = User::where('id', $id)
+            ->loadCount('listings')
+            ->load([
+                'cityLocation', 
+                'areaLocation',
+                'listings' => function ($query) {
+                    $query->with('category')
+                        ->withCount(['views', 'likes', 'stars', 'shares'])
+                        ->latest();
+                }
+            ])
+            ->firstOrFail();
+            
+        return response()->json([
+            'user' => $user,
+        ]);
+    }
+
     public function update(Request $request)
     {
         $user = $request->user();

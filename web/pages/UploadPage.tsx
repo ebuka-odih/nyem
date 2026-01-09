@@ -9,8 +9,10 @@ import {
   ImageIcon,
   LayoutGrid,
   PlusSquare,
-  Send
+  Send,
+  MapPin
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useCategories } from '../hooks/api/useCategories';
@@ -44,6 +46,7 @@ interface UserListing {
 export const UploadPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'collection' | 'new'>('new');
   const [editingItem, setEditingItem] = useState<UserListing | null>(null);
+  const navigate = useNavigate();
 
   // Form States
   const [images, setImages] = useState<string[]>([]);
@@ -83,10 +86,7 @@ export const UploadPage: React.FC = () => {
     { value: 'fair', label: 'Fair' },
   ];
 
-  // Manual fetches removed in favor of React Query
-
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadTasks, setUploadTasks] = useState<Record<string, boolean>>({});
 
   // Cleanup blob URLs on unmount
   useEffect(() => {
@@ -103,13 +103,11 @@ export const UploadPage: React.FC = () => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    // Check if we already have 4 images
     if (images.length >= 4) {
       setError('Maximum 4 images allowed');
       return;
     }
 
-    // Determine how many more items we can add
     const remainingSlots = 4 - images.length;
     const filesToUpload = Array.from(files).slice(0, remainingSlots);
 
@@ -119,17 +117,14 @@ export const UploadPage: React.FC = () => {
       setError(null);
     }
 
-    // 1. GENERATE PREVIEWS IMMEDIATELY (Instant feedback)
     const newPreviews = filesToUpload.map(file => URL.createObjectURL(file));
     const startIdx = images.length;
     setImages(prev => [...prev, ...newPreviews]);
 
-    // Reset file input early so user can select more if slots remain
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
 
-    // 2. START UPLOADS IN BACKGROUND
     try {
       setIsUploading(true);
       const token = getStoredToken();
@@ -139,7 +134,6 @@ export const UploadPage: React.FC = () => {
         return;
       }
 
-      // Upload each file and update its corresponding index in the state
       const uploadPromises = filesToUpload.map(async (file, idx) => {
         const targetIdx = startIdx + idx;
         const localBlobUrl = newPreviews[idx];
@@ -162,10 +156,8 @@ export const UploadPage: React.FC = () => {
             throw new Error('Upload failed');
           }
 
-          // SWAP BLOB FOR REMOTE URL
           setImages(prev => {
             const next = [...prev];
-            // Check if user hasn't removed the image while it was uploading
             if (next[targetIdx] === localBlobUrl) {
               next[targetIdx] = result.url;
               URL.revokeObjectURL(localBlobUrl);
@@ -174,7 +166,6 @@ export const UploadPage: React.FC = () => {
           });
         } catch (err: any) {
           console.error(`Failed to upload image ${idx}:`, err);
-          // Remove failed image from UI
           setImages(prev => prev.filter(url => url !== localBlobUrl));
           URL.revokeObjectURL(localBlobUrl);
           setError(`Failed to upload ${file.name}: ${err.message}`);
@@ -188,8 +179,6 @@ export const UploadPage: React.FC = () => {
       setIsUploading(false);
     }
   };
-
-
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
@@ -219,7 +208,11 @@ export const UploadPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    // Validation
+    if (!userData?.user?.city_id || !userData?.user?.area_id) {
+      setError('Please complete your profile (City & Area) before publishing');
+      return;
+    }
+
     if (!title.trim()) {
       setError('Listing title is required');
       return;
@@ -387,201 +380,218 @@ export const UploadPage: React.FC = () => {
             transition={subtleTransition}
             className="space-y-8 flex flex-col pb-32"
           >
-            {/* Context Header */}
-            {editingItem && (
-              <div className="flex items-center justify-between bg-[#830e4c] rounded-[2rem] p-5 shadow-xl border border-white/10 shrink-0">
-                <div className="flex items-center gap-4 overflow-hidden">
-                  {editingItem.photos && editingItem.photos.length > 0 && (
-                    <img
-                      src={editingItem.photos[0]}
-                      className="w-12 h-12 rounded-2xl object-cover border border-white/20 shrink-0"
-                      alt={editingItem.title}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
-                  )}
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em]">Editing Drop</span>
-                    <h4 className="text-white text-xs font-black uppercase truncate tracking-tight">{editingItem.title}</h4>
-                  </div>
+            {(!userData?.user?.city_id || !userData?.user?.area_id) ? (
+              <div className="bg-amber-50 border border-amber-200 rounded-[2.5rem] p-7 text-center shadow-xl shadow-amber-900/5 mt-2">
+                <div className="w-14 h-14 bg-amber-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4">
+                  <MapPin size={24} className="text-amber-600" />
                 </div>
-                <button onClick={resetForm} className="p-2.5 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-all active:scale-90 shrink-0">
-                  <X size={18} strokeWidth={3} />
+                <h4 className="text-sm font-black text-amber-900 uppercase tracking-[0.2em] mb-3 italic">Complete Your Profile</h4>
+                <p className="text-[11px] text-amber-700 font-medium leading-relaxed mb-6 px-4">
+                  Buyers need to know where you're located! Please set your <span className="font-black text-amber-900">City & Area</span> in settings before you can publish listings.
+                </p>
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="w-full bg-amber-600 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] active:scale-95 transition-all shadow-lg shadow-amber-600/20"
+                >
+                  Navigate to Settings
                 </button>
               </div>
-            )}
-
-            {/* Media Upload Section */}
-            <div className="space-y-4 shrink-0">
-              <div className="flex justify-between items-end px-1">
-                <label className="text-[11px] font-black text-neutral-900 uppercase tracking-[0.2em]">Product Imagery</label>
-                <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{images.length}/4 Required</span>
-              </div>
-
-              <div className="grid grid-cols-4 gap-3">
-                {images.map((img, idx) => {
-                  const isLocal = img.startsWith('blob:');
-                  return (
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      key={img}
-                      className="relative aspect-square rounded-2xl overflow-hidden border border-neutral-200 shadow-sm group"
-                    >
-                      <img src={img} className="w-full h-full object-cover" alt={`Upload ${idx + 1}`} />
-
-                      {isLocal && (
-                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        </div>
+            ) : (
+              <>
+                {/* Context Header */}
+                {editingItem && (
+                  <div className="flex items-center justify-between bg-[#830e4c] rounded-[2rem] p-5 shadow-xl border border-white/10 shrink-0">
+                    <div className="flex items-center gap-4 overflow-hidden">
+                      {editingItem.photos && editingItem.photos.length > 0 && (
+                        <img
+                          src={editingItem.photos[0]}
+                          className="w-12 h-12 rounded-2xl object-cover border border-white/20 shrink-0"
+                          alt={editingItem.title}
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
                       )}
-
-                      <button
-                        onClick={() => {
-                          if (isLocal) URL.revokeObjectURL(img);
-                          removeImage(idx);
-                        }}
-                        className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      >
-                        <X size={10} strokeWidth={3} />
-                      </button>
-                    </motion.div>
-                  );
-                })}
-
-
-                {images.length < 4 && (
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                    className={`aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {isUploading ? (
-                      <div className="w-6 h-6 border-2 border-[#830e4c] border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
-                    )}
-                  </button>
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em]">Editing Drop</span>
+                        <h4 className="text-white text-xs font-black uppercase truncate tracking-tight">{editingItem.title}</h4>
+                      </div>
+                    </div>
+                    <button onClick={resetForm} className="p-2.5 bg-white/10 rounded-xl text-white hover:bg-white/20 transition-all active:scale-90 shrink-0">
+                      <X size={18} strokeWidth={3} />
+                    </button>
+                  </div>
                 )}
 
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-            </div>
-
-            {/* Structured Form Fields */}
-            <div className="space-y-6">
-              {/* 1. Title */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Listing Title</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g., iPhone 15 Pro Max"
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200"
-                />
-              </div>
-
-              {/* 2. Description */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Description</label>
-                <textarea
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
-                  placeholder="Tell buyers why they need this..."
-                  rows={4}
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-medium text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200 resize-none"
-                />
-              </div>
-
-              {/* 3. Category */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Category</label>
-                <select
-                  value={selectedCategoryId === '' ? '' : String(selectedCategoryId)}
-                  onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : '')}
-                  disabled={loadingCategories}
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <option value="">Select Category</option>
-                  {Array.isArray(categories) && categories.map((cat: any) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 4. Condition */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Condition</label>
-                <select
-                  value={selectedCondition}
-                  onChange={(e) => setSelectedCondition(e.target.value)}
-                  className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm"
-                >
-                  <option value="">Item Condition</option>
-                  {conditions.map((cond) => (
-                    <option key={cond.value} value={cond.value}>
-                      {cond.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 5. Price */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Asking Price</label>
-                <div className="flex h-[62px] bg-white border border-neutral-300 rounded-[1.5rem] focus-within:border-[#830e4c] focus-within:ring-4 focus-within:ring-[#830e4c]/5 transition-all overflow-hidden shadow-sm items-stretch">
-                  <div className="flex items-center justify-center pl-6 pr-3 border-r border-neutral-100 bg-neutral-50/30 shrink-0">
-                    <span className="text-[#830e4c] font-black text-lg">₦</span>
+                {/* Media Upload Section */}
+                <div className="space-y-4 shrink-0">
+                  <div className="flex justify-between items-end px-1">
+                    <label className="text-[11px] font-black text-neutral-900 uppercase tracking-[0.2em]">Product Imagery</label>
+                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{images.length}/4 Required</span>
                   </div>
+
+                  <div className="grid grid-cols-4 gap-3">
+                    {images.map((img, idx) => {
+                      const isLocal = img.startsWith('blob:');
+                      return (
+                        <motion.div
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          key={img}
+                          className="relative aspect-square rounded-2xl overflow-hidden border border-neutral-200 shadow-sm group"
+                        >
+                          <img src={img} className="w-full h-full object-cover" alt={`Upload ${idx + 1}`} />
+
+                          {isLocal && (
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          )}
+
+                          <button
+                            onClick={() => {
+                              if (isLocal) URL.revokeObjectURL(img);
+                              removeImage(idx);
+                            }}
+                            className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                          >
+                            <X size={10} strokeWidth={3} />
+                          </button>
+                        </motion.div>
+                      );
+                    })}
+
+                    {images.length < 4 && (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className={`aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        {isUploading ? (
+                          <div className="w-6 h-6 border-2 border-[#830e4c] border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+
                   <input
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    className="w-full bg-transparent border-none px-4 py-0 text-sm font-black text-neutral-900 focus:ring-0 focus:outline-none placeholder:text-neutral-200"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageSelect}
+                    className="hidden"
                   />
                 </div>
-              </div>
-            </div>
 
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || isUploading}
-              className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Submitting...</span>
-                </>
-              ) : isUploading ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Uploading Images...</span>
-                </>
-              ) : (
-                <>
-                  <Send size={16} className="text-white/60" />
-                  {editingItem ? 'Finalize Updates' : 'Publish to Marketplace'}
-                </>
-              )}
-            </button>
+                {/* Structured Form Fields */}
+                <div className="space-y-6">
+                  {/* 1. Title */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Listing Title</label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g., iPhone 15 Pro Max"
+                      className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-black text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200"
+                    />
+                  </div>
 
+                  {/* 2. Description */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Description</label>
+                    <textarea
+                      value={desc}
+                      onChange={(e) => setDesc(e.target.value)}
+                      placeholder="Tell buyers why they need this..."
+                      rows={4}
+                      className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-sm font-medium text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm placeholder:text-neutral-200 resize-none"
+                    />
+                  </div>
+
+                  {/* 3. Category */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Category</label>
+                    <select
+                      value={selectedCategoryId === '' ? '' : String(selectedCategoryId)}
+                      onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : '')}
+                      disabled={loadingCategories}
+                      className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <option value="">Select Category</option>
+                      {Array.isArray(categories) && categories.map((cat: any) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 4. Condition */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Condition</label>
+                    <select
+                      value={selectedCondition}
+                      onChange={(e) => setSelectedCondition(e.target.value)}
+                      className="w-full bg-white border border-neutral-300 rounded-[1.5rem] px-6 py-5 text-[11px] font-black uppercase tracking-widest text-neutral-900 focus:outline-none focus:border-[#830e4c] focus:ring-4 focus:ring-[#830e4c]/5 transition-all shadow-sm"
+                    >
+                      <option value="">Item Condition</option>
+                      {conditions.map((cond) => (
+                        <option key={cond.value} value={cond.value}>
+                          {cond.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* 5. Price */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Asking Price</label>
+                    <div className="flex h-[62px] bg-white border border-neutral-300 rounded-[1.5rem] focus-within:border-[#830e4c] focus-within:ring-4 focus-within:ring-[#830e4c]/5 transition-all overflow-hidden shadow-sm items-stretch">
+                      <div className="flex items-center justify-center pl-6 pr-3 border-r border-neutral-100 bg-neutral-50/30 shrink-0">
+                        <span className="text-[#830e4c] font-black text-lg">₦</span>
+                      </div>
+                      <input
+                        type="number"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                        className="w-full bg-transparent border-none px-4 py-0 text-sm font-black text-neutral-900 focus:ring-0 focus:outline-none placeholder:text-neutral-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || isUploading}
+                  className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Submitting...</span>
+                    </>
+                  ) : isUploading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Uploading Images...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={16} className="text-white/60" />
+                      {editingItem ? 'Finalize Updates' : 'Publish to Marketplace'}
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

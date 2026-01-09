@@ -37,9 +37,6 @@ Route::get('/locations/cities', [GeographicController::class, 'cities']);
 Route::get('/locations/cities/{cityId}/areas', [GeographicController::class, 'areas']);
 Route::get('/locations/areas', [GeographicController::class, 'areas']); // Alternative: ?city_id=123
 
-// Public endpoint for username availability check
-Route::post('/profile/check-username', [ProfileController::class, 'checkUsername']);
-
 // Public feed endpoints - work with or without authentication
 Route::get('/listings/feed', [ListingController::class, 'feed']);
 Route::get('/items/feed', [ListingController::class, 'feed']); // Backward compatibility alias
@@ -162,3 +159,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/escrows/{escrow}/confirm', [EscrowController::class, 'confirm']);
     Route::post('/escrows/{escrow}/dispute', [EscrowController::class, 'dispute']);
 });
+
+// These public profile routes must be outside and after the auth group to avoid collisions
+Route::prefix('profile')->group(function () {
+    Route::post('/check-username', [ProfileController::class, 'checkUsername']);
+    Route::get('/{id}', [ProfileController::class, 'show']);
+});
+

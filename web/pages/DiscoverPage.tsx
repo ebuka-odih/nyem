@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Compass, RotateCcw, MapPin, Zap } from 'lucide-react';
 import { Product, Vendor } from '../types';
 import { fetcher } from '../hooks/api/fetcher';
@@ -8,7 +8,6 @@ import { SwipeCard } from '../components/SwipeCard';
 import { AdSwipeCard } from '../components/AdSwipeCard';
 import { WelcomeCard } from '../components/WelcomeCard';
 import { SwipeControls } from '../components/SwipeControls';
-import { SellerProfileView } from '../components/SellerProfileView';
 import { ComingSoonState } from '../components/ComingSoonState';
 import { ProductDetailModal } from '../components/modals/ProductDetailModal';
 import { WishlistModal } from '../components/modals/WishlistModal';
@@ -84,7 +83,7 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   const trackedViews = useRef<Set<string | number>>(new Set());
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [viewingSeller, setViewingSeller] = useState<Vendor | null>(null);
+  const navigate = useNavigate();
 
   // Track view when details are opened
   useEffect(() => {
@@ -127,9 +126,9 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   // Expose modal state to parent component
   useEffect(() => {
     if (onModalStateChange) {
-      onModalStateChange(!!selectedProduct || !!viewingSeller);
+      onModalStateChange(!!selectedProduct);
     }
-  }, [selectedProduct, viewingSeller, onModalStateChange]);
+  }, [selectedProduct, onModalStateChange]);
 
   // Fetch items when discover page is active and filters change
   // Only fetch if we don't have items (i.e., no restored state)
@@ -307,7 +306,10 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   };
 
   const openSellerProfile = (vendor: Vendor) => {
-    setViewingSeller(vendor);
+    const sellerId = vendor.id || (vendor as any).userId;
+    if (sellerId) {
+      navigate(`/seller/${sellerId}`);
+    }
   };
 
   return (
@@ -405,19 +407,6 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
         onLogin={onLogin}
       />
 
-      <Modal isOpen={!!viewingSeller} onClose={() => setViewingSeller(null)} title="Seller Profile" fullHeight showBack onBack={() => setViewingSeller(null)}>
-        {viewingSeller && (
-          <SellerProfileView
-            vendor={viewingSeller}
-            onClose={() => setViewingSeller(null)}
-            onProductClick={(p) => {
-              setViewingSeller(null);
-              setSelectedProduct(p);
-            }}
-          />
-        )}
-      </Modal>
-
       <WishlistModal
         isOpen={showWishlist}
         onClose={() => setShowWishlist(false)}
@@ -477,4 +466,3 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
     </>
   );
 };
-
