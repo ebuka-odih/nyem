@@ -270,9 +270,13 @@ export const SellerProfilePage: React.FC = () => {
                                                 whileTap={{ scale: 0.95 }}
                                                 onClick={handleFollowClick}
                                                 disabled={followMutation.isPending}
-                                                className={`flex-1 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg transition-all flex items-center justify-center gap-2 ${isFollowing ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-900 text-white'}`}
+                                                className={`flex-1 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg transition-all flex items-center justify-center gap-2 ${isFollowing ? 'bg-white text-[#830e4c] border-2 border-[#830e4c]' : 'bg-neutral-900 text-white border-2 border-transparent'}`}
                                             >
-                                                <UserPlus size={14} strokeWidth={3} /> {isFollowing ? 'Following' : 'Follow'}
+                                                {isFollowing ? (
+                                                    <><BadgeCheck size={14} strokeWidth={3} /> Following</>
+                                                ) : (
+                                                    <><UserPlus size={14} strokeWidth={3} /> Follow</>
+                                                )}
                                             </motion.button>
                                             <motion.button
                                                 whileTap={{ scale: 0.95 }}

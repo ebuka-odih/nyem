@@ -47,8 +47,8 @@ Route::get('/service-providers/feed', [ServiceProviderController::class, 'feed']
 // Public endpoints for tracking listing stats (works with or without authentication)
 Route::post('/listings/{listing}/view', [ListingController::class, 'trackView']);
 Route::post('/listings/{listing}/share', [ListingController::class, 'trackShare']);
-Route::post('/items/{item}/view', [ListingController::class, 'trackView']); // Backward compatibility alias
-Route::post('/items/{item}/share', [ListingController::class, 'trackShare']); // Backward compatibility alias
+Route::post('/items/{listing}/view', [ListingController::class, 'trackView']); // Backward compatibility alias
+Route::post('/items/{listing}/share', [ListingController::class, 'trackShare']); // Backward compatibility alias
 
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);
@@ -111,9 +111,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/listings/{listing}', [ListingController::class, 'destroy']);
     // Backward compatibility aliases
     Route::post('/items', [ListingController::class, 'store']);
-    Route::get('/items/{item}', [ListingController::class, 'show']);
-    Route::put('/items/{item}', [ListingController::class, 'update']);
-    Route::delete('/items/{item}', [ListingController::class, 'destroy']);
+    Route::get('/items/{listing}', [ListingController::class, 'show']);
+    Route::put('/items/{listing}', [ListingController::class, 'update']);
+    Route::delete('/items/{listing}', [ListingController::class, 'destroy']);
     // Friendly alias for uploads/posts
     Route::post('/posts', [ListingController::class, 'store']);
 

@@ -352,6 +352,13 @@ class ListingService
      */
     public function trackView(Listing $listing, ?User $user, string $ipAddress, string $userAgent): array
     {
+        if (!$listing->id) {
+            return [
+                'success' => false,
+                'message' => 'Invalid listing ID',
+                'newly_created' => false,
+            ];
+        }
         // Check for existing view within last 24 hours
         $existingView = ListingStat::where('listing_id', $listing->id)
             ->where('type', 'view')
@@ -397,6 +404,13 @@ class ListingService
      */
     public function trackShare(Listing $listing, ?User $user, string $ipAddress, string $userAgent): array
     {
+        if (!$listing->id) {
+            return [
+                'success' => false,
+                'message' => 'Invalid listing ID',
+                'newly_created' => false,
+            ];
+        }
         // Check for existing share within last 24 hours
         $existingShare = ListingStat::where('listing_id', $listing->id)
             ->where('type', 'share')
