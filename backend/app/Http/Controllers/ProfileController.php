@@ -96,8 +96,8 @@ class ProfileController extends Controller
     public function show($id)
     {
         $user = User::where('id', $id)
-            ->loadCount('listings')
-            ->load([
+            ->withCount('listings')
+            ->with([
                 'cityLocation', 
                 'areaLocation',
                 'listings' => function ($query) {
