@@ -233,18 +233,22 @@ const UploadRoute: React.FC = () => {
 
 // Matches Route Component
 const MatchesRoute: React.FC = () => {
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isInternalChatOpen, setIsInternalChatOpen] = useState(false);
+  const { id: chatId } = useParams<{ id?: string }>();
+  const isChatOpen = isInternalChatOpen || !!chatId;
 
   return (
     <>
       {/* ServiceWorkerUpdate moved to root */}
       <GeneralLayout
-        title="Inbox"
-        rightAction={{ icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } }}
-        bottomNav={<BottomNav />}
+        title={isChatOpen ? "" : "Inbox"}
+        rightAction={isChatOpen ? undefined : { icon: <Sparkles size={20} strokeWidth={2.5} />, onClick: () => { } }}
+        bottomNav={<BottomNav isChatOpen={isChatOpen} />}
+        hideTitle={isChatOpen}
+        hideHeader={isChatOpen}
       >
         <ProtectedRoute title="Inbox">
-          <MatchesPage onChatToggle={setIsChatOpen} />
+          <MatchesPage onChatToggle={setIsInternalChatOpen} />
         </ProtectedRoute>
       </GeneralLayout>
     </>
@@ -423,6 +427,7 @@ const App = () => {
         <Route path="/seller/:id" element={<SellerProfilePage />} />
         <Route path="/upload" element={<UploadRoute />} />
         <Route path="/matches" element={<MatchesRoute />} />
+        <Route path="/chat/:id" element={<MatchesRoute />} />
         <Route path="/profile" element={<ProfileRoute />} />
 
         {/* Default redirect */}

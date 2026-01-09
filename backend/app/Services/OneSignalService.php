@@ -115,6 +115,9 @@ class OneSignalService
             'listing_id' => $listing->id,
         ];
 
+        return $this->sendNotificationToUser($buyer, $title, $message, $data, $url);
+    }
+
     /**
      * Send notification to user when they follow someone
      */
@@ -132,6 +135,8 @@ class OneSignalService
         ];
 
         return $this->sendNotificationToUser($follower, $title, $message, $data, $url);
+    }
+
     /**
      * Send notification to all followers when a user uploads a new item
      */
