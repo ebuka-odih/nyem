@@ -115,7 +115,48 @@ class OneSignalService
             'listing_id' => $listing->id,
         ];
 
-        return $this->sendNotificationToUser($buyer, $title, $message, $data, $url);
+    /**
+     * Send notification to user when they follow someone
+     */
+    public function sendFollowNotification(User $follower, User $following)
+    {
+        $title = "Following " . ($following->name ?? $following->username);
+        $message = "You'll now be notified whenever " . ($following->name ?? $following->username) . " uploads a new item! 🚀";
+        
+        $url = config('app.frontend_url', 'https://nyem.app') . '/profile/' . $following->id;
+        
+        $data = [
+            'type' => 'follow_confirmation',
+            'following_id' => $following->id,
+            'following_name' => $following->name ?? $following->username,
+        ];
+
+        return $this->sendNotificationToUser($follower, $title, $message, $data, $url);
+    /**
+     * Send notification to all followers when a user uploads a new item
+     */
+    public function sendNewListingNotification(Listing $listing)
+    {
+        $seller = $listing->user;
+        if (!$seller) return;
+
+        $followers = $seller->followers()->with('follower')->get();
+        
+        $title = "New Drop by " . ($seller->name ?? $seller->username) . "! 🔥";
+        $message = "Check out their latest upload: " . ($listing->title ?? 'New Item');
+        
+        $url = config('app.frontend_url', 'https://nyem.app') . '/items/' . $listing->id;
+        
+        $data = [
+            'type' => 'new_listing_follower',
+            'listing_id' => $listing->id,
+            'seller_id' => $seller->id,
+            'seller_name' => $seller->name ?? $seller->username,
+        ];
+
+        foreach ($followers as $follow) {
+            $this->sendNotificationToUser($follow->follower, $title, $message, $data, $url);
+        }
     }
 }
 

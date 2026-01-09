@@ -89,6 +89,11 @@ export const ENDPOINTS = {
   reviews: {
     create: '/reviews',
     list: (userId: string | number) => `/users/${userId}/reviews`,
+  },
+  follow: {
+    follow: (id: string | number) => `/users/${id}/follow`,
+    unfollow: (id: string | number) => `/users/${id}/unfollow`,
+    status: (id: string | number) => `/users/${id}/follow-status`,
   }
 };
 

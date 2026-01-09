@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Schema;
 class ListingService
 {
     public function __construct(
-        protected LocationService $locationService
+        protected LocationService $locationService,
+        protected OneSignalService $oneSignalService
     ) {}
 
     /**
@@ -74,6 +75,13 @@ class ListingService
         ]);
 
         $listing->load(['user.cityLocation', 'user.areaLocation']);
+
+        // Notify followers of the new drop
+        try {
+            $this->oneSignalService->sendNewListingNotification($listing);
+        } catch (\Exception $e) {
+            \Log::error('Follower notification failed for listing ' . $listing->id . ': ' . $e->getMessage());
+        }
 
         return $listing;
     }

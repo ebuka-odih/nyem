@@ -143,6 +143,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Users who follow this user
+     */
+    public function followers()
+    {
+        return $this->hasMany(Follower::class, 'following_id');
+    }
+
+    /**
+     * Users this user is following
+     */
+    public function following()
+    {
+        return $this->hasMany(Follower::class, 'follower_id');
+    }
+
+    /**
      * Get city name attribute (backward compatibility)
      * Uses cityLocation relationship if available, falls back to city string
      */

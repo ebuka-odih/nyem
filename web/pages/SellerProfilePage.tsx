@@ -104,6 +104,63 @@ export const SellerProfilePage: React.FC = () => {
         });
     };
 
+    const { data: followData, refetch: refetchFollowStatus } = useQuery({
+        queryKey: ['follow-status', id],
+        queryFn: () => apiFetch(ENDPOINTS.follow.status(id!)),
+        enabled: !!id && hasValidToken
+    });
+
+    const isFollowing = followData?.is_following || false;
+
+    const followMutation = useMutation({
+        mutationFn: () => apiFetch(isFollowing ? ENDPOINTS.follow.unfollow(id!) : ENDPOINTS.follow.follow(id!), { method: 'POST' }),
+        onSuccess: (res) => {
+            queryClient.invalidateQueries({ queryKey: ['follow-status', id] });
+            queryClient.invalidateQueries({ queryKey: ['seller-profile', id] });
+            if (res.is_following) {
+                // The backend handles the actual push notification, but we can show a toast or alert
+                alert(`You are now following this seller. You'll be notified when they upload new items!`);
+            }
+        },
+        onError: (err: any) => {
+            alert(err.message || 'Failed to update follow status');
+        }
+    });
+
+    const handleFollowClick = () => {
+        if (!hasValidToken) {
+            navigate('/login', { state: { from: window.location.pathname } });
+            return;
+        }
+        followMutation.mutate();
+    };
+
+    const startConversationMutation = useMutation({
+        mutationFn: () => apiFetch(ENDPOINTS.conversations.start, {
+            method: 'POST',
+            body: {
+                recipient_id: id,
+                message_text: "Hi, I'm interested in your items!"
+            }
+        }),
+        onSuccess: (res) => {
+            if (res.success && res.data?.conversation) {
+                navigate(`/chat/${res.data.conversation.id}`);
+            }
+        },
+        onError: (err: any) => {
+            alert(err.message || 'Failed to start conversation');
+        }
+    });
+
+    const handleMessageClick = () => {
+        if (!hasValidToken) {
+            navigate('/login', { state: { from: window.location.pathname } });
+            return;
+        }
+        startConversationMutation.mutate();
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-white flex items-center justify-center">
@@ -199,15 +256,23 @@ export const SellerProfilePage: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             <motion.button
                                                 whileTap={{ scale: 0.95 }}
-                                                className="flex-1 bg-neutral-900 text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg transition-all flex items-center justify-center gap-2"
+                                                onClick={handleFollowClick}
+                                                disabled={followMutation.isPending}
+                                                className={`flex-1 py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg transition-all flex items-center justify-center gap-2 ${isFollowing ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-900 text-white'}`}
                                             >
-                                                <UserPlus size={14} strokeWidth={3} /> Follow
+                                                <UserPlus size={14} strokeWidth={3} /> {isFollowing ? 'Following' : 'Follow'}
                                             </motion.button>
                                             <motion.button
                                                 whileTap={{ scale: 0.95 }}
+                                                onClick={handleMessageClick}
+                                                disabled={startConversationMutation.isPending}
                                                 className="flex-1 bg-[#830e4c] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-lg transition-all flex items-center justify-center gap-2"
                                             >
-                                                <MessageSquare size={14} strokeWidth={3} /> Message
+                                                {startConversationMutation.isPending ? (
+                                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                ) : (
+                                                    <><MessageSquare size={14} strokeWidth={3} /> Message</>
+                                                )}
                                             </motion.button>
                                         </div>
                                         <div className="flex gap-4">

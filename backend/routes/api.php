@@ -22,6 +22,7 @@ use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\FollowController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -138,6 +139,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/report', [ModerationController::class, 'report']);
     Route::post('/block', [ModerationController::class, 'block']);
+
+    // Follower routes
+    Route::post('/users/{user}/follow', [FollowController::class, 'follow']);
+    Route::post('/users/{user}/unfollow', [FollowController::class, 'unfollow']);
+    Route::get('/users/{user}/follow-status', [FollowController::class, 'check']);
 
     // Service provider endpoints
     Route::post('/service-providers', [ServiceProviderController::class, 'store']);
