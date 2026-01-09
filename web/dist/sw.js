@@ -6,7 +6,7 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 // Service Worker Version - Auto-updated on each build by vite-plugin-sw-version
 // This ensures cache invalidation when new builds are deployed
-const SW_VERSION = 'v3-1767720224739';
+const SW_VERSION = 'v3-1767921864043';
 const STATIC_CACHE = `nyem-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `nyem-runtime-${SW_VERSION}`;
 const API_CACHE = `nyem-api-${SW_VERSION}`;
@@ -42,8 +42,8 @@ self.addEventListener('install', (event) => {
         console.error('[SW] Cache install failed:', error);
       })
   );
-  // Skip waiting to activate immediately - this ensures updates apply right away
-  self.skipWaiting();
+  // We'll call skipWaiting() only when requested by the client (activateUpdate)
+  // to ensure a smooth transition and avoid reload loops.
 });
 
 // Activate event - clean up old caches and notify clients
@@ -297,4 +297,3 @@ self.addEventListener('message', (event) => {
     });
   }
 });
-

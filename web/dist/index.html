@@ -1,18 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Nyem - Your Local Marketplace</title>
-  
+
   <!-- PWA Meta Tags -->
-  <meta name="description" content="Connect with your community to buy, sell, trade items, and find trusted artisans. Swipe through local listings and discover great deals, services, and swap opportunities in your city." />
+  <meta name="description"
+    content="Connect with your community to buy, sell, trade items, and find trusted artisans. Swipe through local listings and discover great deals, services, and swap opportunities in your city." />
   <meta name="theme-color" content="#880e4f" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Nyem" />
-  
+
   <!-- iOS Safari PWA Support -->
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="apple-touch-icon" sizes="72x72" href="/icon-72x72.png" />
@@ -23,108 +26,45 @@
   <link rel="apple-touch-icon" sizes="192x192" href="/icon-192x192.png" />
   <link rel="apple-touch-icon" sizes="384x384" href="/icon-384x384.png" />
   <link rel="apple-touch-icon" sizes="512x512" href="/icon-512x512.png" />
-  
+
   <!-- Android Chrome PWA Support -->
   <link rel="manifest" href="/manifest.json" />
   <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
   <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
-  
+
   <!-- Favicon -->
   <link rel="shortcut icon" href="/favicon.ico" />
-  
-  <!-- Register Service Worker Early (before PushAlert) -->
+
+  <!-- Register Service Worker for Early Boot -->
   <script>
-    // Register service worker immediately so PushAlert can access it
     if ('serviceWorker' in navigator) {
-      // Store registration promise globally for PushAlert
       window.serviceWorkerRegistrationPromise = navigator.serviceWorker
-        .register('/sw.js', { 
-          updateViaCache: 'none', // Always check for updates, don't use cache
+        .register(new URL('/sw.js', window.location.origin).href, {
+          updateViaCache: 'none',
           scope: '/'
         })
-        .then(function(registration) {
-          console.log('Service Worker registered successfully:', registration.scope);
-          // Store registration globally for PushAlert
+        .then(function (registration) {
+          console.log('Service Worker registered:', registration.scope);
           window.serviceWorkerRegistration = registration;
-          
-          // Check for updates immediately
-          registration.update();
-          
-          // Listen for updates
-          registration.addEventListener('updatefound', function() {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', function() {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New service worker is waiting
-                  console.log('[SW] New service worker available');
-                  // Notify the app
-                  if (window.dispatchEvent) {
-                    window.dispatchEvent(new CustomEvent('sw-update-available'));
-                  }
-                } else if (newWorker.state === 'activated') {
-                  // New service worker activated
-                  console.log('[SW] New service worker activated');
-                  // Reload to use new service worker
-                  if (window.dispatchEvent) {
-                    window.dispatchEvent(new CustomEvent('sw-update-activated'));
-                  }
-                }
-              });
-            }
-          });
-          
-          // Listen for controller change (service worker updated)
-          navigator.serviceWorker.addEventListener('controllerchange', function() {
-            console.log('[SW] Controller changed');
-            // Reload to use new service worker
-            window.location.reload();
-          });
-          
-          // Also make it available via navigator.serviceWorker.ready for PushAlert compatibility
-          navigator.serviceWorker.ready.then(function(reg) {
-            console.log('Service Worker ready:', reg.scope);
-          });
-          
           return registration;
         })
-        .catch(function(error) {
+        .catch(function (error) {
           console.warn('Service Worker registration failed:', error);
           return null;
         });
-      
-      // Also expose via getRegistration for PushAlert
-      navigator.serviceWorker.getRegistration().then(function(registration) {
-        if (registration) {
-          window.serviceWorkerRegistration = registration;
-        }
-      }).catch(function() {
-        // Ignore errors
-      });
-      
-      // Check for updates periodically (every 10 minutes)
-      setInterval(function() {
-        navigator.serviceWorker.getRegistration().then(function(registration) {
-          if (registration) {
-            registration.update();
-          }
-        }).catch(function() {
-          // Ignore errors
-        });
-      }, 10 * 60 * 1000);
     }
   </script>
-  
+
   <!-- OneSignal Web Push Notifications -->
   <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
   <script>
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalReady = new Promise((resolve) => {
-      OneSignalDeferred.push(async function(OneSignal) {
+      OneSignalDeferred.push(async function (OneSignal) {
         try {
           await OneSignal.init({
             appId: "401c6128-33c4-47ba-af30-337413de42bb",
-            serviceWorkerPath: '/sw.js', // Use our custom service worker that includes OneSignal
+            serviceWorkerPath: 'sw.js',
             serviceWorkerParam: { scope: '/' },
           });
           // Store OneSignal instance globally
@@ -138,7 +78,7 @@
       });
     });
   </script>
-  
+
   <!-- PushAlert Unified Code - COMMENTED OUT FOR TESTING ONESIGNAL -->
   <!-- Load PushAlert after service worker is ready -->
   <!--
@@ -198,11 +138,11 @@
   </script>
   -->
   <!-- End PushAlert Unified Code -->
-  
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-    
+
     :root {
       /* Safe area insets for iOS devices with notch */
       --safe-area-inset-top: env(safe-area-inset-top, 0px);
@@ -210,29 +150,33 @@
       --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
       --safe-area-inset-left: env(safe-area-inset-left, 0px);
     }
-    
+
     body {
       font-family: 'Inter', sans-serif;
       overscroll-behavior-y: none;
     }
-    
+
     /* Hide scrollbar for Chrome, Safari and Opera */
-    
+
     .no-scrollbar::-webkit-scrollbar {
       display: none;
     }
-    
+
     /* Hide scrollbar for IE, Edge and Firefox */
-    
+
     .no-scrollbar {
-      -ms-overflow-style: none;  /* IE and Edge */
-      scrollbar-width: none;  /* Firefox */
+      -ms-overflow-style: none;
+      /* IE and Edge */
+      scrollbar-width: none;
+      /* Firefox */
     }
   </style>
-  <script type="module" crossorigin src="/assets/js/index-ID-wmFOE.js"></script>
+  <script type="module" crossorigin src="/assets/js/index-BzzgBvCO.js"></script>
 </head>
+
 <body class="bg-slate-50 m-0 p-0 overflow-hidden" style="position: fixed; width: 100%; height: 100vh; height: 100dvh;">
   <div id="root" style="width: 100%; height: 100%; overflow: hidden;"></div>
   <div class='onesignal-customlink-container'></div>
 </body>
+
 </html>
