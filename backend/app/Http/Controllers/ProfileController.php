@@ -108,6 +108,12 @@ class ProfileController extends Controller
             ])
             ->firstOrFail();
             
+        // Ensure city string field is populated from relationship for backward compatibility
+        if ($user->cityLocation && !$user->city) {
+            $user->city = $user->cityLocation->name;
+            $user->save();
+        }
+            
         return response()->json([
             'user' => $user,
         ]);

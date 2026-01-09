@@ -71,6 +71,7 @@ export const transformListingToProduct = (listing: any): Product => {
     color: '#f3f4f6',
     distance: distance,
     vendor: {
+      id: user.id || listing.user_id || listing.owner?.id,
       name: user.username || user.name || 'Unknown Seller',
       avatar: user.profile_photo || user.image || 'https://i.pravatar.cc/150?u=default',
       location: fullLocation,

@@ -4,6 +4,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
+    X,
+    Edit3,
+    Trash2,
     MapPin,
     BadgeCheck,
     Share2,
@@ -26,11 +29,17 @@ export const SellerProfilePage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
+    const isInvalidId = !id || id === 'undefined' || id === 'null';
+
     const { data, isLoading, error } = useQuery({
         queryKey: ['seller-profile', id],
         queryFn: () => fetcher<any>(ENDPOINTS.profile.show(id!)),
-        enabled: !!id
+        enabled: !isInvalidId
     });
+
+    console.log('[SellerProfilePage] id:', id, 'isInvalid:', isInvalidId);
+    console.log('[SellerProfilePage] data:', data);
+    console.log('[SellerProfilePage] error:', error);
 
     if (isLoading) {
         return (
@@ -40,17 +49,37 @@ export const SellerProfilePage: React.FC = () => {
         );
     }
 
-    if (error || !data?.user) {
+    const user = data?.user || data;
+
+    if (isInvalidId || error || !user || (!user.id && !user.username)) {
         return (
             <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center">
-                <h2 className="text-xl font-black text-neutral-900 uppercase">Seller not found</h2>
-                <button onClick={() => navigate(-1)} className="mt-4 text-[#830e4c] font-bold">Go Back</button>
+                <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mb-4 mx-auto">
+                    <X size={32} className="text-rose-500" />
+                </div>
+                <h2 className="text-xl font-black text-neutral-900 uppercase">
+                    {error ? 'Profile Error' : isInvalidId ? 'Invalid Profile URL' : 'Seller not found'}
+                </h2>
+                {(error || isInvalidId) && (
+                    <p className="mt-2 text-sm text-neutral-500 font-medium max-w-xs mx-auto">
+                        {isInvalidId
+                            ? 'The seller ID in the URL is missing or malformed.'
+                            : (error as any).message || 'An unexpected error occurred while fetching the profile.'}
+                    </p>
+                )}
+                <button
+                    onClick={() => navigate(-1)}
+                    className="mt-8 bg-neutral-900 text-white px-8 py-3 rounded-2xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-lg"
+                >
+                    Go Back
+                </button>
             </div>
         );
     }
-
-    const user = data.user;
-    const listings = (user.listings || []).map(transformListingToProduct);
+    const listings = (user.listings || []).map((l: any) => transformListingToProduct({
+        ...l,
+        category: l.category?.name || l.category
+    }));
 
     const vendor: Vendor = {
         id: user.id,
