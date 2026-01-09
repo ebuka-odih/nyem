@@ -76,10 +76,20 @@ class FollowController extends Controller
      */
     public function check(Request $request, User $user)
     {
-        $isFollowing = Follower::where('follower_id', $request->user()->id)
-            ->where('following_id', $user->id)
-            ->exists();
+        try {
+            Log::info('Checking follow status', [
+                'follower' => $request->user()?->id,
+                'following' => $user->id
+            ]);
 
-        return response()->json(['is_following' => $isFollowing]);
+            $isFollowing = Follower::where('follower_id', $request->user()->id)
+                ->where('following_id', $user->id)
+                ->exists();
+
+            return response()->json(['is_following' => $isFollowing]);
+        } catch (\Exception $e) {
+            Log::error('Follow check failed: ' . $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
 }

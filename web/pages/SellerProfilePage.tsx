@@ -106,7 +106,14 @@ export const SellerProfilePage: React.FC = () => {
 
     const { data: followData, refetch: refetchFollowStatus } = useQuery({
         queryKey: ['follow-status', id],
-        queryFn: () => fetcher<any>(ENDPOINTS.follow.status(id!)),
+        queryFn: async () => {
+            try {
+                return await fetcher<any>(ENDPOINTS.follow.status(id!));
+            } catch (err) {
+                console.error('Follow status check failed', err);
+                return { is_following: false };
+            }
+        },
         enabled: !!id && hasValidToken
     });
 
@@ -144,8 +151,12 @@ export const SellerProfilePage: React.FC = () => {
             }
         }),
         onSuccess: (res) => {
-            if (res.success && res.data?.conversation) {
-                navigate(`/chat/${res.data.conversation.id}`);
+            // Check both unpacked and raw response formats
+            const conversationId = res.conversation?.id || res.data?.conversation?.id;
+            const isSuccess = res.success !== false; // if it was unpacked, success might be missing
+
+            if (conversationId) {
+                navigate(`/chat/${conversationId}`);
             }
         },
         onError: (err: any) => {
@@ -190,7 +201,8 @@ export const SellerProfilePage: React.FC = () => {
     }
 
     const listings = (user.listings || []).map(transformListingToProduct);
-    const reviewsList = reviewsData?.data || [];
+    // fetcher automatically unpacks 'data' if it exists (like in paginated reviews)
+    const reviewsList = Array.isArray(reviewsData) ? reviewsData : (reviewsData?.data || []);
 
     const vendor = {
         id: user.id,
