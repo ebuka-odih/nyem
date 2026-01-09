@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\OneSignalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class FollowController extends Controller
 {
@@ -123,7 +124,8 @@ class FollowController extends Controller
             return response()->json(['is_following' => $isFollowing]);
         } catch (\Exception $e) {
             Log::error('Follow check failed: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 500);
+            // Return false instead of 500 to keep UI functional
+            return response()->json(['is_following' => false, 'error' => $e->getMessage()], 200);
         }
     }
 }

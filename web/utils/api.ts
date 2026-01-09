@@ -202,6 +202,9 @@ export async function apiFetch<T = any>(
   // Add authentication token if provided
   if (token) {
     requestHeaders.Authorization = `Bearer ${token}`;
+    console.log(`[apiFetch] Using token: ${token.substring(0, 10)}...`);
+  } else {
+    console.log('[apiFetch] No token provided for this request');
   }
 
   // Validate path is not undefined
