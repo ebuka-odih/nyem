@@ -66,7 +66,7 @@ export const transformListingToProduct = (listing: any): Product => {
     id: listing.id,
     name: listing.title || 'Untitled Item',
     price: price,
-    category: listing.category || 'UNCATEGORIZED', // ListingResource provides category name
+    category: (typeof listing.category === 'object' && listing.category !== null) ? listing.category.name : (listing.category || 'UNCATEGORIZED'), // ListingResource provides category name or object
     description: listing.description || '',
     longDescription: listing.description || '',
     images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?w=800'],
