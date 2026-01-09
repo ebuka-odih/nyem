@@ -86,6 +86,10 @@ export const ENDPOINTS = {
     test: '/notifications/test',
     testMe: '/notifications/test/me',
   },
+  reviews: {
+    create: '/reviews',
+    list: (userId: string | number) => `/users/${userId}/reviews`,
+  }
 };
 
 

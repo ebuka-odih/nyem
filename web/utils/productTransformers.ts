@@ -12,6 +12,8 @@ export const transformListingToProduct = (listing: any): Product => {
   let images: string[] = [];
   if (Array.isArray(listing.images) && listing.images.length > 0) {
     images = listing.images;
+  } else if (Array.isArray(listing.photos) && listing.photos.length > 0) {
+    images = listing.photos;
   } else if (Array.isArray(listing.gallery) && listing.gallery.length > 0) {
     images = listing.gallery;
   } else if (listing.image) {

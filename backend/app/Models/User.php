@@ -72,6 +72,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get reviews received by this user (as a seller)
+     */
+    public function reviews()
+    {
+        return $this->hasMany(Review::class, 'receiver_id');
+    }
+
+    /**
      * Get the service provider profile for this user (if artisan)
      */
     public function serviceProvider()

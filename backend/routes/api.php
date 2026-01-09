@@ -21,6 +21,7 @@ use App\Http\Controllers\TestModelController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -100,6 +101,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/images/upload-base64', [ImageUploadController::class, 'uploadBase64']);
     Route::post('/images/upload-multiple-base64', [ImageUploadController::class, 'uploadMultipleBase64']);
 
+    // Review endpoints
+    Route::post('/reviews', [ReviewController::class, 'store']);
+
     Route::post('/listings', [ListingController::class, 'store']);
     Route::get('/listings/{listing}', [ListingController::class, 'show']);
     Route::put('/listings/{listing}', [ListingController::class, 'update']);
@@ -165,4 +169,6 @@ Route::prefix('profile')->group(function () {
     Route::post('/check-username', [ProfileController::class, 'checkUsername']);
     Route::get('/{id}', [ProfileController::class, 'show']);
 });
+
+Route::get('/users/{user}/reviews', [ReviewController::class, 'index']);
 
