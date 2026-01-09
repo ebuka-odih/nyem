@@ -112,6 +112,7 @@ const PaymentSettingsView: React.FC = () => {
   const [verificationError, setVerificationError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isverified, setIsVerified] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Initialize state from fetched settings
   useEffect(() => {
@@ -120,7 +121,11 @@ const PaymentSettingsView: React.FC = () => {
       if (settings.bank_details) {
         setAccountNumber(settings.bank_details.account_number || '');
         setAccountName(settings.bank_details.account_name || '');
-        // We do not have bank code stored, only bank name.
+        if (!settings.bank_details.account_number) {
+          setIsEditing(true);
+        }
+      } else {
+        setIsEditing(true);
       }
     }
   }, [settings]);
@@ -178,6 +183,7 @@ const PaymentSettingsView: React.FC = () => {
         account_number: accountNumber,
         account_name: accountName || settings?.bank_details?.account_name
       });
+      setIsEditing(false); // Success, switch to view mode
     } catch (err) {
       console.error(err);
     }
@@ -186,6 +192,8 @@ const PaymentSettingsView: React.FC = () => {
   if (isLoading) {
     return <div className="p-8 text-center text-neutral-400 text-xs font-black uppercase tracking-widest">Loading settings...</div>;
   }
+
+  const hasSavedDetails = settings?.bank_details?.account_number && settings?.bank_details?.bank_name;
 
   return (
     <div className="space-y-6">
@@ -219,90 +227,145 @@ const PaymentSettingsView: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">Withdrawal Destination</label>
-        </div>
-
-        <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-6 shadow-sm space-y-5">
-          {/* Bank Dropdown */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
-              <Building2 size={12} /> Bank Name
-            </label>
-            <div className="relative">
-              <select
-                value={bankCode}
-                onChange={(e) => {
-                  setBankCode(e.target.value);
-                  setIsVerified(false);
-                }}
-                className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all appearance-none"
-                disabled={loadingBanks}
-              >
-                <option value="">Select Bank</option>
-                {banks.map((bank: any) => (
-                  <option key={bank.code} value={bank.code}>{bank.name}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-300 pointer-events-none" size={16} />
-            </div>
-          </div>
-
-          {/* Account Number */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
-              <CreditCard size={12} /> Account Number
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={accountNumber}
-                onChange={(e) => {
-                  setAccountNumber(e.target.value.replace(/\D/g, ''));
-                  setIsVerified(false);
-                }}
-                maxLength={10}
-                placeholder="0123456789"
-                className="flex-1 bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all placeholder:text-neutral-300 tracking-widest"
-              />
-              <button
-                onClick={handleVerify}
-                disabled={!bankCode || accountNumber.length < 10 || isVerifying}
-                className="bg-neutral-900 text-white px-6 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isVerifying ? '...' : 'Verify'}
-              </button>
-            </div>
-          </div>
-
-          {/* Verification Result */}
-          {(accountName || verificationError) && (
-            <div className={`p-4 rounded-2xl ${verificationError ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'} flex items-center gap-3`}>
-              {verificationError ? (
-                <>
-                  <ShieldAlert size={18} />
-                  <span className="text-xs font-bold">{verificationError}</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle2 size={18} />
-                  <div>
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-70">Verified Name</p>
-                    <p className="text-sm font-black uppercase">{accountName}</p>
-                  </div>
-                </>
-              )}
-            </div>
+          {!isEditing && hasSavedDetails && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="text-[10px] font-black text-[#830e4c] uppercase tracking-widest flex items-center gap-1.5"
+            >
+              <Edit3 size={12} strokeWidth={2.5} /> Edit Details
+            </button>
+          )}
+          {isEditing && hasSavedDetails && (
+            <button
+              onClick={() => setIsEditing(false)}
+              className="text-[10px] font-black text-neutral-400 uppercase tracking-widest"
+            >
+              Cancel
+            </button>
           )}
         </div>
-      </div>
 
-      <button
-        onClick={handleSave}
-        disabled={updateSettingsMutation.isPending || !isverified}
-        className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <Banknote size={16} strokeWidth={2.5} />
-        {updateSettingsMutation.isPending ? 'Saving...' : 'Save Payment Settings'}
-      </button>
+        {!isEditing && hasSavedDetails ? (
+          /* View Mode Card */
+          <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-8 shadow-sm relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-500">
+              <Building2 size={120} />
+            </div>
+
+            <div className="space-y-6 relative z-10">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-neutral-50 rounded-2xl flex items-center justify-center text-[#830e4c]">
+                  <Building2 size={24} />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-0.5">Bank Name</p>
+                  <h4 className="text-base font-black text-neutral-900 uppercase tracking-tight">{settings.bank_details.bank_name}</h4>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-6">
+                <div>
+                  <p className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-1">Account Number</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-black text-neutral-900 tracking-[0.1em]">{settings.bank_details.account_number}</span>
+                    <BadgeCheck size={18} className="text-emerald-500" />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-neutral-50">
+                  <p className="text-[9px] font-black text-neutral-400 uppercase tracking-[0.2em] mb-1">Verified Account Name</p>
+                  <h5 className="text-sm font-black text-neutral-900 uppercase">{settings.bank_details.account_name}</h5>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Edit Mode Form */
+          <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-6 shadow-sm space-y-5">
+            {/* Bank Dropdown */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                <Building2 size={12} /> Bank Name
+              </label>
+              <div className="relative">
+                <select
+                  value={bankCode}
+                  onChange={(e) => {
+                    setBankCode(e.target.value);
+                    setIsVerified(false);
+                  }}
+                  className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all appearance-none"
+                  disabled={loadingBanks}
+                >
+                  <option value="">Select Bank</option>
+                  {banks.map((bank: any) => (
+                    <option key={bank.code} value={bank.code}>{bank.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-300 pointer-events-none" size={16} />
+              </div>
+            </div>
+
+            {/* Account Number */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+                <CreditCard size={12} /> Account Number
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={accountNumber}
+                  onChange={(e) => {
+                    setAccountNumber(e.target.value.replace(/\D/g, ''));
+                    setIsVerified(false);
+                  }}
+                  maxLength={10}
+                  placeholder="0123456789"
+                  className="flex-1 bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all placeholder:text-neutral-300 tracking-widest"
+                />
+                <button
+                  onClick={handleVerify}
+                  disabled={!bankCode || accountNumber.length < 10 || isVerifying}
+                  className="bg-neutral-900 text-white px-6 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isVerifying ? '...' : 'Verify'}
+                </button>
+              </div>
+            </div>
+
+            {/* Verification Result */}
+            {(accountName || verificationError) && (
+              <div className={`p-4 rounded-2xl ${verificationError ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'} flex items-center gap-3`}>
+                {verificationError ? (
+                  <>
+                    <ShieldAlert size={18} />
+                    <span className="text-xs font-bold">{verificationError}</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} />
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-widest opacity-70">Verified Name</p>
+                      <p className="text-sm font-black uppercase">{accountName}</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {isEditing && (
+              <button
+                onClick={handleSave}
+                disabled={updateSettingsMutation.isPending || !isverified}
+                className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.25em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+              >
+                <Banknote size={16} strokeWidth={2.5} />
+                {updateSettingsMutation.isPending ? 'Saving...' : 'Save Payment Settings'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
