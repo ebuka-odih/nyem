@@ -109,7 +109,7 @@ export const UploadPage: React.FC = () => {
     }
 
     const remainingSlots = 4 - images.length;
-    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    const filesToUpload = (Array.from(files) as File[]).slice(0, remainingSlots);
 
     if (filesToUpload.length < files.length) {
       setError(`Only ${remainingSlots} more images allowed. Selected first ${remainingSlots}.`);
@@ -208,7 +208,7 @@ export const UploadPage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!userData?.user?.city_id || !userData?.user?.area_id) {
+    if (!userData?.city_id && !userData?.city) {
       setError('Please complete your profile (City & Area) before publishing');
       return;
     }
@@ -380,7 +380,7 @@ export const UploadPage: React.FC = () => {
             transition={subtleTransition}
             className="space-y-8 flex flex-col pb-32"
           >
-            {(!userData?.user?.city_id || !userData?.user?.area_id) ? (
+            {(!userData?.city_id && !userData?.city) ? (
               <div className="bg-amber-50 border border-amber-200 rounded-[2.5rem] p-7 text-center shadow-xl shadow-amber-900/5 mt-2">
                 <div className="w-14 h-14 bg-amber-100 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4">
                   <MapPin size={24} className="text-amber-600" />
