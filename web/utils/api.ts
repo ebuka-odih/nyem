@@ -12,21 +12,21 @@ const getApiBase = () => {
     console.log('[API Config] Using VITE_API_BASE from environment:', envApiBase);
     return envApiBase.trim();
   }
-  
+
   // Check if we're in development mode
   const isDev = import.meta.env.DEV;
-  const isLocalhost = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || 
-     window.location.hostname === '127.0.0.1' ||
-     window.location.hostname === '0.0.0.0');
-  
+  const isLocalhost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '0.0.0.0');
+
   // In development mode or on localhost, use local Laravel server
   if (isDev || isLocalhost) {
     const localUrl = 'http://localhost:8000/api';
     console.log('[API Config] Development mode detected, using local URL:', localUrl);
     return localUrl;
   }
-  
+
   // Production fallback
   const prodUrl = 'https://api.nyem.online/backend/public/api';
   console.log('[API Config] Production mode, using production URL:', prodUrl);
@@ -91,10 +91,10 @@ async function ensureCsrfCookie(forceRefresh = false): Promise<void> {
   // Check if API is on localhost (stateful domain)
   // Only fetch CSRF cookie for localhost APIs, not for production/cross-domain
   const apiUrl = new URL(API_BASE);
-  const isLocalhostApi = apiUrl.hostname === 'localhost' || 
-                         apiUrl.hostname === '127.0.0.1' ||
-                         apiUrl.hostname === '0.0.0.0';
-  
+  const isLocalhostApi = apiUrl.hostname === 'localhost' ||
+    apiUrl.hostname === '127.0.0.1' ||
+    apiUrl.hostname === '0.0.0.0';
+
   if (!isLocalhostApi) {
     // For production/cross-domain APIs, skip CSRF cookie fetching
     // These should use token-based authentication only
@@ -185,10 +185,10 @@ export async function apiFetch<T = any>(
   // Determine if this is a localhost API (for CSRF handling)
   // Use API_BASE from environment (VITE_API_BASE)
   const apiUrl = new URL(API_BASE);
-  const isLocalhostApi = apiUrl.hostname === 'localhost' || 
-                         apiUrl.hostname === '127.0.0.1' ||
-                         apiUrl.hostname === '0.0.0.0';
-  
+  const isLocalhostApi = apiUrl.hostname === 'localhost' ||
+    apiUrl.hostname === '127.0.0.1' ||
+    apiUrl.hostname === '0.0.0.0';
+
   // Add XSRF token from cookie if available (only for localhost/stateful domains)
   // Laravel stores the CSRF token in XSRF-TOKEN cookie and expects it as X-XSRF-TOKEN header
   // For production/cross-domain APIs, skip CSRF token (use token auth only)
@@ -266,30 +266,30 @@ export async function apiFetch<T = any>(
           // Don't log as warning, just handle it gracefully
         }
       }
-      
+
       // Provide more specific error messages for common status codes
       let message = data?.message || data?.error || `Request failed with status ${response.status}`;
-      
+
       if (response.status === 419) {
         // CSRF token mismatch - only retry for localhost APIs
         // Production/cross-domain APIs should not use CSRF
         // Use API_BASE from environment (VITE_API_BASE)
         const apiUrl = new URL(API_BASE);
-        const isLocalhostApi = apiUrl.hostname === 'localhost' || 
-                               apiUrl.hostname === '127.0.0.1' ||
-                               apiUrl.hostname === '0.0.0.0';
-        
+        const isLocalhostApi = apiUrl.hostname === 'localhost' ||
+          apiUrl.hostname === '127.0.0.1' ||
+          apiUrl.hostname === '0.0.0.0';
+
         if (isLocalhostApi) {
           // For localhost, reset CSRF cookie and retry once if enabled
           resetCsrfCookie();
-          
+
           // Retry the request once with a fresh CSRF cookie
           if (retryOn419 && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
             console.log('[apiFetch] 419 error - retrying with fresh CSRF cookie...');
-            
+
             // Fetch fresh CSRF cookie
             await ensureCsrfCookie(true);
-            
+
             // Retry the request once
             try {
               const retryResponse = await fetch(url, {
@@ -324,7 +324,7 @@ export async function apiFetch<T = any>(
             }
           }
         }
-        
+
         // Set error message based on API type (reuse variables declared above)
         if (isLocalhostApi) {
           message = `CSRF token mismatch (419). This usually means the session expired. Please try again.`;
@@ -342,30 +342,30 @@ export async function apiFetch<T = any>(
       } else if (response.status === 404) {
         message = `API endpoint not found (404). Check that the route exists: ${url}`;
       } else if (response.status === 500) {
-        message = `Server error (500). Check backend logs for details.`;
+        message = data?.message || data?.error || `Server error (500). Check backend logs for details.`;
       }
-      
+
       throw new Error(message);
     }
 
     return data;
   } catch (error: any) {
     // Don't log 401 errors as errors when no token was provided (expected behavior)
-    const isUnauthenticatedError = error?.message && 
+    const isUnauthenticatedError = error?.message &&
       (error.message.includes('Unauthenticated') || error.message.includes('Unauthorized')) &&
       !token;
-    
+
     if (!isUnauthenticatedError) {
       console.error('[apiFetch][error]', method, url, error?.message || error);
     }
-    
+
     // Provide more helpful error messages for common network issues
     if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
       const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      
+
       try {
         const apiHost = new URL(API_BASE).hostname;
-        
+
         if (isLocalhost && (apiHost === 'localhost' || apiHost === '127.0.0.1')) {
           throw new Error(
             'Cannot connect to backend API. Please ensure: 1) Laravel backend is running (php artisan serve), 2) Backend is accessible at http://localhost:8000, 3) CORS is properly configured in backend/config/cors.php'
@@ -382,7 +382,7 @@ export async function apiFetch<T = any>(
         );
       }
     }
-    
+
     throw error;
   }
 }
@@ -436,19 +436,19 @@ export async function testApiConnection(): Promise<{ success: boolean; message: 
   try {
     const response = await fetch(`${API_BASE}/`);
     const data = await response.json().catch(() => ({}));
-    
+
     if (response.ok) {
       return { success: true, message: 'API connection successful' };
     } else {
-      return { 
-        success: false, 
-        message: `API returned status ${response.status}: ${data.message || 'Unknown error'}` 
+      return {
+        success: false,
+        message: `API returned status ${response.status}: ${data.message || 'Unknown error'}`
       };
     }
   } catch (error: any) {
-    return { 
-      success: false, 
-      message: `Connection failed: ${error.message || 'Cannot reach API server'}` 
+    return {
+      success: false,
+      message: `Connection failed: ${error.message || 'Cannot reach API server'}`
     };
   }
 }

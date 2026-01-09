@@ -22,36 +22,49 @@ class FollowController extends Controller
      */
     public function follow(Request $request, User $user)
     {
-        $follower = $request->user();
-        $following = $user;
+        try {
+            if (!Schema::hasTable('followers')) {
+                return response()->json(['message' => 'Follower system is temporarily unavailable'], 503);
+            }
 
-        if ($follower->id === $following->id) {
-            return response()->json(['message' => 'You cannot follow yourself'], 422);
-        }
+            $follower = $request->user();
+            if (!$follower) {
+                return response()->json(['message' => 'Unauthenticated'], 401);
+            }
 
-        $follow = Follower::firstOrCreate([
-            'follower_id' => $follower->id,
-            'following_id' => $following->id,
-        ]);
+            $following = $user;
 
-        if ($follow->wasRecentlyCreated) {
-            // Send push notification confirmation to the follower
-            try {
-                $this->oneSignalService->sendFollowNotification($follower, $following);
-            } catch (\Exception $e) {
-                Log::error('Failed to send follow notification: ' . $e->getMessage());
+            if ($follower->id === $following->id) {
+                return response()->json(['message' => 'You cannot follow yourself'], 422);
+            }
+
+            $follow = Follower::firstOrCreate([
+                'follower_id' => $follower->id,
+                'following_id' => $following->id,
+            ]);
+
+            if ($follow->wasRecentlyCreated) {
+                // Send push notification confirmation to the follower
+                try {
+                    $this->oneSignalService->sendFollowNotification($follower, $following);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send follow notification: ' . $e->getMessage());
+                }
+
+                return response()->json([
+                    'message' => 'Successfully followed ' . ($following->name ?? $following->username),
+                    'is_following' => true
+                ]);
             }
 
             return response()->json([
-                'message' => 'Successfully followed ' . ($following->name ?? $following->username),
+                'message' => 'You are already following this user',
                 'is_following' => true
             ]);
+        } catch (\Exception $e) {
+            Log::error('Follow failed: ' . $e->getMessage());
+            return response()->json(['error' => 'An error occurred while trying to follow this user'], 500);
         }
-
-        return response()->json([
-            'message' => 'You are already following this user',
-            'is_following' => true
-        ]);
     }
 
     /**
@@ -59,16 +72,28 @@ class FollowController extends Controller
      */
     public function unfollow(Request $request, User $user)
     {
-        $follower = $request->user();
-        
-        $deleted = Follower::where('follower_id', $follower->id)
-            ->where('following_id', $user->id)
-            ->delete();
+        try {
+            if (!Schema::hasTable('followers')) {
+                return response()->json(['message' => 'Follower system is temporarily unavailable'], 503);
+            }
 
-        return response()->json([
-            'message' => $deleted ? 'Successfully unfollowed user' : 'You were not following this user',
-            'is_following' => false
-        ]);
+            $follower = $request->user();
+            if (!$follower) {
+                return response()->json(['message' => 'Unauthenticated'], 401);
+            }
+            
+            $deleted = Follower::where('follower_id', $follower->id)
+                ->where('following_id', $user->id)
+                ->delete();
+
+            return response()->json([
+                'message' => $deleted ? 'Successfully unfollowed user' : 'You were not following this user',
+                'is_following' => false
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Unfollow failed: ' . $e->getMessage());
+            return response()->json(['error' => 'An error occurred while trying to unfollow'], 500);
+        }
     }
 
     /**
@@ -77,12 +102,21 @@ class FollowController extends Controller
     public function check(Request $request, User $user)
     {
         try {
+            if (!Schema::hasTable('followers')) {
+                return response()->json(['is_following' => false, 'error' => 'Table missing'], 200);
+            }
+
+            $currentUser = $request->user();
+            if (!$currentUser) {
+                return response()->json(['is_following' => false]);
+            }
+
             Log::info('Checking follow status', [
-                'follower' => $request->user()?->id,
+                'follower' => $currentUser->id,
                 'following' => $user->id
             ]);
 
-            $isFollowing = Follower::where('follower_id', $request->user()->id)
+            $isFollowing = Follower::where('follower_id', $currentUser->id)
                 ->where('following_id', $user->id)
                 ->exists();
 
