@@ -85,61 +85,111 @@ export const UploadPage: React.FC = () => {
 
   // Manual fetches removed in favor of React Query
 
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadTasks, setUploadTasks] = useState<Record<string, boolean>>({});
+
+  // Cleanup blob URLs on unmount
+  useEffect(() => {
+    return () => {
+      images.forEach(url => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, [images]);
+
   const handleImageSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    if (images.length + files.length > 4) {
+    // Check if we already have 4 images
+    if (images.length >= 4) {
       setError('Maximum 4 images allowed');
       return;
     }
 
-    try {
+    // Determine how many more items we can add
+    const remainingSlots = 4 - images.length;
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+
+    if (filesToUpload.length < files.length) {
+      setError(`Only ${remainingSlots} more images allowed. Selected first ${remainingSlots}.`);
+    } else {
       setError(null);
+    }
+
+    // 1. GENERATE PREVIEWS IMMEDIATELY (Instant feedback)
+    const newPreviews = filesToUpload.map(file => URL.createObjectURL(file));
+    const startIdx = images.length;
+    setImages(prev => [...prev, ...newPreviews]);
+
+    // Reset file input early so user can select more if slots remain
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    // 2. START UPLOADS IN BACKGROUND
+    try {
+      setIsUploading(true);
       const token = getStoredToken();
       if (!token) {
         setError('Please login to upload images');
+        setIsUploading(false);
         return;
       }
 
-      // Convert files to base64
-      const base64Promises = Array.from(files).slice(0, 4 - images.length).map((file: File) => {
-        return new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+      // Upload each file and update its corresponding index in the state
+      const uploadPromises = filesToUpload.map(async (file, idx) => {
+        const targetIdx = startIdx + idx;
+        const localBlobUrl = newPreviews[idx];
+
+        try {
+          if (file.size > 10 * 1024 * 1024) {
+            throw new Error(`File ${file.name} is too large (max 10MB)`);
+          }
+
+          const formData = new FormData();
+          formData.append('image', file);
+
+          const result = await apiFetch<{ url: string }>(ENDPOINTS.images.upload, {
+            method: 'POST',
+            token,
+            body: formData,
+          });
+
+          if (!result.url) {
+            throw new Error('Upload failed');
+          }
+
+          // SWAP BLOB FOR REMOTE URL
+          setImages(prev => {
+            const next = [...prev];
+            // Check if user hasn't removed the image while it was uploading
+            if (next[targetIdx] === localBlobUrl) {
+              next[targetIdx] = result.url;
+              URL.revokeObjectURL(localBlobUrl);
+            }
+            return next;
+          });
+        } catch (err: any) {
+          console.error(`Failed to upload image ${idx}:`, err);
+          // Remove failed image from UI
+          setImages(prev => prev.filter(url => url !== localBlobUrl));
+          URL.revokeObjectURL(localBlobUrl);
+          setError(`Failed to upload ${file.name}: ${err.message}`);
+        }
       });
 
-      const base64Images = await Promise.all(base64Promises);
-
-      // Upload images
-      const uploadPromises = base64Images.map((base64) => {
-        return apiFetch<{ url: string }>(ENDPOINTS.images.uploadBase64, {
-          method: 'POST',
-          token,
-          body: { image: base64 },
-        });
-      });
-
-      const uploadResults = await Promise.all(uploadPromises);
-      const newUrls = uploadResults.map((result) => result.url);
-
-      setImages([...images, ...newUrls]);
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      await Promise.all(uploadPromises);
     } catch (err: any) {
-      console.error('Failed to upload images:', err);
-      setError(err.message || 'Failed to upload images. Please try again.');
+      console.error('Batch upload error:', err);
+    } finally {
+      setIsUploading(false);
     }
   };
+
+
 
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
@@ -371,31 +421,51 @@ export const UploadPage: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-4 gap-3">
-                {images.map((img, idx) => (
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    key={idx}
-                    className="relative aspect-square rounded-2xl overflow-hidden border border-neutral-200 shadow-sm group"
-                  >
-                    <img src={img} className="w-full h-full object-cover" alt={`Upload ${idx + 1}`} />
-                    <button
-                      onClick={() => removeImage(idx)}
-                      className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity"
+                {images.map((img, idx) => {
+                  const isLocal = img.startsWith('blob:');
+                  return (
+                    <motion.div
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      key={img}
+                      className="relative aspect-square rounded-2xl overflow-hidden border border-neutral-200 shadow-sm group"
                     >
-                      <X size={10} strokeWidth={3} />
-                    </button>
-                  </motion.div>
-                ))}
+                      <img src={img} className="w-full h-full object-cover" alt={`Upload ${idx + 1}`} />
+
+                      {isLocal && (
+                        <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center">
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          if (isLocal) URL.revokeObjectURL(img);
+                          removeImage(idx);
+                        }}
+                        className="absolute top-1 right-1 p-1 bg-black/60 text-white rounded-full backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                      >
+                        <X size={10} strokeWidth={3} />
+                      </button>
+                    </motion.div>
+                  );
+                })}
+
 
                 {images.length < 4 && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm"
+                    disabled={isUploading}
+                    className={`aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
-                    <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
+                    {isUploading ? (
+                      <div className="w-6 h-6 border-2 border-[#830e4c] border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
+                    )}
                   </button>
                 )}
+
               </div>
 
               <input
@@ -491,13 +561,18 @@ export const UploadPage: React.FC = () => {
 
             <button
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || isUploading}
               className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Submitting...</span>
+                </>
+              ) : isUploading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Uploading Images...</span>
                 </>
               ) : (
                 <>
@@ -506,6 +581,7 @@ export const UploadPage: React.FC = () => {
                 </>
               )}
             </button>
+
           </motion.div>
         )}
       </AnimatePresence>
