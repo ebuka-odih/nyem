@@ -106,14 +106,14 @@ export const SellerProfilePage: React.FC = () => {
 
     const { data: followData, refetch: refetchFollowStatus } = useQuery({
         queryKey: ['follow-status', id],
-        queryFn: () => apiFetch(ENDPOINTS.follow.status(id!)),
+        queryFn: () => fetcher<any>(ENDPOINTS.follow.status(id!)),
         enabled: !!id && hasValidToken
     });
 
     const isFollowing = followData?.is_following || false;
 
     const followMutation = useMutation({
-        mutationFn: () => apiFetch(isFollowing ? ENDPOINTS.follow.unfollow(id!) : ENDPOINTS.follow.follow(id!), { method: 'POST' }),
+        mutationFn: () => fetcher<any>(isFollowing ? ENDPOINTS.follow.unfollow(id!) : ENDPOINTS.follow.follow(id!), { method: 'POST' }),
         onSuccess: (res) => {
             queryClient.invalidateQueries({ queryKey: ['follow-status', id] });
             queryClient.invalidateQueries({ queryKey: ['seller-profile', id] });
@@ -136,7 +136,7 @@ export const SellerProfilePage: React.FC = () => {
     };
 
     const startConversationMutation = useMutation({
-        mutationFn: () => apiFetch(ENDPOINTS.conversations.start, {
+        mutationFn: () => fetcher<any>(ENDPOINTS.conversations.start, {
             method: 'POST',
             body: {
                 recipient_id: id,

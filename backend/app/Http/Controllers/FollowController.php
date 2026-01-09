@@ -20,10 +20,10 @@ class FollowController extends Controller
     /**
      * Follow a user
      */
-    public function follow(Request $request, $userId)
+    public function follow(Request $request, User $user)
     {
         $follower = $request->user();
-        $following = User::findOrFail($userId);
+        $following = $user;
 
         if ($follower->id === $following->id) {
             return response()->json(['message' => 'You cannot follow yourself'], 422);
@@ -57,12 +57,12 @@ class FollowController extends Controller
     /**
      * Unfollow a user
      */
-    public function unfollow(Request $request, $userId)
+    public function unfollow(Request $request, User $user)
     {
         $follower = $request->user();
         
         $deleted = Follower::where('follower_id', $follower->id)
-            ->where('following_id', $userId)
+            ->where('following_id', $user->id)
             ->delete();
 
         return response()->json([
@@ -74,10 +74,10 @@ class FollowController extends Controller
     /**
      * Check if current user follows target user
      */
-    public function check(Request $request, $userId)
+    public function check(Request $request, User $user)
     {
         $isFollowing = Follower::where('follower_id', $request->user()->id)
-            ->where('following_id', $userId)
+            ->where('following_id', $user->id)
             ->exists();
 
         return response()->json(['is_following' => $isFollowing]);
