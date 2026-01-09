@@ -9,6 +9,7 @@ import { NotificationPermissionModal } from '../components/NotificationPermissio
 import { Bell } from 'lucide-react';
 import { useConversations, useMessageRequests, useTradeOffers } from '../hooks/api/useMatches';
 import { useProfile } from '../hooks/api/useProfile';
+import { useParams, useNavigate } from 'react-router-dom';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -66,6 +67,8 @@ interface MatchesPageProps {
 }
 
 export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
+  const { id: chatId } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'requests' | 'chats'>('chats');
   // React Query hooks
   const {
@@ -98,6 +101,17 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
     }
   }, [userData]);
 
+  // Handle initial chat open if id is in URL
+  useEffect(() => {
+    if (chatId && chats.length > 0 && !selectedChat) {
+      const chat = chats.find(c => c.conversation_id === chatId || c.id === chatId);
+      if (chat) {
+        setSelectedChat(chat);
+        onChatToggle?.(true);
+      }
+    }
+  }, [chatId, chats, selectedChat, onChatToggle]);
+
   const loading = loadingChats || loadingRequests;
 
   const handleRequestAccepted = async () => {
@@ -121,6 +135,10 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
   const handleChatClose = () => {
     setSelectedChat(null);
     onChatToggle?.(false);
+    // If we were on /chat/:id, go back to /matches
+    if (chatId) {
+      navigate('/matches');
+    }
     // Refresh conversations when closing chat to get updated last message
     fetchConversations();
   };
