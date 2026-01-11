@@ -18,11 +18,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const connect = useCallback(() => {
         if (!profile?.id || socketRef.current?.readyState === WebSocket.OPEN) return;
 
-        // Determine WebSocket URL based on current environment
-        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const hostname = window.location.hostname;
+        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168');
+
+        // If local, use the local port. 
+        // If production, try to connect to the same host but on the socket port or a proxied path.
         const wsUrl = isLocal
-            ? `ws://127.0.0.1:6002`
-            : `wss://nyem.online/app/ws`; // Correct production WSS URL
+            ? `ws://${hostname}:6002`
+            : `wss://${hostname}/app/ws`;
 
         console.log('[WebSocket] Connecting to:', wsUrl);
 
