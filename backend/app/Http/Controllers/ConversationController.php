@@ -247,7 +247,7 @@ class ConversationController extends Controller
 
         // CUSTOM WEBSOCKET BROADCAST - Message Sent
         try {
-            Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
+            $response = Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
                 'type' => 'message.sent',
                 'receivers' => [$recipientId, $user->id],
                 'data' => [
@@ -255,6 +255,10 @@ class ConversationController extends Controller
                     'conversation_id' => $conversation->id
                 ]
             ]);
+            
+            if (!$response->successful()) {
+                Log::warning('Custom WebSocket broadcast returned error: ' . $response->status());
+            }
         } catch (\Exception $e) {
             Log::error('Custom WebSocket broadcast (message) failed: ' . $e->getMessage());
         }

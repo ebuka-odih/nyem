@@ -110,15 +110,25 @@ export const ChatView: React.FC<ChatViewProps> = ({
     console.log('[ChatView] Subscribing to conversation:', chat.conversation_id);
 
     const unsubscribe = subscribe(`conversation.${chat.conversation_id}`, (newMessage: any) => {
-      console.log('[ChatView] WebSocket message received:', newMessage);
+      console.log(`[ChatView] WebSocket Callback Triggered for: conversation.${chat.conversation_id}`);
+      console.log('[ChatView] Message:', newMessage);
 
       // Update React Query cache
       queryClient.setQueryData(['messages', chat.conversation_id], (oldData: any[] | undefined) => {
-        const messages = oldData || [];
-        // Check if message already exists (to avoid duplicates if API also returns it)
-        if (messages.find((m: any) => m.id === newMessage.id)) {
+        const messages = Array.isArray(oldData) ? oldData : [];
+
+        // Use message_id or id for duplicate check
+        const isDuplicate = messages.some((m: any) =>
+          (m.id && m.id === newMessage.id) ||
+          (m.message_id && m.message_id === newMessage.id)
+        );
+
+        if (isDuplicate) {
+          console.log('[ChatView] Duplicate message ignored');
           return messages;
         }
+
+        console.log('[ChatView] Adding new message to state');
         return [...messages, newMessage];
       });
 

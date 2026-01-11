@@ -45,28 +45,38 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         socket.onmessage = (event) => {
             try {
                 const payload = JSON.parse(event.data);
-                console.log('[WebSocket] Received:', payload);
+                console.log('[WebSocket] Raw Payload Received:', payload);
 
                 const { type, data } = payload;
 
-                // Handle different event types
                 if (type === 'message.sent') {
                     const conversationId = data.conversation_id;
                     const channel = `conversation.${conversationId}`;
 
+                    console.log(`[WebSocket] Looking for subscribers on channel: ${channel}`);
+                    console.log(`[WebSocket] Current channels:`, Array.from(subscribersRef.current.keys()));
+
                     // Notify subscribers to this conversation
-                    if (subscribersRef.current.has(channel)) {
-                        subscribersRef.current.get(channel)?.forEach(callback => callback(data.message));
+                    const callbacks = subscribersRef.current.get(channel);
+                    if (callbacks && callbacks.size > 0) {
+                        console.log(`[WebSocket] Notifying ${callbacks.size} subscribers for conversation ${conversationId}`);
+                        callbacks.forEach(callback => callback(data.message));
+                    } else {
+                        console.log(`[WebSocket] No active subscribers for conversation ${conversationId}`);
                     }
 
-                    // Also notify general user channel
+                    // Also notify general user channel for list refreshes
                     const userChannel = `user.${profile.id}`;
-                    if (subscribersRef.current.has(userChannel)) {
-                        subscribersRef.current.get(userChannel)?.forEach(callback => callback(payload));
+                    const userCallbacks = subscribersRef.current.get(userChannel);
+                    if (userCallbacks) {
+                        console.log(`[WebSocket] Notifying subscriber on user channel: ${userChannel}`);
+                        userCallbacks.forEach(callback => callback(payload));
                     }
+                } else if (type === 'auth_success') {
+                    console.log('[WebSocket] Successfully authenticated with server');
                 }
             } catch (error) {
-                console.error('[WebSocket] Error parsing message:', error);
+                console.error('[WebSocket] Error processing message:', error);
             }
         };
 

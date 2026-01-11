@@ -84,8 +84,10 @@ wss.on('close', () => {
 app.post('/broadcast', (req, res) => {
     const { type, data, receivers } = req.body;
 
-    console.log(`Broadcasting ${type} to`, receivers);
+    console.log(`[Broadcast] Type: ${type}, Receivers:`, receivers);
+    console.log(`[Broadcast] Data:`, JSON.stringify(data, null, 2));
 
+    let sentCount = 0;
     if (Array.isArray(receivers)) {
         receivers.forEach(receiverId => {
             const id = String(receiverId);
@@ -93,11 +95,15 @@ app.post('/broadcast', (req, res) => {
                 clients.get(id).forEach(client => {
                     if (client.readyState === 1) { // OPEN
                         client.send(JSON.stringify({ type, data }));
+                        sentCount++;
                     }
                 });
+            } else {
+                console.log(`[Broadcast] Receiver ${id} not connected`);
             }
         });
     }
 
-    res.json({ success: true });
+    console.log(`[Broadcast] Sent to ${sentCount} clients`);
+    res.json({ success: true, sentCount });
 });
