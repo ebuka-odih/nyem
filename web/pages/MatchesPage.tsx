@@ -10,6 +10,8 @@ import { Bell } from 'lucide-react';
 import { useConversations, useMessageRequests, useTradeOffers } from '../hooks/api/useMatches';
 import { useProfile } from '../hooks/api/useProfile';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -100,6 +102,22 @@ export const MatchesPage: React.FC<MatchesPageProps> = ({ onChatToggle }) => {
       currentUserId.current = userData.id;
     }
   }, [userData]);
+
+  const queryClient = useQueryClient();
+  const { subscribe } = useWebSocket();
+
+  // Listen for new messages globally to refresh conversation list
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const unsubscribe = subscribe(`user.${userData.id}`, (event: any) => {
+      console.log('[MatchesPage] WebSocket event received:', event);
+      // Refresh the conversations list to show new message snippets/badges
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+    });
+
+    return () => unsubscribe();
+  }, [userData?.id, subscribe, queryClient]);
 
   // Handle initial chat open if id is in URL
   useEffect(() => {

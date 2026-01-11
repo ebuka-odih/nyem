@@ -5,6 +5,8 @@ import { apiFetch, getStoredToken } from '../utils/api';
 import { useMessages, useSendMessage } from '../hooks/api/useMatches';
 import { useConversationListing } from '../hooks/api/useConversationListing';
 import { ENDPOINTS } from '../constants/endpoints';
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { useQueryClient } from '@tanstack/react-query';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -91,6 +93,46 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [chatListingInfo, setChatListingInfo] = useState<{ title: string; image?: string; price?: string } | null>(null);
+
+  const queryClient = useQueryClient();
+  const { subscribe, isConnected } = useWebSocket();
+  const notificationSound = useRef<HTMLAudioElement | null>(null);
+
+  // Initialize notification sound
+  useEffect(() => {
+    notificationSound.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+  }, []);
+
+  // Subscribe to WebSocket messages
+  useEffect(() => {
+    if (!chat.conversation_id) return;
+
+    console.log('[ChatView] Subscribing to conversation:', chat.conversation_id);
+
+    const unsubscribe = subscribe(`conversation.${chat.conversation_id}`, (newMessage: any) => {
+      console.log('[ChatView] WebSocket message received:', newMessage);
+
+      // Update React Query cache
+      queryClient.setQueryData(['messages', chat.conversation_id], (oldData: any[] | undefined) => {
+        const messages = oldData || [];
+        // Check if message already exists (to avoid duplicates if API also returns it)
+        if (messages.find((m: any) => m.id === newMessage.id)) {
+          return messages;
+        }
+        return [...messages, newMessage];
+      });
+
+      // Play sound if message is from the other user
+      if (String(newMessage.sender_id) !== String(currentUserId)) {
+        notificationSound.current?.play().catch(e => console.warn('Sound play failed:', e));
+      }
+    });
+
+    return () => {
+      console.log('[ChatView] Unsubscribing from conversation:', chat.conversation_id);
+      unsubscribe();
+    };
+  }, [chat.conversation_id, subscribe, queryClient, currentUserId]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
