@@ -30,11 +30,13 @@ import {
   Banknote,
   Shield,
   Camera,
-  ChevronDown
+  ChevronDown,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { getStoredUser, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
-import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank } from '../hooks/api/useProfile';
+import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank, useUpdatePassword } from '../hooks/api/useProfile';
 import { useCities, useAreas } from '../hooks/api/useLocations';
 
 const subtleTransition = {
@@ -365,6 +367,152 @@ const PaymentSettingsView: React.FC = () => {
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+const SecuritySettingsView: React.FC = () => {
+  const updatePasswordMutation = useUpdatePassword();
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus(null);
+
+    if (newPassword !== confirmPassword) {
+      setStatus({ type: 'error', message: 'New passwords do not match' });
+      return;
+    }
+
+    try {
+      await updatePasswordMutation.mutateAsync({
+        current_password: currentPassword,
+        new_password: newPassword,
+        new_password_confirmation: confirmPassword
+      });
+      setStatus({ type: 'success', message: 'Password updated successfully' });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      setStatus({ type: 'error', message: err.message || 'Failed to update password' });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Change Password</label>
+        <form onSubmit={handleUpdatePassword} className="bg-white border border-neutral-100 rounded-[2rem] p-6 space-y-5 shadow-sm">
+          {status && (
+            <div className={`p-4 rounded-xl text-xs font-bold ${status.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+              {status.message}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+              <Lock size={12} /> Current Password
+            </label>
+            <div className="relative">
+              <input
+                type={showCurrentPassword ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-300"
+              >
+                {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+              <Lock size={12} /> New Password
+            </label>
+            <div className="relative">
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all"
+                required
+                minLength={6}
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-300"
+              >
+                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest flex items-center gap-2">
+              <Lock size={12} /> Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={updatePasswordMutation.isPending}
+            className="w-full bg-[#830e4c] text-white py-4 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 transition-all disabled:opacity-50"
+          >
+            {updatePasswordMutation.isPending ? 'Updating...' : 'Update Password'}
+          </button>
+        </form>
+      </div>
+
+      <div className="space-y-4">
+        <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Security Options</label>
+        <div className="bg-white border border-neutral-100 rounded-[2rem] p-6 space-y-6">
+          <div className="flex items-center justify-between opacity-40">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-neutral-100 text-neutral-400 rounded-2xl">
+                <SmartphoneNfc size={22} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-neutral-900 tracking-tight">Two-Factor Auth</h4>
+                <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest mt-1">Coming Soon</p>
+              </div>
+            </div>
+            <CustomToggle active={false} onClick={() => { }} />
+          </div>
+          <div className="h-px bg-neutral-50" />
+          <div className="flex items-center justify-between opacity-40">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-neutral-100 text-neutral-400 rounded-2xl">
+                <Lock size={22} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-neutral-900 tracking-tight">Biometric Login</h4>
+                <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest mt-1">Coming Soon</p>
+              </div>
+            </div>
+            <CustomToggle active={false} onClick={() => { }} />
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -709,62 +857,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
       case 'payments':
         return <PaymentSettingsView />;
       case 'security':
-        return (
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Authentication</label>
-              <div className="bg-white border border-neutral-100 rounded-[2rem] p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                      <SmartphoneNfc size={22} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-neutral-900 tracking-tight">Two-Factor Auth</h4>
-                      <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1 flex items-center gap-1">
-                        <Check size={10} strokeWidth={4} /> Enabled
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight size={18} className="text-neutral-200" />
-                </div>
-                <div className="h-px bg-neutral-50" />
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-[#830e4c1a] text-[#830e4c] rounded-2xl">
-                      <Lock size={22} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-neutral-900 tracking-tight">Biometric Login</h4>
-                      <p className="text-[9px] font-black text-neutral-300 uppercase tracking-widest mt-1">FaceID or Fingerprint</p>
-                    </div>
-                  </div>
-                  <CustomToggle active={true} onClick={() => { }} />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Active Sessions</label>
-              <div className="bg-white border border-neutral-100 rounded-[2rem] p-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-neutral-50 flex items-center justify-center text-neutral-400">
-                    <Smartphone size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-black text-neutral-900 tracking-tight">iPhone 15 Pro</h4>
-                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mt-1">Current Device</p>
-                  </div>
-                </div>
-                <span className="text-[8px] font-black text-neutral-300 uppercase tracking-widest px-2 py-1 bg-neutral-50 rounded-lg">Lagos, NG</span>
-              </div>
-            </div>
-
-            <button className="w-full py-5 bg-[#830e4c] text-white rounded-[2rem] font-black uppercase tracking-[0.25em] text-[10px] shadow-xl active:scale-95 transition-all">
-              Change Login Password
-            </button>
-          </div>
-        );
+        return <SecuritySettingsView />;
       case 'history':
         return (
           <div className="space-y-4">

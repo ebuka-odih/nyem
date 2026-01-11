@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getStoredToken, removeToken } from '../utils/api';
-import { apiFetch } from '../utils/api';
+import { getStoredToken, removeToken, storeToken, storeUser, apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 
 export type AuthState = 'welcome' | 'login' | 'register' | 'otp' | 'forgot' | 'authenticated' | 'discover';
@@ -20,6 +19,38 @@ export const useAuth = () => {
 
   const [tempUserEmail, setTempUserEmail] = useState("");
   const [tempRegisterData, setTempRegisterData] = useState<{ name: string; password: string } | null>(null);
+
+  // Handle Google Auth redirect callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const googleAuthSuccess = urlParams.get('google_auth') === 'success';
+    const token = urlParams.get('token');
+    const newUser = urlParams.get('new_user') === 'true';
+
+    if (googleAuthSuccess && token) {
+      console.log('[Auth] Google Auth Success redirect detected');
+      storeToken(token);
+
+      // Fetch user profile to get full user data
+      const fetchProfile = async () => {
+        try {
+          const response = await apiFetch(ENDPOINTS.profile.me, { token });
+          const user = response.user || response.data?.user;
+          if (user) {
+            storeUser(user);
+            setAuthState('discover');
+
+            // Clean up URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } catch (error) {
+          console.error('[Auth] Failed to fetch profile after Google redirect:', error);
+        }
+      };
+
+      fetchProfile();
+    }
+  }, []);
 
   // Validate existing auth token on mount (runs in background)
   useEffect(() => {

@@ -451,6 +451,7 @@ class AuthController extends Controller
             }
 
             // Validate state (CSRF protection)
+            $state = $request->get('state');
             $storedState = session('google_oauth_state');
             if ($state && $storedState && $state !== $storedState) {
                 Log::warning('Google OAuth state mismatch', [

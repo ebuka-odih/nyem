@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Mail, Lock, ArrowRight, Chrome } from 'lucide-react';
 import { apiFetch, storeToken, storeUser } from '../utils/api';
@@ -15,7 +15,71 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    // Only initialize if the script is loaded and client ID is available
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '335759882370-olmomtjn2n2q97sujehp3rpknp6jlk2h.apps.googleusercontent.com';
+
+    if (window.google && window.google.accounts) {
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleAuthResponse,
+        cancel_on_tap_outside: true,
+      });
+    }
+  }, []);
+
+  const handleGoogleAuthResponse = async (response: any) => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      console.log('[Google Auth] Received response:', response);
+
+      const res = await apiFetch<{ user: any; token: string }>(
+        ENDPOINTS.auth.google,
+        {
+          method: 'POST',
+          body: {
+            id_token: response.credential,
+          },
+        }
+      );
+
+      // Store token and user
+      const token = res.token;
+      const user = res.user || res.data?.user;
+
+      if (!token || !user) {
+        throw new Error('Invalid response from server');
+      }
+
+      storeToken(token);
+      storeUser(user);
+
+      // Request location permission and store location (non-blocking)
+      requestAndStoreLocation(token);
+
+      // Call onLogin callback to update parent state
+      onLogin();
+    } catch (err: any) {
+      setError(err.message || 'Google login failed. Please try again.');
+      console.error('Google login error:', err);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    if (window.google && window.google.accounts) {
+      window.google.accounts.id.prompt();
+    } else {
+      setError('Google Sign-In is not available. Please try again later.');
+    }
+  };
 
   // Request and store user location after login
   const requestAndStoreLocation = async (token: string) => {
@@ -112,7 +176,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -135,8 +199,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Email Address</label>
           <div className="relative">
             <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-[#830e4c1a] text-[#830e4c]" size={18} />
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="alex@example.com"
@@ -148,7 +212,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
         <div className="space-y-2">
           <div className="flex justify-between items-center px-1">
             <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest">Password</label>
-            <button 
+            <button
               onClick={onGoToForgot}
               className="text-[10px] font-black text-[#830e4c] uppercase tracking-widest"
             >
@@ -157,8 +221,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
           </div>
           <div className="relative">
             <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-[#830e4c1a] text-[#830e4c]" size={18} />
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -175,7 +239,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
       )}
 
       <div className="space-y-4">
-        <button 
+        <button
           onClick={handleLogin}
           disabled={loading}
           className="w-full bg-[#830e4c] text-white py-6 rounded-full font-black uppercase tracking-[0.3em] text-[11px] shadow-xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -191,9 +255,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
           <span className="relative px-4 bg-white text-[9px] font-black text-neutral-300 uppercase tracking-widest">Or continue with</span>
         </div>
 
-        <button className="w-full bg-white border border-neutral-200 text-neutral-900 py-5 rounded-full font-black uppercase tracking-[0.2em] text-[11px] shadow-sm active:scale-95 transition-all flex items-center justify-center gap-3">
+        <button
+          onClick={handleGoogleLogin}
+          disabled={loading || googleLoading}
+          className="w-full bg-white border border-neutral-200 text-neutral-900 py-5 rounded-full font-black uppercase tracking-[0.2em] text-[11px] shadow-sm active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+        >
           <Chrome size={18} className="text-[#830e4c]" />
-          Google Account
+          {googleLoading ? 'Connecting...' : 'Google Account'}
         </button>
       </div>
 
@@ -201,7 +269,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
         <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">
           New to Nyem? <button onClick={onGoToRegister} className="text-[#830e4c]">Join the community</button>
         </p>
-        <button 
+        <button
           onClick={onSkip}
           className="text-[10px] font-black text-neutral-300 uppercase tracking-widest hover:text-[#830e4c] transition-colors"
         >

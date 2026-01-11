@@ -62,3 +62,9 @@ export const useVerifyBank = () => {
             fetcher(ENDPOINTS.profile.verifyBank, { method: 'POST', body: data }),
     });
 };
+
+export const useUpdatePassword = () => {
+    return useMutation({
+        mutationFn: (data: any) => fetcher(ENDPOINTS.profile.updatePassword, { method: 'PUT', body: data }),
+    });
+};
