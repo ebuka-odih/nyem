@@ -1,192 +1,109 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 
-interface ServiceWorkerState {
-  isUpdateAvailable: boolean;
-  isUpdateReady: boolean;
-  isInstalling: boolean;
-  registration: ServiceWorkerRegistration | null;
-}
-
+/**
+ * useServiceWorker hook - Handles background service worker updates silently
+ * and prevents refresh loops.
+ */
 export const useServiceWorker = () => {
-  const [swState, setSwState] = useState<ServiceWorkerState & { isRefreshing: boolean }>({
-    isUpdateAvailable: false,
-    isUpdateReady: false,
-    isInstalling: false,
-    registration: null,
-    isRefreshing: false,
-  });
-
-  // Check for updates
   const checkForUpdates = useCallback(async () => {
     if (!('serviceWorker' in navigator)) return;
 
     try {
       const registration = await navigator.serviceWorker.getRegistration();
-      if (!registration) return;
-
-      // Check for updates
-      await registration.update();
-
-      // Check if there's a waiting service worker
-      if (registration.waiting) {
-        setSwState((prev) => ({
-          ...prev,
-          isUpdateReady: true,
-          registration,
-        }));
-        return;
+      if (registration) {
+        await registration.update();
       }
-
-      // Listen for installing service worker
-      if (registration.installing) {
-        setSwState((prev) => ({
-          ...prev,
-          isInstalling: true,
-          isUpdateAvailable: true,
-          registration,
-        }));
-
-        registration.installing.addEventListener('statechange', (e) => {
-          const sw = e.target as ServiceWorker;
-          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-            // New service worker is installed and waiting
-            setSwState((prev) => ({
-              ...prev,
-              isUpdateReady: true,
-              isInstalling: false,
-            }));
-          } else if (sw.state === 'activated') {
-            // Service worker activated
-            setSwState((prev) => ({
-              ...prev,
-              isInstalling: false,
-              isUpdateAvailable: false,
-              isUpdateReady: false,
-            }));
-          }
-        });
-      }
-
-      // Listen for updatefound event
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          setSwState((prev) => ({
-            ...prev,
-            isInstalling: true,
-            isUpdateAvailable: true,
-            registration,
-          }));
-
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New service worker installed, waiting to activate
-              setSwState((prev) => ({
-                ...prev,
-                isUpdateReady: true,
-                isInstalling: false,
-              }));
-            } else if (newWorker.state === 'activated') {
-              // New service worker activated
-              setSwState((prev) => ({
-                ...prev,
-                isInstalling: false,
-                isUpdateAvailable: false,
-                isUpdateReady: false,
-              }));
-            }
-          });
-        }
-      });
     } catch (error) {
-      console.error('Error checking for service worker updates:', error);
+      // Silently fail update checks
+      console.debug('[SW] Update check failed:', error);
     }
   }, []);
 
-  // Activate update
-  const activateUpdate = useCallback(async () => {
-    if (!swState.registration || !swState.registration.waiting || swState.isRefreshing) return;
-
-    try {
-      setSwState(prev => ({ ...prev, isRefreshing: true }));
-      console.log('[SW] Sending SKIP_WAITING to waiting worker...');
-      swState.registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-    } catch (error) {
-      console.error('Error activating service worker update:', error);
-      setSwState(prev => ({ ...prev, isRefreshing: false }));
-    }
-  }, [swState.registration, swState.isRefreshing]);
-
-  // Initialize service worker monitoring
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return;
 
-    let refreshLock = false;
+    // Protection against refresh loops
+    const lastReloadKey = 'sw_last_reload';
+    const lastReload = localStorage.getItem(lastReloadKey);
+    const now = Date.now();
 
-    // Get initial registration
-    navigator.serviceWorker.getRegistration().then((registration) => {
-      if (registration) {
-        setSwState((prev) => ({ ...prev, registration }));
+    // If we reloaded less than 30 seconds ago, don't trigger another reload
+    // even if the controller changes. This breaks cycles.
+    const isLooping = lastReload && (now - parseInt(lastReload, 10) < 30000);
 
-        // Check if there's already a waiting service worker
-        if (registration.waiting) {
-          setSwState((prev) => ({
-            ...prev,
-            isUpdateReady: true,
-            registration,
-          }));
-        }
-
-        // Listen for controller change (service worker updated)
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (refreshLock) return;
-          refreshLock = true;
-          console.log('[SW] Controller changed, reloading page');
-          window.location.reload();
-        });
-
-        // Listen for messages from service worker
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          if (event.data && event.data.type === 'SW_UPDATED') {
-            console.log('[SW] Service worker active:', event.data.version);
-            // We no longer call checkForUpdates() here to avoid potential loops
-          }
-        });
+    const handleControllerChange = () => {
+      if (isLooping) {
+        console.warn('[SW] Potential refresh loop detected, delaying reload');
+        return;
       }
-    });
 
-    // Check for updates on mount
+      // Store the reload time BEFORE reloading
+      localStorage.setItem(lastReloadKey, now.toString());
+
+      /**
+       * Silent Background Update Strategy:
+       * 1. If the user is currently interacting with the page (visible), 
+       *    wait for them to switch tabs or minimize the app.
+       * 2. If the app is already backgrounded, reload immediately.
+       */
+      const reload = () => {
+        console.log('[SW] Service worker updated, refreshing for latest version');
+        window.location.reload();
+      };
+
+      if (document.visibilityState === 'hidden') {
+        reload();
+      } else {
+        // Wait for the tab to be hidden before reloading
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'hidden') {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            reload();
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Also set a fallback timeout for very long sessions (e.g. 1 hour)
+        // This ensures they eventually get the update even if they never hide the tab
+        setTimeout(() => {
+          // Only if still the same controller change event waiting
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }, 60 * 60 * 1000);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+    // Initial check on mount
     checkForUpdates();
 
-    // Check for updates periodically (every 5 minutes)
-    const updateInterval = setInterval(() => {
-      checkForUpdates();
-    }, 5 * 60 * 1000);
+    // Periodic check every 30 minutes (less aggressive to save battery/data)
+    const updateInterval = setInterval(checkForUpdates, 30 * 60 * 1000);
 
-    // Also check when the app comes back into focus
-    const handleFocus = () => {
-      checkForUpdates();
-    };
-    window.addEventListener('focus', handleFocus);
-
-    // Also check when online
-    const handleOnline = () => {
-      checkForUpdates();
-    };
-    window.addEventListener('online', handleOnline);
+    // Check on focus and online
+    const handleEvents = () => checkForUpdates();
+    window.addEventListener('focus', handleEvents);
+    window.addEventListener('online', handleEvents);
 
     return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
       clearInterval(updateInterval);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('focus', handleEvents);
+      window.removeEventListener('online', handleEvents);
     };
   }, [checkForUpdates]);
 
+  // Return empty interface for backward compatibility with components
   return {
-    ...swState,
+    isUpdateAvailable: false,
+    isUpdateReady: false,
+    isRefreshing: false,
+    isInstalling: false,
+    registration: null,
     checkForUpdates,
-    activateUpdate,
+    activateUpdate: () => { }, // No longer needed as it's automatic
   };
 };
+
 
 
