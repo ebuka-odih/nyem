@@ -3,26 +3,12 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-    X,
-    MapPin,
-    BadgeCheck,
-    Share2,
-    Heart,
-    UserPlus,
-    MessageSquare,
-    Star,
-    Zap,
-    Package,
-    ChevronLeft,
-    MoreVertical
-} from 'lucide-react';
+import { Phone, X, MapPin, BadgeCheck, Share2, Heart, UserPlus, MessageSquare, Star, Zap, Package, ChevronLeft, MoreVertical } from 'lucide-react';
 import { fetcher } from '../hooks/api/fetcher';
 import { apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { transformListingToProduct } from '../utils/productTransformers';
 import { Product } from '../types';
-import { BottomNav } from '../components/BottomNav';
 import { useAuth } from '../hooks/useAuth';
 
 export const SellerProfilePage: React.FC = () => {
@@ -37,6 +23,16 @@ export const SellerProfilePage: React.FC = () => {
     const [rating, setRating] = React.useState(0);
     const [comment, setComment] = React.useState('');
     const [isSubmitting, setIsSubmitting] = React.useState(false);
+    const [showCallButton, setShowCallButton] = React.useState(false);
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const scrollTop = e.currentTarget.scrollTop;
+        if (scrollTop > 150) {
+            setShowCallButton(true);
+        } else {
+            setShowCallButton(false);
+        }
+    };
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['seller-profile', id],
@@ -211,6 +207,7 @@ export const SellerProfilePage: React.FC = () => {
         location: (typeof user.city === 'object' && user.city !== null ? user.city.name : user.city) || 'Lagos, Nigeria',
         bio: user.bio || 'Product Designer & Vintage Collector',
         verified: !!user.phone_verified_at,
+        phone: user.phone || null,
     };
 
     const stats = [
@@ -233,7 +230,10 @@ export const SellerProfilePage: React.FC = () => {
                 </header>
 
                 <main className="flex-1 relative overflow-hidden flex flex-col min-h-0 bg-neutral-50/50">
-                    <div className="flex-1 relative w-full mx-auto px-4 flex flex-col overflow-y-auto no-scrollbar pt-6 pb-10">
+                    <div
+                        onScroll={handleScroll}
+                        className="flex-1 relative w-full mx-auto px-4 flex flex-col overflow-y-auto no-scrollbar pt-6 pb-12"
+                    >
                         <div className="flex flex-col gap-8">
                             {/* Combined Master Card */}
                             <div className="bg-white rounded-[3rem] shadow-xl border border-neutral-100 overflow-hidden">
@@ -436,10 +436,28 @@ export const SellerProfilePage: React.FC = () => {
                         </div>
                     </div>
                 </main>
-                <div className="shrink-0 z-[130] w-full mt-auto">
-                    <BottomNav />
-                </div>
             </div>
+
+            <AnimatePresence>
+                {showCallButton && vendor.phone && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5, y: 50 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.5, y: 50 }}
+                        className="fixed bottom-10 z-[150] w-full flex justify-center pointer-events-none"
+                    >
+                        <motion.a
+                            href={`tel:${vendor.phone}`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="pointer-events-auto bg-[#830e4c] text-white px-8 py-4 rounded-full font-black uppercase tracking-[0.2em] text-[11px] shadow-[0_15px_35px_rgba(131,14,76,0.4)] flex items-center gap-3 transition-colors hover:bg-[#a0125d]"
+                        >
+                            <Phone size={16} fill="white" />
+                            Call Seller
+                        </motion.a>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {isReviewModalOpen && (

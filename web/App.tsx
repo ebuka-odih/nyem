@@ -23,6 +23,7 @@ import { BottomNav } from './components/BottomNav';
 import { useAuth } from './hooks/useAuth';
 import { useLocation as useLocationHook } from './hooks/useLocation';
 import { useWishlist } from './hooks/useWishlist';
+import { queryClient } from './hooks/api/queryClient';
 import { useServiceWorker } from './hooks/useServiceWorker';
 import { getStoredUser } from './utils/api';
 import { ServiceWorkerUpdate } from './components/ServiceWorkerUpdate';
@@ -300,6 +301,7 @@ const AuthRoutes: React.FC = () => {
     setTempUserEmail,
     tempRegisterData,
     setTempRegisterData,
+    clearSessionData,
   } = useAuth();
 
   const {
@@ -343,6 +345,8 @@ const AuthRoutes: React.FC = () => {
           {authState === 'login' && (
             <LoginPage
               onLogin={async () => {
+                // Clear any leftover data from previous sessions
+                clearSessionData();
                 await checkLocationAndShowModal();
                 navigate('/discover');
               }}
@@ -368,6 +372,8 @@ const AuthRoutes: React.FC = () => {
               name={tempRegisterData?.name}
               password={tempRegisterData?.password}
               onVerify={async () => {
+                // Clear any leftover data from previous sessions
+                clearSessionData();
                 setTempRegisterData(null);
                 await checkLocationAndShowModal();
                 localStorage.removeItem('has_seen_welcome_card');

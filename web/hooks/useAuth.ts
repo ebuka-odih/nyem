@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getStoredToken, removeToken, storeToken, storeUser, apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
+import { queryClient } from './api/queryClient';
 
 export type AuthState = 'welcome' | 'login' | 'register' | 'otp' | 'forgot' | 'authenticated' | 'discover';
 
@@ -132,7 +133,23 @@ export const useAuth = () => {
   const hasValidToken = localStorage.getItem('auth_token') !== null;
   const isAuthenticated = authState === 'authenticated' && hasValidToken;
 
+  const clearSessionData = () => {
+    // Clear all React Query cached data
+    queryClient.clear();
+
+    // Clear persisted discovery state (filters and swipe history)
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('discover_state_')) {
+        localStorage.removeItem(key);
+      }
+    });
+
+    // Reset Welcome Card status for the new session
+    localStorage.removeItem('has_seen_welcome_card');
+  };
+
   const signOut = () => {
+    clearSessionData();
     removeToken();
     setAuthState('welcome');
   };
@@ -146,7 +163,8 @@ export const useAuth = () => {
     setTempRegisterData,
     hasValidToken,
     isAuthenticated,
-    signOut
+    signOut,
+    clearSessionData
   };
 };
 

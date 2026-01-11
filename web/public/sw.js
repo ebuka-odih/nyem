@@ -6,7 +6,7 @@ importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
 
 // Service Worker Version - Auto-updated on each build by vite-plugin-sw-version
 // This ensures cache invalidation when new builds are deployed
-const SW_VERSION = 'v3-1768158045943';
+const SW_VERSION = 'v3-1768166519129';
 const STATIC_CACHE = `nyem-static-${SW_VERSION}`;
 const RUNTIME_CACHE = `nyem-runtime-${SW_VERSION}`;
 const API_CACHE = `nyem-api-${SW_VERSION}`;
