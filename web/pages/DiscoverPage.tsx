@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Compass, RotateCcw, MapPin, Zap } from 'lucide-react';
+import { Compass, RotateCcw, MapPin, Zap, Star } from 'lucide-react';
 import { Product, Vendor } from '../types';
 import { fetcher } from '../hooks/api/fetcher';
 import { SwipeCard } from '../components/SwipeCard';
@@ -446,18 +446,20 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
             initial={{ opacity: 0, y: 50, x: '-50%', scale: 0.9 }}
             animate={{ opacity: 1, y: 0, x: '-50%', scale: 1 }}
             exit={{ opacity: 0, y: 40, x: '-50%', scale: 0.9 }}
-            className="fixed bottom-36 left-1/2 -translate-x-1/2 w-[85%] max-w-[340px] bg-white/20 backdrop-blur-[40px] px-5 py-4 rounded-[2.5rem] flex items-center gap-4 z-[200] shadow-[0_25px_60px_-12px_rgba(0,0,0,0.12)] border border-white/40 ring-1 ring-black/5"
+            className="fixed bottom-36 left-1/2 -translate-x-1/2 w-[85%] max-w-[340px] bg-[#830e4c] px-5 py-4 rounded-[2.5rem] flex items-center gap-4 z-[200] shadow-[0_25px_60px_-12px_rgba(131,14,76,0.3)] border border-white/10"
           >
-            <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-md flex-shrink-0 border border-white/50">
+            <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-sm flex-shrink-0 border border-white/20">
               <img src={lastSparkedItem.images[0]} className="w-full h-full object-cover" />
             </div>
             <div className="flex flex-col flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Zap size={10} className="text-[#29B3F0]" fill="currentColor" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#29B3F0] leading-none">Super Interest Sent!</span>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="bg-white/20 p-1.5 rounded-full">
+                  <Star size={12} className="text-white" fill="currentColor" strokeWidth={0} />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80 leading-none">Super Interest Sent</span>
               </div>
-              <span className="text-[11px] font-black uppercase tracking-tight text-neutral-900 truncate">
-                Request sent for {lastSparkedItem.name}
+              <span className="text-[11px] font-black uppercase tracking-tight text-white truncate">
+                {lastSparkedItem.name}
               </span>
             </div>
           </motion.div>
