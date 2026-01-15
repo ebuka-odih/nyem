@@ -312,6 +312,7 @@ class ConversationController extends Controller
                             'title' => $myListing->title,
                             'photo' => !empty($myListing->photos) ? $myListing->photos[0] : null,
                             'price' => $myListing->price,
+                            'user_id' => $myListing->user_id, // Seller ID - who owns the listing
                         ];
                     }
                 }
@@ -331,6 +332,7 @@ class ConversationController extends Controller
                             'title' => $listing->title,
                             'photo' => !empty($listing->photos) ? $listing->photos[0] : null,
                             'price' => $listing->price,
+                            'user_id' => $listing->user_id, // Seller ID - who owns the listing
                         ];
                     }
                 }

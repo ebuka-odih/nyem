@@ -91,7 +91,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const createEscrowMutation = useCreateEscrow();
 
   const [newMessage, setNewMessage] = useState("");
-  const [isEscrowActive, setIsEscrowActive] = useState(true); // Default to TRUE so it's on by default
+  const [isEscrowActive, setIsEscrowActive] = useState(false); // Default FALSE - seller must activate
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [escrowCreating, setEscrowCreating] = useState(false);
@@ -154,10 +154,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const otherUser = chat.other_user;
 
   // Determine if current user is buyer or seller
-  // Buyer: current user is NOT the listing owner
-  // Seller: current user IS the listing owner
+  // Seller: current user owns the listing (user_id from listing matches current user)
+  // Buyer: current user does NOT own the listing
   const isSeller = chatListingInfo?.sellerId && String(currentUserId) === String(chatListingInfo.sellerId);
   const isBuyer = chatListingInfo?.sellerId && String(currentUserId) !== String(chatListingInfo.sellerId);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('=== Role Detection Debug ===');
+    console.log('currentUserId:', currentUserId);
+    console.log('chatListingInfo.sellerId:', chatListingInfo?.sellerId);
+    console.log('isSeller:', isSeller);
+    console.log('isBuyer:', isBuyer);
+  }, [currentUserId, chatListingInfo, isSeller, isBuyer]);
 
 
   useEffect(() => {
@@ -198,7 +207,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         image: listingData.photo || null,
         price: listingData.price ? `₦${Number(listingData.price).toLocaleString()}` : undefined,
         priceValue: listingData.price ? Number(listingData.price) : undefined,
-        sellerId: listingData.user?.id || listingData.user_id, // REMOVED unsafe fallback to otherUser.id
+        sellerId: listingData.user_id || listingData.user?.id, // Use user_id from backend listing context
       };
 
       if (!newInfo.sellerId) {
