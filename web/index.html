@@ -79,6 +79,19 @@
     });
   </script>
 
+  <!-- Pusher Beams -->
+  <script src="https://js.pusher.com/beams/2.1.0/push-notifications-cdn.js"></script>
+  <script>
+    const beamsClient = new PusherPushNotifications.Client({
+      instanceId: 'eda7c812-4ba4-4c42-b676-b3f207ed4d9f',
+    });
+
+    beamsClient.start()
+      .then(() => beamsClient.addDeviceInterest('hello'))
+      .then(() => console.log('Successfully registered and subscribed to Pusher Beams!'))
+      .catch(console.error);
+  </script>
+
   <!-- PushAlert Unified Code - COMMENTED OUT FOR TESTING ONESIGNAL -->
   <!-- Load PushAlert after service worker is ready -->
   <!--

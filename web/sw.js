@@ -1,8 +1,7 @@
 // Service Worker for Nyem PWA
 // Import OneSignal service worker first (must be before other imports)
 importScripts("https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js");
-// Import PushAlert service worker - COMMENTED OUT FOR TESTING
-// importScripts("https://cdn.pushalert.co/sw-86989.js");
+importScripts("https://js.pusher.com/beams/service-worker.js");
 
 // Service Worker Version - Auto-updated on each build by vite-plugin-sw-version
 // This ensures cache invalidation when new builds are deployed

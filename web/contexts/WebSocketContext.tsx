@@ -1,10 +1,16 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
 import { useProfile } from '../hooks/api/useProfile';
+import { getStoredToken } from '../utils/api';
+
+// Make Pusher available for Echo
+(window as any).Pusher = Pusher;
 
 interface WebSocketContextType {
     isConnected: boolean;
     subscribe: (channel: string, callback: (data: any) => void) => () => void;
+    echo?: Echo<any>;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
@@ -12,121 +18,113 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(undefin
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { data: profile } = useProfile();
     const [isConnected, setIsConnected] = useState(false);
-    const socketRef = useRef<WebSocket | null>(null);
-    const subscribersRef = useRef<Map<string, Set<(data: any) => void>>>(new Map());
+    const echoRef = useRef<Echo<any> | null>(null);
 
     const connect = useCallback(() => {
-        if (!profile?.id || socketRef.current?.readyState === WebSocket.OPEN) return;
+        if (!profile?.id || echoRef.current) return;
 
-        const hostname = window.location.hostname;
-        const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168');
+        const token = getStoredToken();
+        if (!token) {
+            console.warn('[WebSocket] No auth token available, skipping Echo connection');
+            return;
+        }
 
-        // If local, use the local port. 
-        // If production, try to connect to the same host but on the socket port or a proxied path.
-        const wsUrl = isLocal
-            ? `ws://${hostname}:6002`
-            : `wss://${hostname}/app/ws`;
+        const appKey = import.meta.env.VITE_REVERB_APP_KEY || 'XXtWgUw0t6Lf0kBvOmu0';
+        const host = import.meta.env.VITE_REVERB_HOST || 'nyem.gnosisbrand.com';
+        const port = import.meta.env.VITE_REVERB_PORT || 443;
+        const scheme = import.meta.env.VITE_REVERB_SCHEME || 'https';
+        const apiBase = import.meta.env.VITE_API_BASE || 'https://api.nyem.online/backend/public/api';
 
-        console.log('[WebSocket] Connecting to:', wsUrl);
+        console.log('[WebSocket] Connecting via Echo to:', host);
 
-        const socket = new WebSocket(wsUrl);
+        try {
+            const echo = new Echo({
+                broadcaster: 'reverb',
+                key: appKey,
+                wsHost: host,
+                wsPort: port,
+                wssPort: port,
+                forceTLS: scheme === 'https',
+                enabledTransports: ['ws', 'wss'],
+                authEndpoint: `${apiBase}/broadcasting/auth`,
+                auth: {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json',
+                    },
+                },
+            });
 
-        socket.onopen = () => {
-            console.log('[WebSocket] Connected');
-            setIsConnected(true);
+            echo.connector.pusher.connection.bind('connected', () => {
+                console.log('[WebSocket] Echo Connected');
+                setIsConnected(true);
+            });
 
-            // Authenticate
-            socket.send(JSON.stringify({
-                type: 'auth',
-                userId: profile.id
-            }));
-        };
+            echo.connector.pusher.connection.bind('disconnected', () => {
+                console.log('[WebSocket] Echo Disconnected');
+                setIsConnected(false);
+            });
 
-        socket.onmessage = (event) => {
-            try {
-                const payload = JSON.parse(event.data);
-                console.log('[WebSocket] Raw Payload Received:', payload);
+            echo.connector.pusher.connection.bind('error', (err: any) => {
+                console.error('[WebSocket] Echo Error:', err);
+            });
 
-                const { type, data } = payload;
-
-                if (type === 'message.sent') {
-                    const conversationId = data.conversation_id;
-                    const channel = `conversation.${conversationId}`;
-
-                    console.log(`[WebSocket] Looking for subscribers on channel: ${channel}`);
-
-                    const callbacks = subscribersRef.current.get(channel);
-                    if (callbacks) {
-                        callbacks.forEach(callback => callback(data.message));
-                    }
-
-                    // Also notify user channel
-                    const userChannel = `user.${profile.id}`;
-                    const userCallbacks = subscribersRef.current.get(userChannel);
-                    if (userCallbacks) {
-                        userCallbacks.forEach(callback => callback(payload));
-                    }
-                } else if (type === 'escrow.toggle') {
-                    const channel = 'escrow.toggle';
-                    console.log(`[WebSocket] Escrow toggle received, notifying subscribers on channel: ${channel}`);
-                    const callbacks = subscribersRef.current.get(channel);
-                    if (callbacks) {
-                        callbacks.forEach(callback => callback(data));
-                    }
-                } else if (type === 'auth_success') {
-                    console.log('[WebSocket] Successfully authenticated with server');
-                }
-
-            } catch (error) {
-                console.error('[WebSocket] Error processing message:', error);
-            }
-        };
-
-        socket.onclose = () => {
-            console.log('[WebSocket] Disconnected');
-            setIsConnected(false);
-            socketRef.current = null;
-
-            // Reconnect after 3 seconds
-            setTimeout(connect, 3000);
-        };
-
-        socket.onerror = (error) => {
-            console.error('[WebSocket] Error:', error);
-            socket.close();
-        };
-
-        socketRef.current = socket;
+            echoRef.current = echo;
+        } catch (error) {
+            console.error('[WebSocket] Failed to initialize Echo:', error);
+        }
     }, [profile?.id]);
 
     useEffect(() => {
         connect();
         return () => {
-            if (socketRef.current) {
-                socketRef.current.close();
+            if (echoRef.current) {
+                console.log('[WebSocket] Disconnecting Echo');
+                echoRef.current.disconnect();
+                echoRef.current = null;
             }
         };
     }, [connect]);
 
-    const subscribe = useCallback((channel: string, callback: (data: any) => void) => {
-        if (!subscribersRef.current.has(channel)) {
-            subscribersRef.current.set(channel, new Set());
+    const subscribe = useCallback((channelName: string, callback: (data: any) => void) => {
+        if (!echoRef.current) {
+            console.warn('[WebSocket] Echo not initialized, cannot subscribe to:', channelName);
+            return () => { };
         }
-        subscribersRef.current.get(channel)?.add(callback);
+
+        console.log(`[WebSocket] Subscribing to: ${channelName}`);
+
+        let channel: any;
+        if (channelName.startsWith('user.') || channelName.startsWith('conversation.')) {
+            channel = echoRef.current.private(channelName);
+        } else {
+            channel = echoRef.current.channel(channelName);
+        }
+
+        // Handle common event for both individual and conversation channels
+        channel.listen('.message.sent', (data: any) => {
+            console.log(`[WebSocket][${channelName}] Received message:`, data);
+            callback(data.message || data);
+        });
+
+        // Handle escrow toggle specifically
+        if (channelName === 'escrow.toggle' || channelName.startsWith('conversation.')) {
+            channel.listen('.escrow.toggle', (data: any) => {
+                console.log(`[WebSocket][${channelName}] Received escrow toggle:`, data);
+                callback(data);
+            });
+        }
 
         return () => {
-            const subscribers = subscribersRef.current.get(channel);
-            if (subscribers) {
-                subscribers.delete(callback);
-                if (subscribers.size === 0) {
-                    subscribersRef.current.delete(channel);
-                }
+            console.log(`[WebSocket] Unsubscribing from: ${channelName}`);
+            if (echoRef.current) {
+                echoRef.current.leave(channelName);
             }
         };
     }, []);
 
     return (
-        <WebSocketContext.Provider value={{ isConnected, subscribe }}>
+        <WebSocketContext.Provider value={{ isConnected, subscribe, echo: echoRef.current || undefined }}>
             {children}
         </WebSocketContext.Provider>
     );
