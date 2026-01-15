@@ -95,7 +95,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [escrowCreating, setEscrowCreating] = useState(false);
-  const [chatListingInfo, setChatListingInfo] = useState<{ title: string; image?: string; price?: string; priceValue?: number } | null>(null);
+  const [chatListingInfo, setChatListingInfo] = useState<{ title: string; image?: string; price?: string; priceValue?: number; sellerId?: string | number } | null>(null);
 
   const queryClient = useQueryClient();
   const { subscribe, isConnected } = useWebSocket();
@@ -153,6 +153,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const isMe = (senderId: string) => senderId === currentUserId;
   const otherUser = chat.other_user;
 
+  // Determine if current user is buyer or seller
+  // Buyer: current user is NOT the listing owner
+  // Seller: current user IS the listing owner
+  const isSeller = chatListingInfo?.sellerId && String(currentUserId) === String(chatListingInfo.sellerId);
+  const isBuyer = chatListingInfo?.sellerId && String(currentUserId) !== String(chatListingInfo.sellerId);
+
+
   useEffect(() => {
     refetchMessages();
   }, [chat.conversation_id]);
@@ -191,6 +198,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         image: listingData.photo || null,
         price: listingData.price ? `₦${Number(listingData.price).toLocaleString()}` : undefined,
         priceValue: listingData.price ? Number(listingData.price) : undefined,
+        sellerId: listingData.user?.id || listingData.user_id || otherUser.id,
       };
       console.log('Setting new listing info:', newInfo);
       setChatListingInfo(newInfo);
@@ -235,16 +243,52 @@ export const ChatView: React.FC<ChatViewProps> = ({
     try {
       // Create escrow transaction
       const escrowData = await createEscrowMutation.mutateAsync({
-        seller_id: otherUser.id,
+        seller_id: chatListingInfo.sellerId || otherUser.id,
         amount: chatListingInfo.priceValue,
         description: `Purchase of ${chatListingInfo.title}`,
       });
 
       console.log('Escrow created:', escrowData);
 
-      // TODO: Integrate with Paystack payment gateway
-      // For now, show success message
-      alert(`Escrow created! In production, you would be redirected to Paystack to complete payment of ₦${chatListingInfo.priceValue.toLocaleString()}`);
+      // Get user email from stored user data
+      const storedUser = localStorage.getItem('auth_user');
+      const userEmail = storedUser ? JSON.parse(storedUser).email : 'buyer@nyem.com';
+
+      // Initialize Paystack payment
+      const paymentData = {
+        email: userEmail,
+        amount: chatListingInfo.priceValue * 100, // Paystack expects amount in kobo (smallest currency unit)
+        currency: 'NGN',
+        reference: escrowData.id || `escrow_${Date.now()}`,
+        metadata: {
+          escrow_id: escrowData.id,
+          seller_id: chatListingInfo.sellerId || otherUser.id,
+          listing_title: chatListingInfo.title,
+        },
+      };
+
+      // Get Paystack public key from environment
+      const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_placeholder';
+
+      // Open Paystack payment in new tab
+      const paystackUrl = `https://checkout.paystack.com/pay?` + new URLSearchParams({
+        email: paymentData.email,
+        amount: paymentData.amount.toString(),
+        currency: paymentData.currency,
+        reference: paymentData.reference,
+        publicKey: paystackPublicKey,
+      }).toString();
+
+      // Open in new tab
+      const paymentWindow = window.open(paystackUrl, '_blank');
+
+      if (paymentWindow) {
+        // Show success message
+        alert(`Escrow created! Complete payment in the new tab to secure your purchase.`);
+      } else {
+        // Popup blocked
+        alert(`Escrow created! Please allow popups to complete payment. Reference: ${paymentData.reference}`);
+      }
 
       setIsCheckingOut(false);
     } catch (err: any) {
@@ -312,29 +356,34 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="absolute top-full right-0 mt-2 w-56 bg-white border border-neutral-100 rounded-2xl shadow-2xl z-50 p-2 overflow-hidden"
               >
-                <button
-                  onClick={() => {
-                    setIsEscrowActive(!isEscrowActive);
-                    setShowActionMenu(false);
-                  }}
-                  className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border-2 ${isEscrowActive ? 'bg-[#830e4c] border-[#830e4c] text-white shadow-lg' : 'bg-white border-neutral-50 hover:border-[#830e4c33] text-neutral-700 active:scale-95'}`}
-                >
-                  <div className={`p-1.5 rounded-lg transition-colors ${isEscrowActive ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
-                    <ShieldCheck size={18} strokeWidth={2.5} />
-                  </div>
-                  <div className="flex flex-col items-start">
-                    <span className={`text-[11px] font-black uppercase tracking-widest leading-none ${isEscrowActive ? 'text-white' : 'text-neutral-900'}`}>
-                      {isEscrowActive ? 'Escrow Enabled' : 'Use Escrow'}
-                    </span>
-                    <span className={`text-[8px] font-bold mt-1 uppercase tracking-wider ${isEscrowActive ? 'text-white/40' : 'text-neutral-400'}`}>Secure Protection</span>
-                  </div>
-                  {isEscrowActive ? (
-                    <Check size={14} className="ml-auto text-white" strokeWidth={4} />
-                  ) : (
-                    <ChevronRight size={14} className="ml-auto text-neutral-200" />
-                  )}
-                </button>
-                <div className="h-px bg-neutral-50 my-1 mx-2" />
+                {/* Only show escrow toggle for sellers */}
+                {isSeller && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setIsEscrowActive(!isEscrowActive);
+                        setShowActionMenu(false);
+                      }}
+                      className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border-2 ${isEscrowActive ? 'bg-[#830e4c] border-[#830e4c] text-white shadow-lg' : 'bg-white border-neutral-50 hover:border-[#830e4c33] text-neutral-700 active:scale-95'}`}
+                    >
+                      <div className={`p-1.5 rounded-lg transition-colors ${isEscrowActive ? 'bg-white/20 text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+                        <ShieldCheck size={18} strokeWidth={2.5} />
+                      </div>
+                      <div className="flex flex-col items-start">
+                        <span className={`text-[11px] font-black uppercase tracking-widest leading-none ${isEscrowActive ? 'text-white' : 'text-neutral-900'}`}>
+                          {isEscrowActive ? 'Escrow Enabled' : 'Use Escrow'}
+                        </span>
+                        <span className={`text-[8px] font-bold mt-1 uppercase tracking-wider ${isEscrowActive ? 'text-white/40' : 'text-neutral-400'}`}>Secure Protection</span>
+                      </div>
+                      {isEscrowActive ? (
+                        <Check size={14} className="ml-auto text-white" strokeWidth={4} />
+                      ) : (
+                        <ChevronRight size={14} className="ml-auto text-neutral-200" />
+                      )}
+                    </button>
+                    <div className="h-px bg-neutral-50 my-1 mx-2" />
+                  </>
+                )}
                 <button className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-rose-50 text-rose-500 transition-all active:scale-95">
                   <div className="p-1.5 rounded-lg bg-rose-100/50 text-rose-500">
                     <ShieldAlert size={16} strokeWidth={2.5} />
@@ -372,9 +421,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </div>
       )}
 
-      {/* Escrow Protected Banner */}
+      {/* Escrow Protected Banner - Only show for buyers when seller has enabled escrow */}
       <AnimatePresence>
-        {isEscrowActive && chatListingInfo?.price && (
+        {isEscrowActive && isBuyer && chatListingInfo?.price && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
