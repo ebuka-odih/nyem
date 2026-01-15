@@ -12,7 +12,7 @@ import {
   Send,
   MapPin
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useCategories } from '../hooks/api/useCategories';
@@ -47,6 +47,8 @@ export const UploadPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'collection' | 'new'>('new');
   const [editingItem, setEditingItem] = useState<UserListing | null>(null);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
 
   // Form States
   const [images, setImages] = useState<string[]>([]);
@@ -206,6 +208,17 @@ export const UploadPage: React.FC = () => {
     setPrice("");
     setError(null);
   };
+
+  // Handle auto-edit from URL parameter
+  useEffect(() => {
+    if (editId && myListings.length > 0 && !editingItem) {
+      const itemToEdit = myListings.find(item => String(item.id) === String(editId));
+      if (itemToEdit) {
+        startEdit(itemToEdit);
+        setActiveTab('new');
+      }
+    }
+  }, [editId, myListings, editingItem]);
 
   const handleSubmit = async () => {
     if (!userData?.city_id && !userData?.city) {

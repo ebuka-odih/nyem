@@ -12,6 +12,7 @@ import {
   Bell,
   CreditCard,
   History,
+  Heart,
   ExternalLink,
   Edit3,
   BadgeCheck,
@@ -34,6 +35,7 @@ import {
   Eye,
   EyeOff
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { getStoredUser, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank, useUpdatePassword, useTradeHistory } from '../hooks/api/useProfile';
@@ -97,6 +99,8 @@ interface Drop {
   price: string;
   image: string;
   views: number;
+  likes: number;
+  stars: number;
   status: string;
 }
 
@@ -521,6 +525,7 @@ const SecuritySettingsView: React.FC = () => {
 export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSignOut, onNavigateToUpload }) => {
   const [activeTab, setActiveTab] = useState<'drops' | 'settings'>('drops');
   const [currentView, setCurrentView] = useState<SubPageView>('main');
+  const navigate = useNavigate();
   // React Query Hooks
   const { data: user, isLoading: loading, refetch: refetchUser } = useProfile();
   const { data: transactions = [], isLoading: loadingHistory } = useTradeHistory();
@@ -566,7 +571,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
           name: item.title || 'Untitled Item',
           price: formattedPrice,
           image: primaryImage,
-          views: (item.views_count || item.views || 0),
+          views: (item.views_count || 0),
+          likes: (item.likes_count || 0),
+          stars: (item.stars_count || 0),
           status: item.status === 'active' ? 'Active' : 'Sold'
         };
       });
@@ -1052,7 +1059,11 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   {myDrops.length > 0 ? (
                     <>
                       {myDrops.map((drop) => (
-                        <div key={drop.id} className="bg-white border border-neutral-100 rounded-[2rem] p-3 flex items-center gap-4 group">
+                        <div
+                          key={drop.id}
+                          onClick={() => navigate(`/upload?edit=${drop.id}`)}
+                          className="bg-white border border-neutral-100 rounded-[2rem] p-3 flex items-center gap-4 group cursor-pointer hover:border-[#830e4c1a] hover:shadow-md transition-all"
+                        >
                           <div className="w-20 h-20 rounded-2xl overflow-hidden border border-neutral-100">
                             <img src={drop.image} className="w-full h-full object-cover" alt={drop.name} onError={(e) => {
                               const target = e.target as HTMLImageElement;
@@ -1064,13 +1075,23 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                               <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${drop.status === 'Active' ? 'bg-[#830e4c1a] text-[#830e4c]' : 'bg-neutral-100 text-neutral-400'}`}>
                                 {drop.status}
                               </span>
-                              <span className="text-[8px] font-black text-neutral-300 uppercase tracking-widest">{drop.views} Views</span>
+                              <div className="flex items-center gap-3 mt-1">
+                                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-1.5">
+                                  <Eye size={12} className="text-neutral-400" /> {drop.views}
+                                </span>
+                                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-1.5">
+                                  <Heart size={12} className="text-rose-400" fill={drop.likes > 0 ? "currentColor" : "none"} /> {drop.likes}
+                                </span>
+                                <span className="text-[9px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-1.5">
+                                  <Star size={12} className="text-amber-400" fill={drop.stars > 0 ? "currentColor" : "none"} /> {drop.stars}
+                                </span>
+                              </div>
                             </div>
-                            <h4 className="text-sm font-black text-neutral-900 truncate tracking-tight">{drop.name}</h4>
+                            <h4 className="text-sm font-black text-neutral-900 truncate tracking-tight uppercase">{drop.name}</h4>
                             <p className="text-xs font-black text-[#830e4c] mt-0.5">{drop.price}</p>
                           </div>
-                          <button className="p-3 text-neutral-300 hover:text-neutral-900 transition-colors">
-                            <ChevronRight size={20} strokeWidth={3} />
+                          <button className="p-3 text-neutral-300 group-hover:text-[#830e4c] transition-colors">
+                            <ChevronRight size={22} strokeWidth={3.5} />
                           </button>
                         </div>
                       ))}
