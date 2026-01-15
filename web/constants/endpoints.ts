@@ -23,6 +23,7 @@ export const ENDPOINTS = {
     payments: '/profile/payments',
     getBanks: '/profile/banks',
     verifyBank: '/profile/verify-bank',
+    tradeHistory: '/profile/trade-history',
     show: (id: string | number) => `/profile/${id}`,
   },
   items: {

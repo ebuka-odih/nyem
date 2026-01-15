@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { getStoredUser, getStoredToken } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
-import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank, useUpdatePassword } from '../hooks/api/useProfile';
+import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank, useUpdatePassword, useTradeHistory } from '../hooks/api/useProfile';
 import { useCities, useAreas } from '../hooks/api/useLocations';
 
 const subtleTransition = {
@@ -523,6 +523,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   const [currentView, setCurrentView] = useState<SubPageView>('main');
   // React Query Hooks
   const { data: user, isLoading: loading, refetch: refetchUser } = useProfile();
+  const { data: transactions = [], isLoading: loadingHistory } = useTradeHistory();
   const updateProfileMutation = useUpdateProfile();
   const { data: cities = [], isLoading: loadingCities } = useCities();
 
@@ -628,9 +629,21 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   };
 
   const stats = [
-    { label: 'Deals', value: '24', icon: Package },
-    { label: 'Rating', value: '4.9', icon: Star },
-    { label: 'Drops', value: user?.items_count?.toString() || '0', icon: Zap },
+    {
+      label: 'Deals',
+      value: ((user as any)?.purchases_count || 0) + ((user as any)?.sales_count || 0),
+      icon: Package
+    },
+    {
+      label: 'Rating',
+      value: (user as any)?.reviews_avg_rating ? Number((user as any).reviews_avg_rating).toFixed(1) : '0.0',
+      icon: Star
+    },
+    {
+      label: 'Drops',
+      value: (user as any)?.listings_count?.toString() || user?.items_count?.toString() || '0',
+      icon: Zap
+    },
   ];
 
   const menuItems = [
@@ -861,39 +874,51 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
       case 'history':
         return (
           <div className="space-y-4">
-            {[
-              { id: '1', item: 'Nike Air Max', price: '₦125,000', date: 'Oct 12, 2023', type: 'PURCHASE', img: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=100' },
-              { id: '2', item: 'Sony WH-1000XM5', price: '₦340,000', date: 'Sep 28, 2023', type: 'SALE', img: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=100' },
-              { id: '3', item: 'Coffee Grinder', price: '₦45,000', date: 'Sep 15, 2023', type: 'PURCHASE', img: 'https://images.unsplash.com/photo-1544350285-1811bc3bb970?auto=format&fit=crop&q=80&w=100' }
-            ].map((order) => (
-              <div key={order.id} className="bg-white border border-neutral-100 rounded-[2.5rem] p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden border border-neutral-100 shrink-0">
-                  <img src={order.img} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <div className="flex flex-col">
-                      <span className={`text-[8px] font-black px-2 py-0.5 rounded-full w-fit mb-1 ${order.type === 'SALE' ? 'bg-[#830e4c1a] text-[#830e4c]' : 'bg-emerald-50 text-emerald-600'}`}>
-                        {order.type}
-                      </span>
-                      <h4 className="text-sm font-black text-neutral-900 tracking-tight uppercase truncate">{order.item}</h4>
+            {loadingHistory ? (
+              <div className="p-12 text-center text-neutral-400 text-[10px] font-black uppercase tracking-widest">Loading history...</div>
+            ) : transactions.length > 0 ? (
+              transactions.map((order: any) => (
+                <div key={order.id} className="bg-white border border-neutral-100 rounded-[2.5rem] p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
+                  <div className="w-16 h-16 rounded-2xl overflow-hidden border border-neutral-100 shrink-0 bg-neutral-50 flex items-center justify-center">
+                    {order.listing?.image ? (
+                      <img src={order.listing.image} className="w-full h-full object-cover" alt={order.listing.title} />
+                    ) : (
+                      <Package size={20} className="text-neutral-200" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <div className="flex flex-col">
+                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-full w-fit mb-1 ${order.type === 'SALE' ? 'bg-[#830e4c1a] text-[#830e4c]' : 'bg-emerald-50 text-emerald-600'}`}>
+                          {order.type}
+                        </span>
+                        <h4 className="text-sm font-black text-neutral-900 tracking-tight uppercase truncate">{order.listing?.title || 'Unknown Item'}</h4>
+                      </div>
+                      <span className="text-xs font-black text-neutral-900">{order.price}</span>
                     </div>
-                    <span className="text-xs font-black text-neutral-900">{order.price}</span>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest flex items-center gap-1">
-                      <Clock size={10} /> {order.date}
-                    </p>
-                    <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                      <CheckCircle2 size={10} /> Completed
-                    </span>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-widest flex items-center gap-1">
+                        <Clock size={10} /> {order.date}
+                      </p>
+                      <span className={`text-[9px] font-black uppercase tracking-widest flex items-center gap-1 ${order.status === 'COMPLETED' ? 'text-emerald-600' : 'text-amber-500'}`}>
+                        {order.status === 'COMPLETED' ? <CheckCircle2 size={10} /> : <Clock size={10} />}
+                        {order.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <button className="p-2 text-neutral-200 hover:text-neutral-900 transition-colors">
-                  <ChevronRight size={18} strokeWidth={3} />
-                </button>
+              ))
+            ) : (
+              <div className="py-20 flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-neutral-50 flex items-center justify-center border border-neutral-100 opacity-50">
+                  <History size={24} className="text-neutral-300" />
+                </div>
+                <div className="text-center">
+                  <h4 className="text-sm font-black text-neutral-400 uppercase tracking-widest">No transaction history</h4>
+                  <p className="text-[9px] font-bold text-neutral-300 uppercase tracking-[0.2em] mt-1">Activities will appear here</p>
+                </div>
               </div>
-            ))}
+            )}
 
             <button className="w-full py-5 text-[10px] font-black text-neutral-300 uppercase tracking-[0.25em] mt-4 flex items-center justify-center gap-2">
               <History size={14} /> Request Transaction Export

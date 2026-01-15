@@ -59,7 +59,16 @@ class ProfileController extends Controller
         // Load user with listings relationship (including category) and location relationships
         // Listings are ordered by latest first
         $user = $request->user()
-            ->loadCount('listings')
+            ->loadCount([
+                'listings',
+                'purchaseTransactions as purchases_count' => function ($query) {
+                    $query->where('status', 'completed');
+                },
+                'saleTransactions as sales_count' => function ($query) {
+                    $query->where('status', 'completed');
+                }
+            ])
+            ->loadAvg('reviews', 'rating')
             ->load([
                 'cityLocation', 
                 'areaLocation',
@@ -96,7 +105,16 @@ class ProfileController extends Controller
     public function show($id)
     {
         $user = User::where('id', $id)
-            ->withCount('listings')
+            ->withCount([
+                'listings',
+                'purchaseTransactions as purchases_count' => function ($query) {
+                    $query->where('status', 'completed');
+                },
+                'saleTransactions as sales_count' => function ($query) {
+                    $query->where('status', 'completed');
+                }
+            ])
+            ->withAvg('reviews', 'rating')
             ->with([
                 'cityLocation', 
                 'areaLocation',

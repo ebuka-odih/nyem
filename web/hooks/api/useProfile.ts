@@ -68,3 +68,14 @@ export const useUpdatePassword = () => {
         mutationFn: (data: any) => fetcher(ENDPOINTS.profile.updatePassword, { method: 'PUT', body: data }),
     });
 };
+
+export const useTradeHistory = () => {
+    const token = getStoredToken();
+    return useQuery({
+        queryKey: ['profile', 'trade-history'],
+        queryFn: () => fetcher<any>(ENDPOINTS.profile.tradeHistory),
+        enabled: !!token,
+        select: (data: any) => data.transactions || [],
+    });
+};
+
