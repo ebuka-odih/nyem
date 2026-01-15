@@ -31,7 +31,6 @@ export const useLocation = () => {
     if (!token) return;
 
     try {
-      const { apiFetch } = await import('../utils/api');
       const response = await apiFetch(ENDPOINTS.location.status, { token }) as any;
       if (!response.data?.has_location) {
         setShowLocationModal(true);

@@ -61,8 +61,6 @@ export const useAuth = () => {
       // Validate token by checking user profile
       const validateToken = async () => {
         try {
-          const { apiFetch } = await import('../utils/api');
-          const { ENDPOINTS } = await import('../constants/endpoints');
           const response = await apiFetch(ENDPOINTS.profile.me, { token });
           if (response.user || response.data?.user) {
             // Token is valid, ensure we're in discover state (same as after login)

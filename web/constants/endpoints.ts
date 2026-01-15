@@ -94,6 +94,14 @@ export const ENDPOINTS = {
     follow: (id: string | number) => `/users/${id}/follow`,
     unfollow: (id: string | number) => `/users/${id}/unfollow`,
     status: (id: string | number) => `/users/${id}/follow-status`,
+  },
+  escrows: {
+    store: '/escrows',
+    verifyPayment: (id: string | number) => `/escrows/${id}/verify-payment`,
+    acknowledge: (id: string | number) => `/escrows/${id}/acknowledge`,
+    complete: (id: string | number) => `/escrows/${id}/complete`,
+    confirm: (id: string | number) => `/escrows/${id}/confirm`,
+    dispute: (id: string | number) => `/escrows/${id}/dispute`,
   }
 };
 

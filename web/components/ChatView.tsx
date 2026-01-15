@@ -4,6 +4,7 @@ import { ArrowLeft, Phone, MoreVertical, Lock, ChevronRight, Check, ShieldCheck,
 import { apiFetch, getStoredToken } from '../utils/api';
 import { useMessages, useSendMessage } from '../hooks/api/useMatches';
 import { useConversationListing } from '../hooks/api/useConversationListing';
+import { useCreateEscrow } from '../hooks/api/useEscrow';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -87,12 +88,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   } = useMessages(chat.conversation_id);
 
   const sendMessageMutation = useSendMessage();
+  const createEscrowMutation = useCreateEscrow();
 
   const [newMessage, setNewMessage] = useState("");
   const [isEscrowActive, setIsEscrowActive] = useState(false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [chatListingInfo, setChatListingInfo] = useState<{ title: string; image?: string; price?: string } | null>(null);
+  const [escrowCreating, setEscrowCreating] = useState(false);
+  const [chatListingInfo, setChatListingInfo] = useState<{ title: string; image?: string; price?: string; priceValue?: number } | null>(null);
 
   const queryClient = useQueryClient();
   const { subscribe, isConnected } = useWebSocket();
@@ -187,6 +190,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         title: listingData.title || 'Unknown Listing',
         image: listingData.photo || null,
         price: listingData.price ? `₦${Number(listingData.price).toLocaleString()}` : undefined,
+        priceValue: listingData.price ? Number(listingData.price) : undefined,
       };
       console.log('Setting new listing info:', newInfo);
       setChatListingInfo(newInfo);
@@ -219,6 +223,36 @@ export const ChatView: React.FC<ChatViewProps> = ({
     setShowActionMenu(false);
     setIsCheckingOut(false);
     onClose();
+  };
+
+  const handleEscrowCheckout = async () => {
+    if (!chatListingInfo?.priceValue) {
+      alert('Price information not available');
+      return;
+    }
+
+    setEscrowCreating(true);
+    try {
+      // Create escrow transaction
+      const escrowData = await createEscrowMutation.mutateAsync({
+        seller_id: otherUser.id,
+        amount: chatListingInfo.priceValue,
+        description: `Purchase of ${chatListingInfo.title}`,
+      });
+
+      console.log('Escrow created:', escrowData);
+
+      // TODO: Integrate with Paystack payment gateway
+      // For now, show success message
+      alert(`Escrow created! In production, you would be redirected to Paystack to complete payment of ₦${chatListingInfo.priceValue.toLocaleString()}`);
+
+      setIsCheckingOut(false);
+    } catch (err: any) {
+      console.error('Failed to create escrow:', err);
+      alert(err.message || 'Failed to initiate secure checkout. Please try again.');
+    } finally {
+      setEscrowCreating(false);
+    }
   };
 
   return (
@@ -472,9 +506,22 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
               </div>
 
-              <button className="w-full bg-[#830e4c] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3">
-                <Lock size={16} strokeWidth={2.5} />
-                Confirm & Pay Securely
+              <button
+                onClick={handleEscrowCheckout}
+                disabled={escrowCreating}
+                className="w-full bg-[#830e4c] text-white py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {escrowCreating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Creating Escrow...</span>
+                  </>
+                ) : (
+                  <>
+                    <Lock size={16} strokeWidth={2.5} />
+                    Confirm & Pay Securely
+                  </>
+                )}
               </button>
               <button
                 onClick={() => setIsCheckingOut(false)}
