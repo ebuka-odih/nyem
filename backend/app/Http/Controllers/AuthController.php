@@ -57,7 +57,7 @@ class AuthController extends Controller
 
         // Generate 6-digit OTP code
         $code = (string) random_int(100000, 999999);
-        $expiry = now()->addMinutes(5);
+        $expiry = now()->addMinutes(7);
 
         // Store OTP in database
         $otpData = [
@@ -141,7 +141,7 @@ class AuthController extends Controller
 
         // Generate 6-digit OTP code
         $code = (string) random_int(100000, 999999);
-        $expiry = now()->addMinutes(5);
+        $expiry = now()->addMinutes(7);
 
         // Store OTP in database
         OtpCode::create([
