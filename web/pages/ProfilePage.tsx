@@ -984,7 +984,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                     />
                   )}
                 </div>
-                <button className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-2xl shadow-lg border border-neutral-100 text-[#830e4c] active:scale-90 transition-all">
+                <button
+                  onClick={() => setCurrentView('edit')}
+                  className="absolute -bottom-1 -right-1 bg-white p-2.5 rounded-2xl shadow-lg border border-neutral-100 text-[#830e4c] active:scale-90 transition-all"
+                >
                   <Edit3 size={16} strokeWidth={2.5} />
                 </button>
               </div>
