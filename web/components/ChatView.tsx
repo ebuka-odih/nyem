@@ -421,9 +421,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </div>
       )}
 
-      {/* Escrow Protected Banner - Only show for buyers when seller has enabled escrow */}
+      {/* Escrow Protected Banner - Always show for buyers with priced listings */}
       <AnimatePresence>
-        {isEscrowActive && isBuyer && chatListingInfo?.price && (
+        {isBuyer && chatListingInfo?.price && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -446,6 +446,37 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
                 <div className="bg-white/10 p-2 rounded-xl text-white">
                   <ChevronRight size={18} strokeWidth={3} />
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Seller Banner - Informational */}
+      <AnimatePresence>
+        {isSeller && chatListingInfo?.price && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden bg-white border-b border-[#830e4c33]"
+          >
+            <div className="p-4">
+              <div className="bg-neutral-50 border border-neutral-100 rounded-[1.5rem] p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#830e4c]/10 flex items-center justify-center text-[#830e4c]">
+                    <ShieldCheck size={20} strokeWidth={2.5} />
+                  </div>
+                  <div className="flex flex-col">
+                    <h4 className="text-xs font-black text-neutral-900 uppercase tracking-widest leading-none">Escrow Active</h4>
+                    <p className="text-[9px] font-bold text-neutral-400 mt-1.5 uppercase tracking-wider">Waiting for buyer payment</p>
+                  </div>
+                </div>
+                {/* Status Indicator */}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  <span className="text-[9px] font-bold uppercase tracking-wider">Pending</span>
                 </div>
               </div>
             </div>
