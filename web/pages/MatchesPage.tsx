@@ -61,6 +61,7 @@ interface ChatMessage {
     sender_id: string;
     created_at: string;
   };
+  is_escrow_active: boolean;
   updated_at: string;
 }
 

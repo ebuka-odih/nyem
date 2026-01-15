@@ -54,27 +54,29 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     const channel = `conversation.${conversationId}`;
 
                     console.log(`[WebSocket] Looking for subscribers on channel: ${channel}`);
-                    console.log(`[WebSocket] Current channels:`, Array.from(subscribersRef.current.keys()));
 
-                    // Notify subscribers to this conversation
                     const callbacks = subscribersRef.current.get(channel);
-                    if (callbacks && callbacks.size > 0) {
-                        console.log(`[WebSocket] Notifying ${callbacks.size} subscribers for conversation ${conversationId}`);
+                    if (callbacks) {
                         callbacks.forEach(callback => callback(data.message));
-                    } else {
-                        console.log(`[WebSocket] No active subscribers for conversation ${conversationId}`);
                     }
 
-                    // Also notify general user channel for list refreshes
+                    // Also notify user channel
                     const userChannel = `user.${profile.id}`;
                     const userCallbacks = subscribersRef.current.get(userChannel);
                     if (userCallbacks) {
-                        console.log(`[WebSocket] Notifying subscriber on user channel: ${userChannel}`);
                         userCallbacks.forEach(callback => callback(payload));
+                    }
+                } else if (type === 'escrow.toggle') {
+                    const channel = 'escrow.toggle';
+                    console.log(`[WebSocket] Escrow toggle received, notifying subscribers on channel: ${channel}`);
+                    const callbacks = subscribersRef.current.get(channel);
+                    if (callbacks) {
+                        callbacks.forEach(callback => callback(data));
                     }
                 } else if (type === 'auth_success') {
                     console.log('[WebSocket] Successfully authenticated with server');
                 }
+
             } catch (error) {
                 console.error('[WebSocket] Error processing message:', error);
             }

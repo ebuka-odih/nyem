@@ -60,6 +60,7 @@ export const ENDPOINTS = {
     start: '/conversations/start',
     messages: (id: string | number) => `/conversations/${id}/messages`,
     matches: (id: string | number) => `/conversations/${id}/matches`,
+    toggleEscrow: (id: string | number) => `/conversations/${id}/toggle-escrow`,
   },
   messages: {
     create: '/messages',

@@ -61,3 +61,21 @@ export const useConfirmEscrowDelivery = () => {
         },
     });
 };
+export const useToggleEscrow = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: async (conversationId: string | number) => {
+            const token = getStoredToken();
+            if (!token) throw new Error('Authentication required');
+
+            return await apiFetch(ENDPOINTS.conversations.toggleEscrow(conversationId), {
+                method: 'POST',
+                token,
+            });
+        },
+        onSuccess: (_, conversationId) => {
+            queryClient.invalidateQueries({ queryKey: ['conversations'] });
+        },
+    });
+};

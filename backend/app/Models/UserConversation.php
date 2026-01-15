@@ -13,6 +13,11 @@ class UserConversation extends Model
     protected $fillable = [
         'user1_id',
         'user2_id',
+        'is_escrow_active',
+    ];
+
+    protected $casts = [
+        'is_escrow_active' => 'boolean',
     ];
 
     public function user1()

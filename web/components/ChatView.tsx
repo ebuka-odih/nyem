@@ -4,7 +4,7 @@ import { ArrowLeft, Phone, MoreVertical, Lock, ChevronRight, Check, ShieldCheck,
 import { apiFetch, getStoredToken } from '../utils/api';
 import { useMessages, useSendMessage } from '../hooks/api/useMatches';
 import { useConversationListing } from '../hooks/api/useConversationListing';
-import { useCreateEscrow } from '../hooks/api/useEscrow';
+import { useCreateEscrow, useToggleEscrow } from '../hooks/api/useEscrow';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useWebSocket } from '../contexts/WebSocketContext';
 import { useQueryClient } from '@tanstack/react-query';
@@ -38,6 +38,7 @@ interface ChatMessage {
     photo?: string;
     price?: number;
   };
+  is_escrow_active: boolean;
   updated_at: string;
 }
 
@@ -89,9 +90,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   const sendMessageMutation = useSendMessage();
   const createEscrowMutation = useCreateEscrow();
+  const toggleEscrowMutation = useToggleEscrow();
 
   const [newMessage, setNewMessage] = useState("");
-  const [isEscrowActive, setIsEscrowActive] = useState(false); // Default FALSE - seller must activate
+  const [isEscrowActive, setIsEscrowActive] = useState(chat.is_escrow_active || false);
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [escrowCreating, setEscrowCreating] = useState(false);
@@ -141,9 +143,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
       }
     });
 
+    // Subscribe to escrow status updates
+    const unsubscribeEscrow = subscribe(`escrow.toggle`, (data: any) => {
+      console.log('[ChatView] Escrow Toggle Received:', data);
+      if (String(data.conversation_id) === String(chat.conversation_id)) {
+        console.log('[ChatView] Updating local escrow state:', data.is_escrow_active);
+        setIsEscrowActive(data.is_escrow_active);
+      }
+    });
+
     return () => {
-      console.log('[ChatView] Unsubscribing from conversation:', chat.conversation_id);
+      console.log('[ChatView] Unsubscribing from conversation and escrow:', chat.conversation_id);
       unsubscribe();
+      unsubscribeEscrow();
     };
   }, [chat.conversation_id, subscribe, queryClient, currentUserId]);
 
@@ -391,9 +403,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 {isSeller && (
                   <>
                     <button
+                      disabled={toggleEscrowMutation.isPending}
                       onClick={() => {
-                        setIsEscrowActive(!isEscrowActive);
-                        setShowActionMenu(false);
+                        toggleEscrowMutation.mutate(chat.conversation_id, {
+                          onSuccess: (data: any) => {
+                            setIsEscrowActive(data.is_escrow_active);
+                            setShowActionMenu(false);
+                          }
+                        });
                       }}
                       className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all border-2 ${isEscrowActive ? 'bg-[#830e4c] border-[#830e4c] text-white shadow-lg' : 'bg-white border-neutral-50 hover:border-[#830e4c33] text-neutral-700 active:scale-95'}`}
                     >

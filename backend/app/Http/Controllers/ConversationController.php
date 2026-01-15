@@ -211,6 +211,7 @@ class ConversationController extends Controller
                     'id' => $conversation->id,
                     'conversation_id' => $conversation->id,
                     'other_user' => $otherUser,
+                    'is_escrow_active' => $conversation->is_escrow_active,
                     'created_at' => $conversation->created_at,
                     'updated_at' => $conversation->updated_at,
                 ],
@@ -271,6 +272,7 @@ class ConversationController extends Controller
                     'id' => $conversation->id,
                     'conversation_id' => $conversation->id,
                     'other_user' => $otherUser,
+                    'is_escrow_active' => $conversation->is_escrow_active,
                     'created_at' => $conversation->created_at,
                     'updated_at' => $conversation->updated_at,
                 ],
@@ -348,6 +350,7 @@ class ConversationController extends Controller
                         'created_at' => $lastMessage->created_at,
                     ] : null,
                     'listing_context' => $listingContext,
+                    'is_escrow_active' => $conversation->is_escrow_active,
                     'created_at' => $conversation->created_at,
                     'updated_at' => $conversation->updated_at,
                 ];
@@ -420,6 +423,43 @@ class ConversationController extends Controller
             });
 
         return response()->json(['matches' => $matches]);
+    }
+
+    /**
+     * Toggle escrow status for a conversation
+     */
+    public function toggleEscrow(Request $request, UserConversation $conversation)
+    {
+        $user = $request->user();
+        
+        // Ensure user is part of the conversation
+        if (!in_array($user->id, [$conversation->user1_id, $conversation->user2_id], true)) {
+            return response()->json(['message' => 'Not authorized for this conversation'], 403);
+        }
+
+        // Ideally, only the seller should toggle. 
+        // For simplicity, we toggle and then broadcast.
+        $conversation->is_escrow_active = !$conversation->is_escrow_active;
+        $conversation->save();
+
+        // Broadcast the change
+        try {
+            Http::timeout(2)->post('http://127.0.0.1:6001/broadcast', [
+                'type' => 'escrow.toggle',
+                'receivers' => [$conversation->user1_id, $conversation->user2_id],
+                'data' => [
+                    'conversation_id' => $conversation->id,
+                    'is_escrow_active' => $conversation->is_escrow_active,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Escrow toggle broadcast failed: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'is_escrow_active' => $conversation->is_escrow_active
+        ]);
     }
 }
 

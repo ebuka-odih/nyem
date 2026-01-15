@@ -134,6 +134,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/conversations/start', [ConversationController::class, 'start']);
     Route::get('/conversations/{conversation}/messages', [ConversationController::class, 'messages']);
     Route::get('/conversations/{conversation}/matches', [ConversationController::class, 'matches']);
+    Route::post('/conversations/{conversation}/toggle-escrow', [ConversationController::class, 'toggleEscrow']);
 
     Route::post('/messages', [MessageController::class, 'store']);
 
