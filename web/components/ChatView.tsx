@@ -91,7 +91,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const createEscrowMutation = useCreateEscrow();
 
   const [newMessage, setNewMessage] = useState("");
-  const [isEscrowActive, setIsEscrowActive] = useState(false);
+  const [isEscrowActive, setIsEscrowActive] = useState(true); // Default to TRUE so it's on by default
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [escrowCreating, setEscrowCreating] = useState(false);
@@ -198,8 +198,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
         image: listingData.photo || null,
         price: listingData.price ? `₦${Number(listingData.price).toLocaleString()}` : undefined,
         priceValue: listingData.price ? Number(listingData.price) : undefined,
-        sellerId: listingData.user?.id || listingData.user_id || otherUser.id,
+        sellerId: listingData.user?.id || listingData.user_id, // REMOVED unsafe fallback to otherUser.id
       };
+
+      if (!newInfo.sellerId) {
+        console.warn('ChatView: Could not determine sellerId from listing data!', listingData);
+      }
+
       console.log('Setting new listing info:', newInfo);
       setChatListingInfo(newInfo);
     } else {
@@ -233,6 +238,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
     onClose();
   };
 
+  // Load Paystack script dynamically
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://js.paystack.co/v1/inline.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
   const handleEscrowCheckout = async () => {
     if (!chatListingInfo?.priceValue) {
       alert('Price information not available');
@@ -241,7 +259,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     setEscrowCreating(true);
     try {
-      // Create escrow transaction
+      // 1. Create escrow transaction
       const escrowData = await createEscrowMutation.mutateAsync({
         seller_id: chatListingInfo.sellerId || otherUser.id,
         amount: chatListingInfo.priceValue,
@@ -250,54 +268,58 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
       console.log('Escrow created:', escrowData);
 
-      // Get user email from stored user data
-      const storedUser = localStorage.getItem('auth_user');
-      const userEmail = storedUser ? JSON.parse(storedUser).email : 'buyer@nyem.com';
-
-      // Initialize Paystack payment
-      const paymentData = {
-        email: userEmail,
-        amount: chatListingInfo.priceValue * 100, // Paystack expects amount in kobo (smallest currency unit)
-        currency: 'NGN',
-        reference: escrowData.id || `escrow_${Date.now()}`,
-        metadata: {
-          escrow_id: escrowData.id,
-          seller_id: chatListingInfo.sellerId || otherUser.id,
-          listing_title: chatListingInfo.title,
-        },
-      };
-
-      // Get Paystack public key from environment
-      const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_placeholder';
-
-      // Open Paystack payment in new tab
-      const paystackUrl = `https://checkout.paystack.com/pay?` + new URLSearchParams({
-        email: paymentData.email,
-        amount: paymentData.amount.toString(),
-        currency: paymentData.currency,
-        reference: paymentData.reference,
-        publicKey: paystackPublicKey,
-      }).toString();
-
-      // Open in new tab
-      const paymentWindow = window.open(paystackUrl, '_blank');
-
-      if (paymentWindow) {
-        // Show success message
-        alert(`Escrow created! Complete payment in the new tab to secure your purchase.`);
-      } else {
-        // Popup blocked
-        alert(`Escrow created! Please allow popups to complete payment. Reference: ${paymentData.reference}`);
+      // 2. Prepare Paystack Popup
+      const paystack = (window as any).PaystackPop;
+      if (!paystack) {
+        alert('Payment system is loading, please try again in a moment or refresh the page.');
+        setEscrowCreating(false);
+        return;
       }
 
-      setIsCheckingOut(false);
+      const storedUser = localStorage.getItem('auth_user');
+      const userEmail = storedUser ? JSON.parse(storedUser).email : 'buyer@nyem.com';
+      const publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
+
+      if (!publicKey || publicKey.includes('placeholder')) {
+        alert('Paystack Public Key is missing! Please configure VITE_PAYSTACK_PUBLIC_KEY in .env');
+        setEscrowCreating(false);
+        return;
+      }
+
+      // 3. Open Paystack Native Popup
+      const handler = paystack.setup({
+        key: publicKey,
+        email: userEmail,
+        amount: chatListingInfo.priceValue * 100, // Amount in kobo
+        currency: 'NGN',
+        ref: escrowData.id, // Use escrow ID as reference
+        metadata: {
+          escrow_id: escrowData.id,
+          custom_fields: [
+            { display_name: "Item", variable_name: "item", value: chatListingInfo.title }
+          ]
+        },
+        callback: function (response: any) {
+          console.log('Payment complete! Reference:', response.reference);
+          alert('Payment successful! Your funds are now secured in Escrow.');
+          setIsCheckingOut(false);
+        },
+        onClose: function () {
+          alert('Transaction was cancelled.');
+          setEscrowCreating(false);
+        }
+      });
+
+      handler.openIframe();
+
     } catch (err: any) {
       console.error('Failed to create escrow:', err);
       alert(err.message || 'Failed to initiate secure checkout. Please try again.');
-    } finally {
       setEscrowCreating(false);
     }
   };
+
+
 
   return (
     <motion.div
@@ -421,9 +443,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         </div>
       )}
 
-      {/* Escrow Protected Banner - Always show for buyers with priced listings */}
+      {/* Escrow Protected Banner - Show for buyers when escrow is active */}
       <AnimatePresence>
-        {isBuyer && chatListingInfo?.price && (
+        {isEscrowActive && isBuyer && chatListingInfo?.price && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
@@ -453,9 +475,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Seller Banner - Informational */}
+      {/* Seller Banner - Informational (Only when active) */}
       <AnimatePresence>
-        {isSeller && chatListingInfo?.price && (
+        {isEscrowActive && isSeller && chatListingInfo?.price && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
