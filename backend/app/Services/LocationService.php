@@ -30,11 +30,34 @@ class LocationService
         $user = $request->user();
         
         // 1. Authenticated user
-        if ($user && $user->hasLocation()) {
-            return [
-                'latitude' => (float) $user->latitude,
-                'longitude' => (float) $user->longitude
-            ];
+        if ($user) {
+            // Priority 1: User's actual GPS coordinates
+            if ($user->hasLocation()) {
+                return [
+                    'latitude' => (float) $user->latitude,
+                    'longitude' => (float) $user->longitude
+                ];
+            }
+
+            // Priority 2: Fall back to user's selected area/city center coordinates
+            // Ensure relationships are loaded if possible
+            if ($user->area_id || $user->city_id) {
+                $user->loadMissing(['areaLocation', 'cityLocation']);
+                
+                if ($user->area_id && $user->areaLocation && $user->areaLocation->latitude && $user->areaLocation->longitude) {
+                    return [
+                        'latitude' => (float) $user->areaLocation->latitude,
+                        'longitude' => (float) $user->areaLocation->longitude
+                    ];
+                }
+                
+                if ($user->city_id && $user->cityLocation && $user->cityLocation->latitude && $user->cityLocation->longitude) {
+                    return [
+                        'latitude' => (float) $user->cityLocation->latitude,
+                        'longitude' => (float) $user->cityLocation->longitude
+                    ];
+                }
+            }
         }
 
         // 2. Custom headers (from Frontend)

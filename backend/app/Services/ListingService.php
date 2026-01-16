@@ -259,6 +259,18 @@ class ListingService
         // Priority: Use item coordinates > seller's user coordinates
         $currentRequest = request();
         $userCoords = $currentRequest ? $this->locationService->getRequestCoordinates($currentRequest) : null;
+        
+        // Final fallback: Use the filtered city center as the user's location if they haven't shared GPS
+        if (!$userCoords && isset($filters['city']) && !empty($filters['city']) && !in_array(strtolower($filters['city']), ['all', 'all locations'])) {
+            $filterLocation = \App\Models\Location::where('name', $filters['city'])->where('type', 'city')->first();
+            if ($filterLocation && $filterLocation->latitude && $filterLocation->longitude) {
+                $userCoords = [
+                    'latitude' => (float) $filterLocation->latitude,
+                    'longitude' => (float) $filterLocation->longitude
+                ];
+            }
+        }
+
         $userLat = $userCoords['latitude'] ?? null;
         $userLon = $userCoords['longitude'] ?? null;
 
@@ -303,17 +315,36 @@ class ListingService
                 }
                 
                 // Priority 2: Fall back to seller's user coordinates if item has no coordinates
-                if ($distanceKm === null && $listing->user && $listing->user->hasLocation()) {
-                    try {
-                        $distanceKm = $this->locationService->calculateDistance(
-                            (float) $userLat,
-                            (float) $userLon,
-                            (float) $listing->user->latitude,
-                            (float) $listing->user->longitude,
-                            'km'
-                        );
-                    } catch (\Exception $e) {
-                        \Log::warning('Distance calculation failed for listing ' . $listing->id . ' using seller coordinates: ' . $e->getMessage());
+                if ($distanceKm === null && $listing->user) {
+                    $sellerLat = null;
+                    $sellerLon = null;
+
+                    if ($listing->user->hasLocation()) {
+                        $sellerLat = (float) $listing->user->latitude;
+                        $sellerLon = (float) $listing->user->longitude;
+                    } else {
+                        // Fall back to city/area center
+                        if ($listing->user->area_id && $listing->user->areaLocation && $listing->user->areaLocation->latitude && $listing->user->areaLocation->longitude) {
+                            $sellerLat = (float) $listing->user->areaLocation->latitude;
+                            $sellerLon = (float) $listing->user->areaLocation->longitude;
+                        } elseif ($listing->user->city_id && $listing->user->cityLocation && $listing->user->cityLocation->latitude && $listing->user->cityLocation->longitude) {
+                            $sellerLat = (float) $listing->user->cityLocation->latitude;
+                            $sellerLon = (float) $listing->user->cityLocation->longitude;
+                        }
+                    }
+
+                    if ($sellerLat && $sellerLon) {
+                        try {
+                            $distanceKm = $this->locationService->calculateDistance(
+                                (float) $userLat,
+                                (float) $userLon,
+                                $sellerLat,
+                                $sellerLon,
+                                'km'
+                            );
+                        } catch (\Exception $e) {
+                            \Log::warning('Distance calculation failed for listing ' . $listing->id . ' using seller fallback coordinates: ' . $e->getMessage());
+                        }
                     }
                 }
                 

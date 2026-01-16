@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform, useAnimation, PanInfo } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star, ShieldCheck, Zap, MoreHorizontal, ChevronRight, Eye, Heart } from 'lucide-react';
+import { MapPin, Star, ShieldCheck, Zap, MoreHorizontal, ChevronRight, Eye, Heart, TrendingUp, Flame } from 'lucide-react';
 import { Product } from '../types';
 import { getStoredUser } from '../utils/api';
 
@@ -55,6 +55,10 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
       return false;
     }
   }, [product.createdAt]);
+
+  // Check for other badges
+  const isMostViewed = (stats.views || 0) >= 50;
+  const isPopular = (stats.stars || 0) >= 10;
 
   React.useEffect(() => {
     if (isTop) {
@@ -260,14 +264,26 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
               <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-tight drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]">
                 {product.name}
               </h2>
-              {isNew && (
-                <div className="flex items-center gap-2">
-                  <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-xl flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {isNew && (
+                  <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-xl flex items-center gap-2">
                     <Zap size={14} className="text-[#830e4c]" fill="currentColor" />
                     <span className="text-[10px] font-black text-neutral-900 uppercase tracking-widest italic">New Drop</span>
                   </div>
-                </div>
-              )}
+                )}
+                {isMostViewed && (
+                  <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-xl flex items-center gap-2">
+                    <TrendingUp size={14} className="text-indigo-600" strokeWidth={3} />
+                    <span className="text-[10px] font-black text-neutral-900 uppercase tracking-widest italic">Most Viewed</span>
+                  </div>
+                )}
+                {isPopular && (
+                  <div className="bg-white/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-xl flex items-center gap-2">
+                    <Flame size={14} className="text-orange-500" fill="currentColor" />
+                    <span className="text-[10px] font-black text-neutral-900 uppercase tracking-widest italic">Popular</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

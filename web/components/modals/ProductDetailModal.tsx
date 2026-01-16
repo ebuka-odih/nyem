@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Share2, MapPin, ChevronRight, SendHorizontal } from 'lucide-react';
+import { Share2, MapPin, ChevronRight, SendHorizontal, Zap, TrendingUp, Flame } from 'lucide-react';
 import { Product, Vendor } from '../../types';
 import { RatingStars } from '../RatingStars';
 import { Modal } from '../Modal';
@@ -27,6 +27,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   if (!product) return null;
+
+  const stats = product.stats || {};
+  const isNew = product.createdAt ? (Date.now() - new Date(product.createdAt.replace(' ', 'T')).getTime() < 7 * 24 * 60 * 60 * 1000) : false;
+  const isMostViewed = (stats.views || 0) >= 50;
+  const isPopular = (stats.stars || 0) >= 10;
 
   return (
     <Modal isOpen={!!product} onClose={onClose} title="Item Details" fullHeight>
@@ -56,10 +61,28 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
         <div className="px-1 space-y-6">
           <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-[10px] font-black text-[#830e4c] uppercase tracking-[0.2em] bg-[#830e4c1a] px-3 py-1.5 rounded-xl border border-[#830e4c33]">
                 {product.category}
               </span>
+              {isNew && (
+                <span className="text-[10px] font-black text-rose-600 uppercase tracking-[0.2em] bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-100 flex items-center gap-1.5">
+                  <Zap size={10} fill="currentColor" />
+                  New Drop
+                </span>
+              )}
+              {isMostViewed && (
+                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 flex items-center gap-1.5">
+                  <TrendingUp size={10} strokeWidth={3} />
+                  Most Viewed
+                </span>
+              )}
+              {isPopular && (
+                <span className="text-[10px] font-black text-orange-600 uppercase tracking-[0.2em] bg-orange-50 px-3 py-1.5 rounded-xl border border-orange-100 flex items-center gap-1.5">
+                  <Flame size={10} fill="currentColor" />
+                  Popular
+                </span>
+              )}
             </div>
 
             <div className="space-y-4">

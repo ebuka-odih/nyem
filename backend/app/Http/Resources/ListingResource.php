@@ -135,9 +135,21 @@ class ListingResource extends JsonResource
                 $sellerLon = (float) $this->longitude;
             }
             // Priority 2: Fall back to seller's user coordinates
-            elseif ($this->user && $this->user->hasLocation()) {
-                $sellerLat = (float) $this->user->latitude;
-                $sellerLon = (float) $this->user->longitude;
+            elseif ($this->user) {
+                if ($this->user->hasLocation()) {
+                    $sellerLat = (float) $this->user->latitude;
+                    $sellerLon = (float) $this->user->longitude;
+                } else {
+                    // Fall back to city/area center
+                    $this->user->loadMissing(['areaLocation', 'cityLocation']);
+                    if ($this->user->area_id && $this->user->areaLocation && $this->user->areaLocation->latitude && $this->user->areaLocation->longitude) {
+                        $sellerLat = (float) $this->user->areaLocation->latitude;
+                        $sellerLon = (float) $this->user->areaLocation->longitude;
+                    } elseif ($this->user->city_id && $this->user->cityLocation && $this->user->cityLocation->latitude && $this->user->cityLocation->longitude) {
+                        $sellerLat = (float) $this->user->cityLocation->latitude;
+                        $sellerLon = (float) $this->user->cityLocation->longitude;
+                    }
+                }
             }
             
             if (!$sellerLat || !$sellerLon) {

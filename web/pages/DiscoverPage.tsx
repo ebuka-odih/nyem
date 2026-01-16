@@ -362,7 +362,7 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
                   />
                 ) : (
                   <SwipeCard
-                    key={`${product.id}-${items.length}`}
+                    key={product.id}
                     product={product}
                     index={activeVisibleIndex - idx}
                     isTop={idx === activeVisibleIndex}

@@ -47,7 +47,12 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
     return null;
   })();
 
-  const [items, setItems] = useState<Product[]>(restoredState?.items || []);
+  const [items, setItems] = useState<Product[]>(() => {
+    if (!restoredState?.items) return [];
+    const uniqueMap = new Map();
+    restoredState.items.forEach(item => uniqueMap.set(item.id, item));
+    return Array.from(uniqueMap.values());
+  });
   const [history, setHistory] = useState<Product[]>(restoredState?.history || []);
   const [swipeCount, setSwipeCount] = useState(restoredState?.swipeCount || 0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -111,6 +116,13 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
     if (fetchedItems && fetchedItems.length > 0 && items.length === 0 && !hasRestoredRef.current) {
       // Reverse so latest items are at the end of the array (top of the stack)
       let finalItems = [...fetchedItems].reverse();
+
+      // Deduplicate items by ID to prevent duplicate key errors
+      const uniqueItemsMap = new Map();
+      finalItems.forEach(item => {
+        uniqueItemsMap.set(item.id, item);
+      });
+      finalItems = Array.from(uniqueItemsMap.values());
 
       // Add Welcome Card if needed
       const hasSeenWelcome = localStorage.getItem('has_seen_welcome_card') === 'true';
