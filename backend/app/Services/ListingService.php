@@ -131,6 +131,7 @@ class ListingService
     public function getFeedListings(array $filters, ?User $user = null, array $blockedIds = []): Collection
     {
         $query = Listing::with(['user.cityLocation', 'user.areaLocation', 'category'])
+            ->withCount(['views', 'likes', 'stars', 'shares'])
             ->where('status', Listing::STATUS_ACTIVE);
         
         // Exclude blocked users if authenticated

@@ -57,8 +57,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   }, [product.createdAt]);
 
   // Check for other badges
-  const isMostViewed = (stats.views || 0) >= 50;
-  const isPopular = (stats.stars || 0) >= 10;
+  const isMostViewed = (stats.views || 0) >= 10;
+  const isPopular = (stats.stars || 0) >= 5;
 
   React.useEffect(() => {
     if (isTop) {

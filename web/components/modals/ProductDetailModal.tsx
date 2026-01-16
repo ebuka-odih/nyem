@@ -30,8 +30,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const stats = product.stats || {};
   const isNew = product.createdAt ? (Date.now() - new Date(product.createdAt.replace(' ', 'T')).getTime() < 7 * 24 * 60 * 60 * 1000) : false;
-  const isMostViewed = (stats.views || 0) >= 50;
-  const isPopular = (stats.stars || 0) >= 10;
+  const isMostViewed = (stats.views || 0) >= 10;
+  const isPopular = (stats.stars || 0) >= 5;
 
   return (
     <Modal isOpen={!!product} onClose={onClose} title="Item Details" fullHeight>

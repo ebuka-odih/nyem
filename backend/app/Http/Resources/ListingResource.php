@@ -26,11 +26,11 @@ class ListingResource extends JsonResource
             $price = number_format($this->price, 0, '.', ',');
         }
         
-        // Calculate listing stats
-        $views = $this->views()->count();
-        $likes = $this->likes()->count();
-        $stars = $this->stars()->count(); // Super interest / wishlist count
-        $shares = $this->shares()->count();
+        // Calculate listing stats - using withCount attributes if available
+        $views = $this->views_count ?? $this->views()->count();
+        $likes = $this->likes_count ?? $this->likes()->count();
+        $stars = $this->stars_count ?? $this->stars()->count();
+        $shares = $this->shares_count ?? $this->shares()->count();
         
         // Format distance for display
         $distanceDisplay = $distanceKm !== null 
