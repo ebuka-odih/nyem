@@ -771,8 +771,8 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
     if (file) {
       try {
         setEditError(null);
-        // Process image: HEIC conversion + Compression
-        const processedFile = await compressAndConvertImage(file);
+        // Process image: HEIC conversion + Compression (optimized for avatar)
+        const processedFile = await compressAndConvertImage(file, { isAvatar: true });
 
         const reader = new FileReader();
         reader.onloadend = () => {

@@ -1,7 +1,7 @@
 import imageCompression from 'browser-image-compression';
 import heic2any from 'heic2any';
 
-export async function compressAndConvertImage(file: File): Promise<File> {
+async function processImage(file: File, options?: { isAvatar?: boolean }): Promise<File> {
     let processingFile = file;
 
     // 1. Convert HEIC to JPEG if needed
@@ -25,18 +25,24 @@ export async function compressAndConvertImage(file: File): Promise<File> {
     }
 
     // 2. Compress the image
-    const options = {
-        maxSizeMB: 0.8, // Target size under 800KB
-        maxWidthOrHeight: 1200, // Reasonable resolution for profile photo
+    const isAvatar = options?.isAvatar || false;
+
+    const compressionOptions = {
+        maxSizeMB: isAvatar ? 0.2 : 0.8, // 200KB for avatars, 800KB for products
+        maxWidthOrHeight: isAvatar ? 600 : 1200, // 600px for avatars, 1200px for products
         useWebWorker: true,
         initialQuality: 0.8
     };
 
     try {
-        const compressedFile = await imageCompression(processingFile, options);
+        const compressedFile = await imageCompression(processingFile, compressionOptions);
         return compressedFile;
     } catch (error) {
         console.error('Compression failed:', error);
         return processingFile;
     }
+}
+
+export async function compressAndConvertImage(file: File, options?: { isAvatar?: boolean }): Promise<File> {
+    return processImage(file, options);
 }

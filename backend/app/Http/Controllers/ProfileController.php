@@ -153,7 +153,7 @@ class ProfileController extends Controller
             'username' => 'sometimes|string|max:255|unique:users,username,' . $user->id,
             'name' => 'sometimes|nullable|string|max:255',
             'bio' => 'sometimes|nullable|string|max:500',
-            'profile_photo' => 'sometimes|nullable|string|max:65535', // TEXT field can hold up to 65,535 characters
+            'profile_photo' => 'sometimes|nullable|string|max:5000000', // Support larger base64 images (up to ~3.5MB)
             'city' => 'sometimes|string|max:255', // Keep for backward compatibility
             'city_id' => [
                 'sometimes',
