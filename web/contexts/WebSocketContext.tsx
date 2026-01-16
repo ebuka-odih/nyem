@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
-import { useProfile } from '../hooks/api/useProfile';
-import { getStoredToken } from '../utils/api';
+import { getStoredToken, getStoredUser } from '../utils/api';
 
 // Make Pusher available for Echo
 (window as any).Pusher = Pusher;
@@ -16,9 +15,21 @@ interface WebSocketContextType {
 const WebSocketContext = createContext<WebSocketContextType | undefined>(undefined);
 
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { data: profile } = useProfile();
+    const [profile, setProfile] = useState(() => getStoredUser());
     const [isConnected, setIsConnected] = useState(false);
     const echoRef = useRef<Echo<any> | null>(null);
+
+    // Sync profile from storage to avoid hook issues in top-level provider
+    useEffect(() => {
+        const checkUser = () => {
+            const user = getStoredUser();
+            if (user?.id !== profile?.id) {
+                setProfile(user);
+            }
+        };
+        const interval = setInterval(checkUser, 2000);
+        return () => clearInterval(interval);
+    }, [profile?.id]);
 
     const connect = useCallback(() => {
         if (!profile?.id || echoRef.current) return;

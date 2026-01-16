@@ -362,13 +362,13 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
                 className="w-full bg-neutral-50 rounded-[4rem] p-4 flex items-center gap-5 border border-neutral-100 shadow-sm transition-all active:scale-[0.98]"
               >
                 <div className="shrink-0 relative">
-                  <img src={product.vendor.avatar} className="w-16 h-16 rounded-[1.5rem] object-cover shadow-md border-2 border-white" />
+                  <img src={isOwnListing && currentUser?.profile_photo ? currentUser.profile_photo : product.vendor.avatar} className="w-16 h-16 rounded-[1.5rem] object-cover shadow-md border-2 border-white" />
                   <div className="absolute -bottom-1 -right-1 bg-[#29B3F0] p-1 rounded-full text-white shadow-lg border border-white">
                     <ShieldCheck size={10} fill="currentColor" />
                   </div>
                 </div>
                 <div className="flex-1 text-left flex flex-col gap-1">
-                  <h4 className="text-base font-black text-neutral-900 uppercase tracking-tight">{product.vendor.name}</h4>
+                  <h4 className="text-base font-black text-neutral-900 uppercase tracking-tight">{isOwnListing && currentUser?.username ? currentUser.username : (product.vendor.name)}</h4>
                   <div className="flex items-center gap-2">
                     <Star size={14} fill="#FFD700" className="text-[#FFD700]" />
                     <span className="text-xs font-black text-neutral-900">{product.vendor.rating > 0 ? product.vendor.rating.toFixed(1) : '0.0'}</span>

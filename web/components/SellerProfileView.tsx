@@ -1,21 +1,22 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  MapPin, 
-  BadgeCheck, 
-  Share2, 
-  Heart, 
-  UserPlus, 
-  MessageSquare, 
-  Star, 
-  Zap, 
+import {
+  MapPin,
+  BadgeCheck,
+  Share2,
+  Heart,
+  UserPlus,
+  MessageSquare,
+  Star,
+  Zap,
   Package,
   ChevronRight
 } from 'lucide-react';
 import { Vendor, Product } from '../types';
 import { RatingStars } from './RatingStars';
 import { PRODUCTS } from '../data';
+import { getStoredUser } from '../utils/api';
 
 interface SellerProfileViewProps {
   vendor: Vendor;
@@ -26,6 +27,8 @@ interface SellerProfileViewProps {
 export const SellerProfileView: React.FC<SellerProfileViewProps> = ({ vendor, onClose, onProductClick }) => {
   // Filter products for this specific vendor from the global list
   const sellerProducts = PRODUCTS.filter(p => p.vendor.name === vendor.name);
+  const currentUser = getStoredUser();
+  const isOwnProfile = currentUser && (String(currentUser.id) === String(vendor.id) || String(currentUser.id) === String((vendor as any).userId));
 
   const stats = [
     { label: 'Deals', value: vendor.reviewCount, icon: Package },
@@ -39,7 +42,7 @@ export const SellerProfileView: React.FC<SellerProfileViewProps> = ({ vendor, on
       <div className="flex flex-col items-center pt-4">
         <div className="relative mb-6">
           <div className="w-28 h-28 rounded-[2.5rem] bg-indigo-50 border-4 border-white shadow-xl overflow-hidden">
-            <img src={vendor.avatar} className="w-full h-full object-cover" alt={vendor.name} />
+            <img src={isOwnProfile && currentUser?.profile_photo ? currentUser.profile_photo : vendor.avatar} className="w-full h-full object-cover" alt={vendor.name} />
           </div>
           {vendor.verified && (
             <div className="absolute -bottom-1 -right-1 bg-white p-1.5 rounded-xl shadow-lg border border-neutral-100 text-indigo-600">
@@ -47,9 +50,9 @@ export const SellerProfileView: React.FC<SellerProfileViewProps> = ({ vendor, on
             </div>
           )}
         </div>
-        
+
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-black text-neutral-900 tracking-tighter uppercase italic">{vendor.name}</h2>
+          <h2 className="text-2xl font-black text-neutral-900 tracking-tighter uppercase italic">{isOwnProfile && currentUser?.username ? currentUser.username : vendor.name}</h2>
           <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] flex items-center justify-center gap-1.5">
             <MapPin size={12} /> {vendor.location}
           </p>
@@ -96,7 +99,7 @@ export const SellerProfileView: React.FC<SellerProfileViewProps> = ({ vendor, on
         </div>
         <div className="flex gap-4 overflow-x-auto no-scrollbar px-1 pb-4 snap-x">
           {sellerProducts.map((product) => (
-            <button 
+            <button
               key={product.id}
               onClick={() => onProductClick(product)}
               className="flex-shrink-0 w-40 snap-start text-left group"
@@ -114,7 +117,7 @@ export const SellerProfileView: React.FC<SellerProfileViewProps> = ({ vendor, on
           {/* Add a placeholder if few items */}
           {sellerProducts.length < 3 && (
             <div className="flex-shrink-0 w-40 aspect-[4/5] bg-neutral-50 rounded-3xl border-2 border-dashed border-neutral-100 flex items-center justify-center text-neutral-300">
-               <span className="text-[8px] font-black uppercase tracking-widest">More Soon</span>
+              <span className="text-[8px] font-black uppercase tracking-widest">More Soon</span>
             </div>
           )}
         </div>

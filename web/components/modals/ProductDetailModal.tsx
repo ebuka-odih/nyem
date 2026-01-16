@@ -4,6 +4,7 @@ import { Share2, MapPin, ChevronRight, SendHorizontal, Zap, TrendingUp, Flame } 
 import { Product, Vendor } from '../../types';
 import { RatingStars } from '../RatingStars';
 import { Modal } from '../Modal';
+import { getStoredUser } from '../../utils/api';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -32,6 +33,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const isNew = product.createdAt ? (Date.now() - new Date(product.createdAt.replace(' ', 'T')).getTime() < 7 * 24 * 60 * 60 * 1000) : false;
   const isMostViewed = (stats.views || 0) >= 10;
   const isPopular = (stats.stars || 0) >= 5;
+
+  const currentUser = getStoredUser();
+  const isOwnListing = currentUser && product.userId && String(currentUser.id) === String(product.userId);
 
   return (
     <Modal isOpen={!!product} onClose={onClose} title="Item Details" fullHeight>
@@ -125,14 +129,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <div className="flex items-center gap-5">
                 <div className="relative shrink-0">
                   <div className="w-20 h-20 rounded-full overflow-hidden border-[6px] border-white shadow-lg ring-1 ring-neutral-100">
-                    <img src={product.vendor.avatar} className="w-full h-full object-cover" />
+                    <img src={isOwnListing && currentUser?.profile_photo ? currentUser.profile_photo : product.vendor.avatar} className="w-full h-full object-cover" />
                   </div>
                   <div className="absolute bottom-1 right-1 bg-white p-1 rounded-full shadow-md border border-neutral-100">
                     <div className="w-3.5 h-3.5 bg-[#29B3F0] rounded-full shadow-inner" />
                   </div>
                 </div>
-                <div className="flex flex-col gap-2 min-w-0">
-                  <h4 className="text-xl font-black text-neutral-900 uppercase tracking-tighter italic leading-none truncate">{product.vendor.name}</h4>
+                <div className="flex-col gap-2 min-w-0">
+                  <h4 className="text-xl font-black text-neutral-900 uppercase tracking-tighter italic leading-none truncate">{isOwnListing && currentUser?.username ? currentUser.username : product.vendor.name}</h4>
                   <div className="flex flex-col gap-1">
                     <RatingStars rating={product.vendor.rating} />
                     <div className="flex items-center gap-1 text-neutral-400">

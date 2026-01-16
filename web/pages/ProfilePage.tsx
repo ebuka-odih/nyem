@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { compressAndConvertImage } from '../utils/imageUtils';
+import { ImageCropperModal } from '../components/ImageCropperModal';
 import { getStoredUser, getStoredToken, apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank, useUpdatePassword, useTradeHistory } from '../hooks/api/useProfile';
@@ -707,6 +708,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   const [bio, setBio] = useState('');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
+  const [tempImageForCrop, setTempImageForCrop] = useState<string | null>(null);
 
   const { data: areas = [], isLoading: loadingAreas } = useAreas(cityId);
   const editLoading = updateProfileMutation.isPending;
@@ -769,21 +771,32 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      try {
-        setEditError(null);
-        // Process image: HEIC conversion + Compression (optimized for avatar)
-        const processedFile = await compressAndConvertImage(file, { isAvatar: true });
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setProfilePhoto(reader.result as string);
-        };
-        reader.readAsDataURL(processedFile);
-      } catch (error: any) {
-        setEditError('Failed to process image. Please try another one.');
-        console.error('Image processing error:', error);
-      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setTempImageForCrop(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = async (croppedFile: File) => {
+    try {
+      setEditError(null);
+      // Process image: HEIC conversion + Compression (optimized for avatar)
+      const processedFile = await compressAndConvertImage(croppedFile, { isAvatar: true });
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePhoto(reader.result as string);
+        setTempImageForCrop(null);
+      };
+      reader.readAsDataURL(processedFile);
+    } catch (error: any) {
+      setEditError('Failed to process image. Please try another one.');
+      console.error('Image processing error:', error);
+      setTempImageForCrop(null);
+    }
+
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -1366,6 +1379,16 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
               {renderSubPage()}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {tempImageForCrop && (
+          <ImageCropperModal
+            image={tempImageForCrop}
+            onCropComplete={handleCropComplete}
+            onCancel={() => setTempImageForCrop(null)}
+          />
         )}
       </AnimatePresence>
     </motion.div>
