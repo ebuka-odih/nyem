@@ -24,7 +24,7 @@ import { useAuth } from './hooks/useAuth';
 import { useLocation as useLocationHook } from './hooks/useLocation';
 import { useWishlist } from './hooks/useWishlist';
 import { queryClient } from './hooks/api/queryClient';
-import { useServiceWorker } from './hooks/useServiceWorker';
+// useServiceWorker inlined below to prevent React instance conflicts
 import { getStoredUser } from './utils/api';
 import { ServiceWorkerUpdate } from './components/ServiceWorkerUpdate';
 import { useCategories } from './hooks/api/useCategories';
@@ -395,6 +395,70 @@ const AuthRoutes: React.FC = () => {
       </AuthLayout>
     </>
   );
+};
+
+// useServiceWorker hook - Handles background service worker updates silently
+const useServiceWorker = () => {
+  const checkForUpdates = useCallback(async () => {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) await registration.update();
+    } catch (error) {
+      console.debug('[SW] Update check failed:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const lastReloadKey = 'sw_last_reload';
+    const lastReload = localStorage.getItem(lastReloadKey);
+    const now = Date.now();
+    const isLooping = lastReload && (now - parseInt(lastReload, 10) < 30000);
+
+    const handleControllerChange = () => {
+      if (isLooping) {
+        console.warn('[SW] Potential refresh loop detected, delaying reload');
+        return;
+      }
+      localStorage.setItem(lastReloadKey, now.toString());
+      const reload = () => {
+        console.log('[SW] Service worker updated, refreshing for latest version');
+        window.location.reload();
+      };
+
+      if (document.visibilityState === 'hidden') {
+        reload();
+      } else {
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === 'hidden') {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            reload();
+          }
+        };
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        setTimeout(() => {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        }, 60 * 60 * 1000);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+    checkForUpdates();
+    const updateInterval = setInterval(checkForUpdates, 30 * 60 * 1000);
+    const handleEvents = () => checkForUpdates();
+    window.addEventListener('focus', handleEvents);
+    window.addEventListener('online', handleEvents);
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+      clearInterval(updateInterval);
+      window.removeEventListener('focus', handleEvents);
+      window.removeEventListener('online', handleEvents);
+    };
+  }, [checkForUpdates]);
+
+  return { isUpdateReady: false, activateUpdate: () => { } };
 };
 
 const App = () => {

@@ -22,13 +22,22 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'react': path.resolve(__dirname, 'node_modules/react'),
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
       },
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
       dedupe: ['react', 'react-dom'], // Ensure single instance of React
     },
     optimizeDeps: {
-      // Explicitly include React to ensure single instance
-      include: ['react', 'react-dom', 'react/jsx-dev-runtime', 'framer-motion'],
+      // Explicitly include React and other key libs to ensure single instance and avoid CJS/ESM conflicts
+      include: [
+        'react',
+        'react-dom',
+        'react/jsx-dev-runtime',
+        'framer-motion',
+        'browser-image-compression',
+        'heic2any'
+      ],
       // ESBuild options for better compatibility
       esbuildOptions: {
         target: 'esnext',

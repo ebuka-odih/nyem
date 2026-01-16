@@ -21,6 +21,7 @@ import { ENDPOINTS } from '../constants/endpoints';
 import { useCategories } from '../hooks/api/useCategories';
 import { useProfile } from '../hooks/api/useProfile';
 import { useCreateListing, useUpdateListing, useDeleteListing } from '../hooks/api/useListings';
+import { compressAndConvertImage } from '../utils/imageUtils';
 
 const subtleTransition = {
   type: "spring" as const,
@@ -128,24 +129,32 @@ export const UploadPage: React.FC = () => {
     }
 
     const remainingSlots = 4 - images.length;
-    const filesToUpload = (Array.from(files) as File[]).slice(0, remainingSlots);
+    const rawFiles = (Array.from(files) as File[]).slice(0, remainingSlots);
 
-    if (filesToUpload.length < files.length) {
+    if (rawFiles.length < files.length) {
       setError(`Only ${remainingSlots} more images allowed. Selected first ${remainingSlots}.`);
     } else {
       setError(null);
     }
 
-    const newPreviews = filesToUpload.map(file => URL.createObjectURL(file));
-    const startIdx = images.length;
-    setImages(prev => [...prev, ...newPreviews]);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-
     try {
       setIsUploading(true);
+
+      // 1. Process all images: HEIC conversion + Compression
+      const filesToUpload = await Promise.all(
+        rawFiles.map(file => compressAndConvertImage(file))
+      );
+
+      // 2. Create local previews
+      const newPreviews = filesToUpload.map(file => URL.createObjectURL(file));
+      const startIdx = images.length;
+      setImages(prev => [...prev, ...newPreviews]);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // 3. Upload to server
       const token = getStoredToken();
       if (!token) {
         setError('Please login to upload images');
@@ -158,10 +167,6 @@ export const UploadPage: React.FC = () => {
         const localBlobUrl = newPreviews[idx];
 
         try {
-          if (file.size > 10 * 1024 * 1024) {
-            throw new Error(`File ${file.name} is too large (max 10MB)`);
-          }
-
           const formData = new FormData();
           formData.append('image', file);
 
@@ -194,6 +199,7 @@ export const UploadPage: React.FC = () => {
       await Promise.all(uploadPromises);
     } catch (err: any) {
       console.error('Batch upload error:', err);
+      setError('Failed to process or upload images.');
     } finally {
       setIsUploading(false);
     }

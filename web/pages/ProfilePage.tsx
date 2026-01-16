@@ -38,6 +38,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { compressAndConvertImage } from '../utils/imageUtils';
 import { getStoredUser, getStoredToken, apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank, useUpdatePassword, useTradeHistory } from '../hooks/api/useProfile';
@@ -765,32 +766,24 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
     fileInputRef.current?.click();
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (max 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        setEditError('Image must be less than 2MB');
-        return;
-      }
-
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        setEditError('Please select a valid image file');
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePhoto(reader.result as string);
+      try {
         setEditError(null);
-      };
-      reader.onerror = () => {
-        setEditError('Failed to read image file');
-      };
-      reader.readAsDataURL(file);
-    }
+        // Process image: HEIC conversion + Compression
+        const processedFile = await compressAndConvertImage(file);
 
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setProfilePhoto(reader.result as string);
+        };
+        reader.readAsDataURL(processedFile);
+      } catch (error: any) {
+        setEditError('Failed to process image. Please try another one.');
+        console.error('Image processing error:', error);
+      }
+    }
     // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';

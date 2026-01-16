@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.16",
+    "browser-image-compression": "^2.0.2",
     "framer-motion": "^12.23.26",
+    "heic2any": "^0.0.4",
     "laravel-echo": "^2.3.0",
     "lucide-react": "^0.562.0",
     "pusher-js": "^8.4.0",
