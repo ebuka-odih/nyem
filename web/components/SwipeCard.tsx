@@ -41,8 +41,20 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   const currentUser = getStoredUser();
   const isOwnListing = currentUser && product.userId && String(currentUser.id) === String(product.userId);
   const stats = product.stats || {};
-  // Check if listing is "new" (less than 3 days old)
-  const isNew = product.createdAt ? (Date.now() - new Date(product.createdAt).getTime() < 3 * 24 * 60 * 60 * 1000) : false;
+  // Check if listing is "new" (less than 7 days old)
+  const isNew = React.useMemo(() => {
+    if (!product.createdAt) return false;
+    try {
+      const dateStr = typeof product.createdAt === 'string'
+        ? product.createdAt.replace(' ', 'T')
+        : product.createdAt;
+      const createdDate = new Date(dateStr).getTime();
+      if (isNaN(createdDate)) return false;
+      return (Date.now() - createdDate) < 7 * 24 * 60 * 60 * 1000;
+    } catch (e) {
+      return false;
+    }
+  }, [product.createdAt]);
 
   React.useEffect(() => {
     if (isTop) {

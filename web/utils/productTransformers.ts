@@ -72,7 +72,9 @@ export const transformListingToProduct = (listing: any): Product => {
     images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?w=800'],
     color: '#f3f4f6',
     distance: distance,
-    createdAt: listing.created_at,
+    createdAt: typeof listing.created_at === 'string'
+      ? listing.created_at
+      : (listing.created_at?.date || listing.created_at),
     vendor: {
       id: user.id || listing.user_id || listing.owner?.id,
       name: user.username || user.name || 'Unknown Seller',
