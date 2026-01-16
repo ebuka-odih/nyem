@@ -35,6 +35,7 @@ export interface Product {
   longDescription: string;
   vendor: Vendor;
   distance: string;
+  createdAt?: string;
   isSuper?: boolean;
   isAd?: boolean;
   isWelcome?: boolean;

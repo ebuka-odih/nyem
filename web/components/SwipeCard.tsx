@@ -41,6 +41,8 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   const currentUser = getStoredUser();
   const isOwnListing = currentUser && product.userId && String(currentUser.id) === String(product.userId);
   const stats = product.stats || {};
+  // Check if listing is "new" (less than 3 days old)
+  const isNew = product.createdAt ? (Date.now() - new Date(product.createdAt).getTime() < 3 * 24 * 60 * 60 * 1000) : false;
 
   React.useEffect(() => {
     if (isTop) {
@@ -246,12 +248,14 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
               <h2 className="text-2xl font-black text-white uppercase italic tracking-tighter leading-tight drop-shadow-[0_4px_8px_rgba(0,0,0,0.6)]">
                 {product.name}
               </h2>
-              <div className="flex items-center gap-2">
-                <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-xl flex items-center gap-2">
-                  <Zap size={14} className="text-[#830e4c]" fill="currentColor" />
-                  <span className="text-[10px] font-black text-neutral-900 uppercase tracking-widest italic">Best Seller</span>
+              {isNew && (
+                <div className="flex items-center gap-2">
+                  <div className="bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/20 shadow-xl flex items-center gap-2">
+                    <Zap size={14} className="text-[#830e4c]" fill="currentColor" />
+                    <span className="text-[10px] font-black text-neutral-900 uppercase tracking-widest italic">New Drop</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -298,10 +302,6 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
                 <div className="bg-rose-50 px-4 py-2.5 rounded-full flex items-center gap-2 border border-rose-100">
                   <Star size={12} className="text-[#830e4c]" fill="currentColor" />
                   <span className="text-[11px] font-black text-[#830e4c] uppercase tracking-widest">{product.category}</span>
-                </div>
-                <div className="bg-indigo-50 px-4 py-2.5 rounded-full flex items-center gap-2 border border-indigo-100">
-                  <ShieldCheck size={12} className="text-indigo-500" />
-                  <span className="text-[11px] font-black text-indigo-700 uppercase tracking-widest">Inspected</span>
                 </div>
               </div>
             </div>
