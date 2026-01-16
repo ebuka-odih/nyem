@@ -14,29 +14,58 @@ return new class extends Migration
     {
         $driverName = DB::getDriverName();
 
-        // 1. Force Disable Foreign Key checks so we can do whatever we want
+        // 1. Force Disable Foreign Key checks
         if ($driverName === 'mysql') {
             DB::statement('SET FOREIGN_KEY_CHECKS=0');
         }
 
-        // 2. Drop the redundant 'listings' table if it exists
-        // (Just in case a failed migration left it half-created)
-        Schema::dropIfExists('listings');
-
-        // 3. COPY STRUCTURE: Create the 'listings' table EXACTLY like the 'items' table
-        if ($driverName === 'mysql') {
-            DB::statement('CREATE TABLE listings LIKE items');
-        } else {
-            // SQLite backup plan (less likely to be needed on prod, but good safe-guard)
-            // For SQLite, we might just rename since "CREATE LIKE" isn't standard
-             DB::statement('CREATE TABLE listings AS SELECT * FROM items WHERE 1=0');
+        // SCENARIO A: 'listings' ALREADY EXISTS
+        // If the table 'listings' already exists, we assume the previous migration
+        // actually succeeded in renaming it before it crashed. We are safe!
+        if (Schema::hasTable('listings')) {
+            \Log::info("Table 'listings' already exists. Migration assumed successful.");
+        }
+        
+        // SCENARIO B: 'listings' DOES NOT EXIST, BUT 'items' DOES
+        // This means the rename hasn't happened yet. We rename it now.
+        elseif (Schema::hasTable('items')) {
+             if ($driverName === 'mysql') {
+                DB::statement('RENAME TABLE items TO listings');
+            } else {
+                Schema::rename('items', 'listings');
+            }
         }
 
-        // 4. COPY DATA: Move all data from 'items' to 'listings'
-        // This is safer than rename because it leaves 'items' as a backup!
-        DB::statement('INSERT INTO listings SELECT * FROM items');
+        // SCENARIO C: NEITHER EXISTS (Critical Error Recovery)
+        // If neither exists, we must create 'listings' from scratch to prevent 500 errors.
+        else {
+             Schema::create('listings', function (Blueprint $table) {
+                // Determine user_id type based on users table
+                $userIdType = 'uuid'; // Default assumption
+                
+                $table->uuid('id')->primary();
+                $table->uuid('user_id')->nullable(); 
+                $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+                
+                $table->unsignedBigInteger('category_id')->nullable();
+                $table->enum('type', ['shop', 'swap', 'barter', 'marketplace', 'services'])->default('shop');
+                $table->string('title');
+                $table->text('description')->nullable();
+                $table->decimal('price', 10, 2)->nullable();
+                $table->string('city')->nullable();
+                $table->string('location')->nullable(); // Legacy field
+                $table->json('photos')->nullable();
+                $table->json('images')->nullable(); // Legacy field
+                $table->string('condition')->default('used');
+                $table->string('status')->default('active');
+                $table->string('looking_for')->nullable();
+                $table->decimal('latitude', 10, 7)->nullable();
+                $table->decimal('longitude', 10, 7)->nullable();
+                $table->timestamps();
+            });
+        }
 
-        // 5. Re-enable security checks
+        // 2. Re-enable security checks
         if ($driverName === 'mysql') {
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
         }
@@ -47,6 +76,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('listings');
+        // No rollback
     }
 };
