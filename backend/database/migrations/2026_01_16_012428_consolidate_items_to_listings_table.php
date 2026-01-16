@@ -14,11 +14,12 @@ return new class extends Migration
     {
         $driverName = DB::getDriverName();
 
-        // 1. Drop the redundant 'listings' table if it exists
+        // 1. Drop the redundant empty 'listings' table if it exists
         Schema::dropIfExists('listings');
 
-        // 2. We must drop all foreign keys pointing to 'items' before renaming it on MySQL
-        $tablesWithFks = [
+        // 2. Clear out all potential foreign keys pointing to 'items' or using 'listing' names
+        // In MySQL, we MUST do these in separate Schema::table calls to handle errors gracefully
+        $fkMap = [
             'listing_stats' => ['listing_id', 'item_id'],
             'swipes' => ['target_listing_id', 'offered_listing_id', 'target_item_id', 'offered_item_id'],
             'user_matches' => ['listing1_id', 'listing2_id', 'item1_id', 'item2_id'],
@@ -29,20 +30,26 @@ return new class extends Migration
             'trade_offers' => ['offered_listing_id', 'target_listing_id', 'offered_item_id', 'target_item_id']
         ];
 
-        foreach ($tablesWithFks as $table => $columns) {
-            if (Schema::hasTable($table)) {
-                Schema::table($table, function (Blueprint $t) use ($table, $columns) {
-                    foreach ($columns as $column) {
-                        try {
-                            // Try dropping the FK. MySQL often names them table_column_foreign
-                            $t->dropForeign("{$table}_{$column}_foreign");
-                        } catch (\Exception $e) {}
-                    }
-                });
+        foreach ($fkMap as $table => $columns) {
+            if (!Schema::hasTable($table)) continue;
+
+            foreach ($columns as $column) {
+                if (!Schema::hasColumn($table, $column)) continue;
+
+                $fkName = "{$table}_{$column}_foreign";
+                
+                try {
+                    // SEPARATE call for every drop to prevent MySQL SQLSTATE[42000] from stopping the migration
+                    Schema::table($table, function (Blueprint $t) use ($fkName) {
+                        $t->dropForeign($fkName);
+                    });
+                } catch (\Exception $e) {
+                    // Ignore: Foreign key likely doesn't exist with this specific name
+                }
             }
         }
 
-        // 3. Now rename 'items' table to 'listings'
+        // 3. Perform the rename now that table 'items' is unlocked
         if (Schema::hasTable('items') && !Schema::hasTable('listings')) {
             if ($driverName === 'sqlite') {
                 DB::statement('ALTER TABLE items RENAME TO listings');
@@ -51,20 +58,21 @@ return new class extends Migration
             }
         }
 
-        // 4. Re-create all foreign keys pointing to the new 'listings' table
-        foreach ($tablesWithFks as $table => $columns) {
-            if (Schema::hasTable($table)) {
-                Schema::table($table, function (Blueprint $t) use ($table, $columns) {
-                    foreach ($columns as $column) {
-                        if (Schema::hasColumn($table, $column)) {
-                            try {
-                                $t->foreign($column)->references('id')->on('listings')->cascadeOnDelete();
-                            } catch (\Exception $e) {
-                                \Log::warning("Could not recreate FK for {$table}.{$column}: " . $e->getMessage());
-                            }
-                        }
-                    }
-                });
+        // 4. Re-establish foreign keys pointing to the new 'listings' table
+        foreach ($fkMap as $table => $columns) {
+            if (!Schema::hasTable($table)) continue;
+
+            foreach ($columns as $column) {
+                if (!Schema::hasColumn($table, $column)) continue;
+
+                try {
+                    Schema::table($table, function (Blueprint $t) use ($column) {
+                        $t->foreign($column)->references('id')->on('listings')->cascadeOnDelete();
+                    });
+                } catch (\Exception $e) {
+                    // Log but don't crash
+                    \Log::info("Skip recreated FK for {$table}.{$column}: " . $e->getMessage());
+                }
             }
         }
     }
