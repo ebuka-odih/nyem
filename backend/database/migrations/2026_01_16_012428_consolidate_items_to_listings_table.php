@@ -14,34 +14,23 @@ return new class extends Migration
     {
         $driverName = DB::getDriverName();
 
-        // 1. Drop the empty and redundant 'listings' table
+        // 1. Drop the redundant 'listings' table if it exists
+        // This table was likely created by a previous migration but is empty
         Schema::dropIfExists('listings');
 
         // 2. Rename 'items' table to 'listings'
-        if ($driverName === 'sqlite') {
-            DB::statement('ALTER TABLE items RENAME TO listings');
-        } else {
-            Schema::rename('items', 'listings');
-        }
-
-        // 3. Fix foreign keys in listing_stats
-        // We need to make sure the foreign key points to the new 'listings' table (which was 'items')
-        if (Schema::hasTable('listing_stats')) {
-            try {
-                Schema::table('listing_stats', function (Blueprint $table) {
-                    $table->dropForeign(['listing_id']);
-                });
-            } catch (\Exception $e) {
-                // Ignore if foreign key doesn't exist
+        // We only do this if 'items' exists and 'listings' does not
+        if (Schema::hasTable('items') && !Schema::hasTable('listings')) {
+            if ($driverName === 'sqlite') {
+                DB::statement('ALTER TABLE items RENAME TO listings');
+            } else {
+                Schema::rename('items', 'listings');
             }
-
-            Schema::table('listing_stats', function (Blueprint $table) {
-                $table->foreign('listing_id')->references('id')->on('listings')->cascadeOnDelete();
-            });
         }
-        
-        // 4. Update other tables that might be pointing to the wrong table
+
+        // 3. Update foreign keys across all related tables
         $tablesToFix = [
+            'listing_stats' => ['listing_id'],
             'swipes' => ['target_listing_id', 'offered_listing_id'],
             'user_matches' => ['listing1_id', 'listing2_id'],
             'buy_requests' => ['listing_id'],
@@ -53,20 +42,45 @@ return new class extends Migration
 
         foreach ($tablesToFix as $table => $columns) {
             if (Schema::hasTable($table)) {
-                Schema::table($table, function (Blueprint $t) use ($table, $columns) {
-                    foreach ($columns as $column) {
-                        try {
-                            $t->dropForeign([$column]);
-                        } catch (\Exception $e) {}
-                    }
-                });
-
-                Schema::table($table, function (Blueprint $t) use ($table, $columns) {
-                    foreach ($columns as $column) {
-                        $t->foreign($column)->references('id')->on('listings')->cascadeOnDelete();
-                    }
-                });
+                foreach ($columns as $column) {
+                    $this->recreateForeignKey($table, $column);
+                }
             }
+        }
+    }
+
+    /**
+     * Recreate a foreign key to point to the new 'listings' table.
+     * Handles MySQL "Can't DROP FOREIGN KEY" errors gracefully.
+     */
+    private function recreateForeignKey(string $table, string $column): void
+    {
+        // Try to drop the foreign key using both 'listing' and 'item' naming conventions
+        // MySQL requires the exact name of the constraint
+        $potentialNames = [
+            "{$table}_{$column}_foreign",
+            str_replace('listing', 'item', "{$table}_{$column}_foreign")
+        ];
+
+        foreach ($potentialNames as $fkName) {
+            try {
+                // We use a fresh connection/statement for each attempt to prevent transaction issues
+                Schema::table($table, function (Blueprint $t) use ($fkName) {
+                    $t->dropForeign($fkName);
+                });
+            } catch (\Exception $e) {
+                // Ignore failure to drop - it likely doesn't exist with this name
+            }
+        }
+
+        // Finally, create the new foreign key pointing to 'listings'
+        try {
+            Schema::table($table, function (Blueprint $t) use ($column) {
+                $t->foreign($column)->references('id')->on('listings')->cascadeOnDelete();
+            });
+        } catch (\Exception $e) {
+            // Log if creation fails, but don't stop the migration
+            \Log::warning("Could not create foreign key for {$table}.{$column}: " . $e->getMessage());
         }
     }
 
@@ -75,7 +89,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        // Reversing this is complex because it involves table renaming and FK recreation.
-        // For local development, we'll keep it simple or skip.
+        // No rollback provided for this consolidation
     }
 };
