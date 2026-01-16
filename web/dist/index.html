@@ -79,6 +79,19 @@
     });
   </script>
 
+  <!-- Pusher Beams -->
+  <script src="https://js.pusher.com/beams/2.1.0/push-notifications-cdn.js"></script>
+  <script>
+    const beamsClient = new PusherPushNotifications.Client({
+      instanceId: 'eda7c812-4ba4-4c42-b676-b3f207ed4d9f',
+    });
+
+    beamsClient.start()
+      .then(() => beamsClient.addDeviceInterest('hello'))
+      .then(() => console.log('Successfully registered and subscribed to Pusher Beams!'))
+      .catch(console.error);
+  </script>
+
   <!-- PushAlert Unified Code - COMMENTED OUT FOR TESTING ONESIGNAL -->
   <!-- Load PushAlert after service worker is ready -->
   <!--
@@ -172,13 +185,13 @@
       /* Firefox */
     }
   </style>
-  <script type="module" crossorigin src="/assets/js/index-BZPezok9.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/js/vendor-react-BfM_owaC.js">
-  <link rel="modulepreload" crossorigin href="/assets/js/vendor-framer-4X7OVNh1.js">
-  <link rel="modulepreload" crossorigin href="/assets/js/vendor-query-DeEM7L4V.js">
-  <link rel="modulepreload" crossorigin href="/assets/js/vendor-icons-Cnh11lZp.js">
-  <link rel="modulepreload" crossorigin href="/assets/js/pages-D6-agQBt.js">
-  <link rel="modulepreload" crossorigin href="/assets/js/pages-auth-N2FzcPrV.js">
+  <script type="module" crossorigin src="/assets/js/index-DuWlARxL.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/js/vendor-react-mETsQ2lE.js">
+  <link rel="modulepreload" crossorigin href="/assets/js/vendor-framer-BUk_mL6S.js">
+  <link rel="modulepreload" crossorigin href="/assets/js/vendor-query-BDtb7VjF.js">
+  <link rel="modulepreload" crossorigin href="/assets/js/vendor-icons-Duy5fzZO.js">
+  <link rel="modulepreload" crossorigin href="/assets/js/pages-CA0SByDS.js">
+  <link rel="modulepreload" crossorigin href="/assets/js/pages-auth-DDAUbddM.js">
 </head>
 
 <body class="bg-slate-50 m-0 p-0 overflow-hidden" style="position: fixed; width: 100%; height: 100vh; height: 100dvh;">

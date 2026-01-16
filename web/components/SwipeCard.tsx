@@ -60,14 +60,20 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   const isMostViewed = (stats.views || 0) >= 10;
   const isPopular = (stats.stars || 0) >= 5;
 
+  const swipedRef = useRef(false);
+
   React.useEffect(() => {
     if (isTop) {
       if (triggerDirection) {
+        swipedRef.current = true;
         if (triggerDirection === 'right') controls.start({ x: 800, opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }).then(() => onSwipe('right'));
         else if (triggerDirection === 'left') controls.start({ x: -800, opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }).then(() => onSwipe('left'));
         else if (triggerDirection === 'up') controls.start({ y: -1000, opacity: 0, transition: { duration: 0.2, ease: 'easeOut' } }).then(() => onSwipe('up'));
       } else {
-        controls.start({ scale: 1, x: 0, y: 0, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } });
+        // Only reset position if we haven't triggered a swipe exit
+        if (!swipedRef.current) {
+          controls.start({ scale: 1, x: 0, y: 0, opacity: 1, transition: { type: 'spring', stiffness: 500, damping: 30 } });
+        }
       }
     } else {
       const stackOffset = Math.min(index * 8, 16);
