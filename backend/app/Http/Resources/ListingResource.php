@@ -111,7 +111,11 @@ class ListingResource extends JsonResource
      */
     private function calculateDistance($user): ?float
     {
-        if (!$user || !$user->hasLocation()) {
+        // Get user coordinates from user object or guest session
+        $userLat = $user ? $user->latitude : session('guest_latitude');
+        $userLon = $user ? $user->longitude : session('guest_longitude');
+
+        if (!$userLat || !$userLon) {
             return null;
         }
 
@@ -126,13 +130,13 @@ class ListingResource extends JsonResource
             
             // Priority 1: Use item's own coordinates if available
             if ($this->latitude && $this->longitude) {
-                $sellerLat = $this->latitude;
-                $sellerLon = $this->longitude;
+                $sellerLat = (float) $this->latitude;
+                $sellerLon = (float) $this->longitude;
             }
             // Priority 2: Fall back to seller's user coordinates
             elseif ($this->user && $this->user->hasLocation()) {
-                $sellerLat = $this->user->latitude;
-                $sellerLon = $this->user->longitude;
+                $sellerLat = (float) $this->user->latitude;
+                $sellerLon = (float) $this->user->longitude;
             }
             
             if (!$sellerLat || !$sellerLon) {
@@ -142,8 +146,8 @@ class ListingResource extends JsonResource
             try {
                 $locationService = app(\App\Services\LocationService::class);
                 $distanceKm = $locationService->calculateDistance(
-                    $user->latitude,
-                    $user->longitude,
+                    (float) $userLat,
+                    (float) $userLon,
                     $sellerLat,
                     $sellerLon,
                     'km'

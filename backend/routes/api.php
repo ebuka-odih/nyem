@@ -66,6 +66,14 @@ Route::prefix('auth')->group(function () {
 
 
 
+// Location endpoints
+// Rate limiting is handled within the controller
+Route::prefix('location')->group(function () {
+    Route::post('/update', [LocationController::class, 'update']);
+    Route::get('/nearby', [LocationController::class, 'nearby']);
+    Route::get('/status', [LocationController::class, 'status']);
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profile/me', [ProfileController::class, 'me']);
     Route::put('/profile/update', [ProfileController::class, 'update']);
@@ -88,13 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Trade history
     Route::get('/profile/trade-history', [ProfileController::class, 'getTradeHistory']);
 
-    // Location endpoints
-    // Rate limiting is handled within the controller
-    Route::prefix('location')->group(function () {
-        Route::post('/update', [LocationController::class, 'update']);
-        Route::get('/nearby', [LocationController::class, 'nearby']);
-        Route::get('/status', [LocationController::class, 'status']);
-    });
+
 
     // Image upload endpoints
     Route::post('/images/upload', [ImageUploadController::class, 'upload']);

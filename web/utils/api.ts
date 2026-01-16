@@ -199,6 +199,14 @@ export async function apiFetch<T = any>(
     }
   }
 
+  // Add location headers if available (for both guests and auth users)
+  const guestLat = localStorage.getItem('guest_latitude');
+  const guestLon = localStorage.getItem('guest_longitude');
+  if (guestLat && guestLon) {
+    requestHeaders['X-User-Latitude'] = guestLat;
+    requestHeaders['X-User-Longitude'] = guestLon;
+  }
+
   // Add authentication token if provided
   if (token) {
     requestHeaders.Authorization = `Bearer ${token}`;

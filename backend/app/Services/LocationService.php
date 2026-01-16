@@ -1,26 +1,57 @@
-<?php
-
-namespace App\Services;
-
-use App\Models\User;
-use Illuminate\Support\Collection;
+use Spatie\Geocoder\Facades\Geocoder;
+use Illuminate\Http\Request;
 
 /**
  * LocationService
  * 
  * Handles location-based operations including:
  * - Distance calculations using Haversine formula
+ * - Geocoding (resolving addresses to coordinates)
  * - Finding nearby users
  * - Validating GPS coordinates
  * - Converting between different distance units
- * 
- * The Haversine formula is used for calculating distances between two points
- * on the Earth's surface (assumed to be a sphere). This is accurate for
- * distances up to a few hundred kilometers and is the industry standard for
- * location-based applications like Tinder.
  */
 class LocationService
 {
+    /**
+     * Get user coordinates from the request (Auth, Session, or Headers)
+     * 
+     * @param Request $request
+     * @return array|null ['latitude' => float, 'longitude' => float]
+     */
+    public function getRequestCoordinates(Request $request): ?array
+    {
+        $user = $request->user();
+        
+        // 1. Authenticated user
+        if ($user && $user->hasLocation()) {
+            return [
+                'latitude' => (float) $user->latitude,
+                'longitude' => (float) $user->longitude
+            ];
+        }
+
+        // 2. Custom headers (from Frontend)
+        $lat = $request->header('X-User-Latitude');
+        $lng = $request->header('X-User-Longitude');
+        
+        if ($lat && $lng) {
+            return [
+                'latitude' => (float) $lat,
+                'longitude' => (float) $lng
+            ];
+        }
+
+        // 3. Session (Guest)
+        if (session()->has('guest_latitude') && session()->has('guest_longitude')) {
+            return [
+                'latitude' => (float) session('guest_latitude'),
+                'longitude' => (float) session('guest_longitude')
+            ];
+        }
+
+        return null;
+    }
     /**
      * Earth's radius in kilometers
      */
@@ -81,6 +112,30 @@ class LocationService
         }
         
         return round($distance, 2); // Round to 2 decimal places for larger distances
+    }
+
+    /**
+     * Resolve coordinates for a given address/location string
+     * 
+     * @param string $address
+     * @return array|null ['lat' => float, 'lng' => float]
+     */
+    public function getCoordinates(string $address): ?array
+    {
+        try {
+            $result = Geocoder::getCoordinatesForAddress($address);
+            
+            if ($result && isset($result['lat']) && isset($result['lng'])) {
+                return [
+                    'latitude' => $result['lat'],
+                    'longitude' => $result['lng']
+                ];
+            }
+        } catch (\Exception $e) {
+            \Log::error("Geocoding failed for address '{$address}': " . $e->getMessage());
+        }
+
+        return null;
     }
 
     /**

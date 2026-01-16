@@ -27,11 +27,11 @@ export const useLocation = () => {
   const checkLocationAndShowModal = async () => {
     if (locationPermissionChecked) return;
 
+    // Always check status (auth or guest)
     const token = getStoredToken();
-    if (!token) return;
 
     try {
-      const response = await apiFetch(ENDPOINTS.location.status, { token }) as any;
+      const response = await apiFetch(ENDPOINTS.location.status, token ? { token } : {}) as any;
       if (!response.data?.has_location) {
         setShowLocationModal(true);
       }

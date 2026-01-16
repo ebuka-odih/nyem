@@ -26,21 +26,20 @@ export const LocationPermissionModal: React.FC<LocationPermissionModalProps> = (
       async (position) => {
         try {
           const token = getStoredToken();
-          if (!token) {
-            setError('Please login first');
-            setLoading(false);
-            return;
-          }
 
           // Update user location on server
           await apiFetch(ENDPOINTS.location.update, {
             method: 'POST',
-            token,
+            ...(token ? { token } : {}),
             body: {
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
             },
           });
+
+          // Save to localStorage for automatic headers
+          localStorage.setItem('guest_latitude', position.coords.latitude.toString());
+          localStorage.setItem('guest_longitude', position.coords.longitude.toString());
 
           // Success - close modal
           onAllow();

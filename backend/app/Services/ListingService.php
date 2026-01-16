@@ -257,20 +257,40 @@ class ListingService
 
         // Calculate distances and apply personalized ranking
         // Priority: Use item coordinates > seller's user coordinates
-        if ($user && $user->hasLocation()) {
+        $userLat = $user ? $user->latitude : session('guest_latitude');
+        $userLon = $user ? $user->longitude : session('guest_longitude');
+
+        if ($userLat && $userLon) {
             $maxDistanceKm = 100; // Default 100km radius, can be made configurable
             
-            $listings = $listings->map(function ($listing) use ($user, $userLikedCategories) {
+            $listings = $listings->map(function ($listing) use ($userLat, $userLon, $userLikedCategories) {
                 $distanceKm = null;
                 
+                // If listing has no coordinates, try to resolve from city/area using Geocoder
+                if (!$listing->latitude || !$listing->longitude) {
+                    $locationString = $listing->city;
+                    if ($listing->user && $listing->user->areaLocation) {
+                        $locationString = $listing->user->areaLocation->name . ', ' . $locationString;
+                    }
+                    
+                    if ($locationString) {
+                        $resolvedCoords = $this->locationService->getCoordinates($locationString);
+                        if ($resolvedCoords) {
+                            $listing->latitude = $resolvedCoords['latitude'];
+                            $listing->longitude = $resolvedCoords['longitude'];
+                            $listing->save(); // Cache it
+                        }
+                    }
+                }
+
                 // Priority 1: Use item's own coordinates if available
                 if ($listing->latitude && $listing->longitude) {
                     try {
                         $distanceKm = $this->locationService->calculateDistance(
-                            $user->latitude,
-                            $user->longitude,
-                            $listing->latitude,
-                            $listing->longitude,
+                            (float) $userLat,
+                            (float) $userLon,
+                            (float) $listing->latitude,
+                            (float) $listing->longitude,
                             'km'
                         );
                     } catch (\Exception $e) {
@@ -282,10 +302,10 @@ class ListingService
                 if ($distanceKm === null && $listing->user && $listing->user->hasLocation()) {
                     try {
                         $distanceKm = $this->locationService->calculateDistance(
-                            $user->latitude,
-                            $user->longitude,
-                            $listing->user->latitude,
-                            $listing->user->longitude,
+                            (float) $userLat,
+                            (float) $userLon,
+                            (float) $listing->user->latitude,
+                            (float) $listing->user->longitude,
                             'km'
                         );
                     } catch (\Exception $e) {
@@ -296,12 +316,8 @@ class ListingService
                 $listing->distance_km = $distanceKm;
                 
                 // Calculate personalized score
-                // Score factors:
-                // 1. Recency (newer = higher score) - timestamp in seconds
-                // 2. Distance (closer = higher score) - inverse of distance
-                // 3. Category preference (liked categories = higher score)
                 $recencyScore = $listing->created_at->timestamp;
-                $distanceScore = $distanceKm !== null ? (1000 / max($distanceKm, 0.1)) : 0; // Inverse distance, max 1000 for very close items
+                $distanceScore = $distanceKm !== null ? (1000 / max($distanceKm, 0.1)) : 0; 
                 $categoryScore = 0;
                 if (!empty($userLikedCategories) && $listing->category_id && in_array($listing->category_id, $userLikedCategories)) {
                     // Boost listings from preferred categories

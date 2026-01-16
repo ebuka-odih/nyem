@@ -16,6 +16,7 @@
         "laravel/tinker": "^2.10.1",
         "pusher/pusher-php-server": "^7.2",
         "sentry/sentry-laravel": "^4.20",
+        "spatie/geocoder": "^3.16",
         "twilio/sdk": "^8.8"
     },
     "require-dev": {

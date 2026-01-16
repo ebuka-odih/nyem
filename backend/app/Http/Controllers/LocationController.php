@@ -54,9 +54,10 @@ class LocationController extends Controller
      */
     public function update(Request $request)
     {
-        // Rate limit: 60 requests per minute per user
-        // This prevents abuse while allowing reasonable location updates
-        $key = 'location_update:' . $request->user()->id;
+        // Rate limit: 60 requests per minute
+        $key = $request->user() 
+            ? 'location_update:' . $request->user()->id 
+            : 'location_update_guest:' . $request->ip();
         
         if (RateLimiter::tooManyAttempts($key, 60)) {
             $seconds = RateLimiter::availableIn($key);
@@ -65,7 +66,7 @@ class LocationController extends Controller
             ]);
         }
 
-        RateLimiter::hit($key, 60); // 60 seconds
+        RateLimiter::hit($key, 60);
 
         // Validate input
         $validated = $request->validate([
@@ -87,33 +88,49 @@ class LocationController extends Controller
             ]);
         }
 
-        // Update user location
-        $user->latitude = $coords['latitude'];
-        $user->longitude = $coords['longitude'];
-        $user->location_updated_at = now();
-        $user->save();
+        if ($user) {
+            // Update user location
+            $user->latitude = $coords['latitude'];
+            $user->longitude = $coords['longitude'];
+            $user->location_updated_at = now();
+            $user->save();
 
-        // If user has area_id set, also update the area's coordinates
-        // This allows items to use area coordinates for distance calculation
-        if ($user->area_id) {
-            $area = \App\Models\Location::find($user->area_id);
-            if ($area && (!$area->latitude || !$area->longitude)) {
-                // Only update if area doesn't have coordinates yet
-                // This preserves manually set coordinates if they exist
-                $area->latitude = $coords['latitude'];
-                $area->longitude = $coords['longitude'];
-                $area->save();
+            // If user has area_id set, also update the area's coordinates
+            if ($user->area_id) {
+                $area = \App\Models\Location::find($user->area_id);
+                if ($area && (!$area->latitude || !$area->longitude)) {
+                    $area->latitude = $coords['latitude'];
+                    $area->longitude = $coords['longitude'];
+                    $area->save();
+                }
             }
-        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Location updated successfully',
-            'data' => [
-                'user' => $user->fresh(['cityLocation', 'areaLocation']),
-                'location_updated_at' => $user->location_updated_at->toIso8601String(),
-            ],
-        ], 200);
+            return response()->json([
+                'success' => true,
+                'message' => 'Location updated successfully',
+                'data' => [
+                    'user' => $user->fresh(['cityLocation', 'areaLocation']),
+                    'location_updated_at' => $user->location_updated_at->toIso8601String(),
+                ],
+            ], 200);
+        } else {
+            // For guests, store in session
+            session([
+                'guest_latitude' => $coords['latitude'],
+                'guest_longitude' => $coords['longitude'],
+                'location_updated_at' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Guest location updated successfully',
+                'data' => [
+                    'latitude' => $coords['latitude'],
+                    'longitude' => $coords['longitude'],
+                    'location_updated_at' => now()->toIso8601String(),
+                ],
+            ], 200);
+        }
     }
 
     /**
@@ -166,19 +183,17 @@ class LocationController extends Controller
         ]);
 
         // Determine search center point
-        // Use provided coordinates or fall back to user's stored location
-        $latitude = $validated['latitude'] ?? $user->latitude;
-        $longitude = $validated['longitude'] ?? $user->longitude;
+        // Use provided coordinates, authenticated user coordinates, or guest session coordinates
+        $latitude = $validated['latitude'] ?? ($user ? $user->latitude : session('guest_latitude'));
+        $longitude = $validated['longitude'] ?? ($user ? $user->longitude : session('guest_longitude'));
 
-        // If no coordinates available and user hasn't shared location, return error
+        // If no coordinates available, return error
         if (is_null($latitude) || is_null($longitude)) {
-            if (!isset($validated['latitude']) || !isset($validated['longitude'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Location is required. Please update your location first or provide latitude and longitude.',
-                    'data' => null,
-                ], 400);
-            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Location is required. Please update your location first or provide latitude and longitude.',
+                'data' => null,
+            ], 400);
         }
 
         // Validate coordinates
@@ -197,12 +212,8 @@ class LocationController extends Controller
         $limit = $validated['limit'] ?? 50; // Default 50 results
 
         // Find nearby users
-        // Exclude the current user from results
-        $excludeUserIds = [$user->id];
-
-        // Optional: Exclude blocked users or users who blocked the current user
-        // This would require checking a blocks table if it exists
-        // For now, we'll just exclude the current user
+        // Exclude the current user from results if authenticated
+        $excludeUserIds = $user ? [$user->id] : [];
 
         $nearbyUsers = $this->locationService->findNearbyUsers(
             $latitude,
@@ -252,17 +263,35 @@ class LocationController extends Controller
     {
         $user = $request->user();
 
+        if ($user) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Location status retrieved successfully',
+                'data' => [
+                    'has_location' => $user->hasLocation(),
+                    'latitude' => $user->latitude,
+                    'longitude' => $user->longitude,
+                    'location_updated_at' => $user->location_updated_at?->toIso8601String(),
+                    'location_age_hours' => $user->location_updated_at 
+                        ? round(now()->diffInHours($user->location_updated_at), 2)
+                        : null,
+                ],
+            ], 200);
+        }
+
+        // Guest status from session
+        $hasGuestLocation = session()->has('guest_latitude') && session()->has('guest_longitude');
+        
         return response()->json([
             'success' => true,
-            'message' => 'Location status retrieved successfully',
+            'message' => 'Guest location status retrieved successfully',
             'data' => [
-                'has_location' => $user->hasLocation(),
-                'latitude' => $user->latitude,
-                'longitude' => $user->longitude,
-                'location_updated_at' => $user->location_updated_at?->toIso8601String(),
-                'location_age_hours' => $user->location_updated_at 
-                    ? round(now()->diffInHours($user->location_updated_at), 2)
-                    : null,
+                'has_location' => $hasGuestLocation,
+                'latitude' => session('guest_latitude'),
+                'longitude' => session('guest_longitude'),
+                'location_updated_at' => session('location_updated_at') instanceof \Carbon\Carbon 
+                    ? session('location_updated_at')->toIso8601String() 
+                    : session('location_updated_at'),
             ],
         ], 200);
     }
