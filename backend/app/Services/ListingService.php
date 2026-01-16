@@ -37,12 +37,9 @@ class ListingService
             $data['price'] = null;
         }
 
-        // Check phone verification requirement
-        $listingsCount = $user->listings()->count();
-        $freeUploadLimit = 2;
-        
-        if (!$user->phone_verified_at && $listingsCount >= $freeUploadLimit) {
-            throw new \Exception('Verify your account to upload more listings. You can upload up to 2 listings without verification.', 403);
+        // Check phone verification requirement for sellers
+        if (!$user->phone_verified_at) {
+            throw new \Exception('Identity verification required. Please verify your phone number to publish listings.', 403);
         }
 
         // Get coordinates from seller's area or city location

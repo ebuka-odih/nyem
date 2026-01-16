@@ -61,4 +61,12 @@ return [
         'paymentUrl' => env('PAYSTACK_PAYMENT_URL', 'https://api.paystack.co'),
     ],
 
+    'termii' => [
+        'api_key' => env('TERMII_API'),
+        'secret_key' => env('TERMII_SECRET_KEY'),
+        'base_url' => env('BASE_URL', 'https://v3.api.termii.com'),
+        'from' => env('TERMII_FROM', 'NYEM'), // Default sender ID
+        'channel' => env('TERMII_CHANNEL', 'generic'), // dnd, whatsapp, or generic
+    ],
+
 ];

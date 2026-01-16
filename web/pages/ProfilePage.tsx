@@ -33,10 +33,12 @@ import {
   Camera,
   ChevronDown,
   Eye,
-  EyeOff
+  EyeOff,
+  Phone,
+  ArrowRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getStoredUser, getStoredToken } from '../utils/api';
+import { getStoredUser, getStoredToken, apiFetch } from '../utils/api';
 import { ENDPOINTS } from '../constants/endpoints';
 import { useProfile, useUpdateProfile, usePaymentSettings, useUpdatePaymentSettings, useBanks, useVerifyBank, useUpdatePassword, useTradeHistory } from '../hooks/api/useProfile';
 import { useCities, useAreas } from '../hooks/api/useLocations';
@@ -376,7 +378,12 @@ const PaymentSettingsView: React.FC = () => {
   );
 };
 
-const SecuritySettingsView: React.FC = () => {
+interface SecuritySettingsProps {
+  user: any;
+  refetchUser: () => void;
+}
+
+const SecuritySettingsView: React.FC<SecuritySettingsProps> = ({ user, refetchUser }) => {
   const updatePasswordMutation = useUpdatePassword();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -384,6 +391,68 @@ const SecuritySettingsView: React.FC = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  // Phone Verification States
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [otpCode, setOtpCode] = useState('');
+  const [verificationStep, setVerificationStep] = useState<'input' | 'otp'>('input');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [phoneStatus, setPhoneStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+
+  useEffect(() => {
+    if (user?.phone && !phone) {
+      setPhone(user.phone);
+    }
+  }, [user]);
+
+  const handleSendOtp = async () => {
+    if (!phone || phone.length < 10) {
+      setPhoneStatus({ type: 'error', message: 'Please enter a valid phone number' });
+      return;
+    }
+
+    try {
+      setIsSendingOtp(true);
+      setPhoneStatus(null);
+      await apiFetch<{ message: string }>(ENDPOINTS.auth.sendOtp, {
+        method: 'POST',
+        body: { phone }
+      });
+      setVerificationStep('otp');
+    } catch (err: any) {
+      setPhoneStatus({ type: 'error', message: err.message || 'Failed to send OTP' });
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    if (otpCode.length !== 6) {
+      setPhoneStatus({ type: 'error', message: 'Enter the 6-digit code' });
+      return;
+    }
+
+    try {
+      setIsVerifyingOtp(true);
+      setPhoneStatus(null);
+      const token = getStoredToken();
+      await apiFetch(ENDPOINTS.auth.verifyPhoneForSeller, {
+        method: 'POST',
+        token,
+        body: { phone, code: otpCode }
+      });
+
+      setPhoneStatus({ type: 'success', message: 'Phone verified successfully!' });
+      setVerificationStep('input');
+      setOtpCode('');
+      refetchUser();
+    } catch (err: any) {
+      setPhoneStatus({ type: 'error', message: err.message || 'Verification failed' });
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -410,7 +479,100 @@ const SecuritySettingsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Identity & Verification Section */}
+      <div className="space-y-4">
+        <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Identity & Phone</label>
+        <div className="bg-white border border-neutral-100 rounded-[2.5rem] p-6 space-y-6 shadow-sm">
+          {user?.phone_verified_at ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-neutral-900 tracking-tight">Phone Verified</h4>
+                  <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">{user.phone}</p>
+                </div>
+              </div>
+              <BadgeCheck className="text-emerald-500" size={24} />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 mb-2">
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                  <Smartphone size={22} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-neutral-900 tracking-tight">Phone Verification</h4>
+                  <p className="text-[9px] font-bold text-amber-600 uppercase tracking-widest mt-1">Required for sellers</p>
+                </div>
+              </div>
+
+              {phoneStatus && (
+                <div className={`p-4 rounded-xl text-[10px] font-black uppercase tracking-widest ${phoneStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                  {phoneStatus.message}
+                </div>
+              )}
+
+              {verificationStep === 'input' ? (
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <Phone size={14} className="text-neutral-300" />
+                    </div>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+234..."
+                      className="w-full bg-neutral-50 border border-neutral-100 rounded-xl pl-10 pr-4 py-3 text-sm font-bold text-neutral-900 focus:outline-none focus:border-[#830e4c] transition-all"
+                    />
+                  </div>
+                  <button
+                    onClick={handleSendOtp}
+                    disabled={isSendingOtp || !phone}
+                    className="bg-neutral-900 text-white px-5 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {isSendingOtp ? '...' : (
+                      <>
+                        Verify <ArrowRight size={12} />
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="ENTER CODE"
+                      className="flex-1 bg-neutral-50 border border-neutral-100 rounded-xl px-4 py-3 text-center text-sm font-black tracking-[0.4em] focus:outline-none focus:border-[#830e4c] transition-all"
+                    />
+                    <button
+                      onClick={handleVerifyPhone}
+                      disabled={isVerifyingOtp || otpCode.length !== 6}
+                      className="bg-[#830e4c] text-white px-6 rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+                    >
+                      {isVerifyingOtp ? '...' : 'Confirm'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setVerificationStep('input')}
+                    className="text-[9px] font-black text-neutral-400 uppercase tracking-widest hover:text-[#830e4c]"
+                  >
+                    Use different number
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className="space-y-4">
         <label className="text-[10px] font-black text-neutral-400 uppercase tracking-widest px-1">Change Password</label>
         <form onSubmit={handleUpdatePassword} className="bg-white border border-neutral-100 rounded-[2rem] p-6 space-y-5 shadow-sm">
@@ -877,7 +1039,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
       case 'payments':
         return <PaymentSettingsView />;
       case 'security':
-        return <SecuritySettingsView />;
+        return <SecuritySettingsView user={user} refetchUser={refetchUser} />;
       case 'history':
         return (
           <div className="space-y-4">

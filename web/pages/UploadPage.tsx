@@ -10,7 +10,10 @@ import {
   LayoutGrid,
   PlusSquare,
   Send,
-  MapPin
+  MapPin,
+  Phone,
+  ArrowRight,
+  ShieldCheck
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch, getStoredToken } from '../utils/api';
@@ -50,6 +53,12 @@ export const UploadPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
 
+  const { data: userData, isLoading: loadingListings, refetch: fetchUserListings } = useProfile();
+  const { data: categories = [], isLoading: loadingCategories } = useCategories('Shop');
+  const createListingMutation = useCreateListing();
+  const updateListingMutation = useUpdateListing();
+  const deleteListingMutation = useDeleteListing();
+
   // Form States
   const [images, setImages] = useState<string[]>([]);
   const [title, setTitle] = useState("");
@@ -59,12 +68,20 @@ export const UploadPage: React.FC = () => {
   const [price, setPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // React Query hooks
-  const { data: categories = [], isLoading: loadingCategories } = useCategories('Shop');
-  const { data: userData, isLoading: loadingListings, refetch: fetchUserListings } = useProfile();
-  const createListingMutation = useCreateListing();
-  const updateListingMutation = useUpdateListing();
-  const deleteListingMutation = useDeleteListing();
+  // Phone Verification States
+  const [phone, setPhone] = useState(userData?.phone || "");
+  const [otpCode, setOtpCode] = useState("");
+  const [verificationStep, setVerificationStep] = useState<'input' | 'otp'>('input');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [expiryTime, setExpiryTime] = useState<string | null>(null);
+
+  // Sync phone from userData
+  useEffect(() => {
+    if (userData?.phone && !phone) {
+      setPhone(userData.phone);
+    }
+  }, [userData?.phone]);
 
   const myListings = (userData?.listings || userData?.items || []).map((listing: any) => ({
     id: listing.id,
@@ -219,6 +236,56 @@ export const UploadPage: React.FC = () => {
       }
     }
   }, [editId, myListings, editingItem]);
+
+  const handleSendOtp = async () => {
+    if (!phone || phone.length < 10) {
+      setError('Please enter a valid phone number');
+      return;
+    }
+
+    try {
+      setIsSendingOtp(true);
+      setError(null);
+      const result = await apiFetch<{ message: string, expires_at: string }>(ENDPOINTS.auth.sendOtp, {
+        method: 'POST',
+        body: { phone }
+      });
+
+      setVerificationStep('otp');
+      setExpiryTime(result.expires_at);
+    } catch (err: any) {
+      setError(err.message || 'Failed to send OTP. Please try again.');
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  const handleVerifyPhone = async () => {
+    if (otpCode.length !== 6) {
+      setError('Please enter the 6-digit code');
+      return;
+    }
+
+    try {
+      setIsVerifyingOtp(true);
+      setError(null);
+      const token = getStoredToken();
+      await apiFetch(ENDPOINTS.auth.verifyPhoneForSeller, {
+        method: 'POST',
+        token,
+        body: { phone, code: otpCode }
+      });
+
+      // Success! Refetch profile to update phone_verified_at
+      await fetchUserListings();
+      setVerificationStep('input');
+      setOtpCode('');
+    } catch (err: any) {
+      setError(err.message || 'Verification failed. Please check the code.');
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!userData?.city_id && !userData?.city) {
@@ -410,6 +477,77 @@ export const UploadPage: React.FC = () => {
                 >
                   Navigate to Settings
                 </button>
+              </div>
+            ) : !userData?.phone_verified_at ? (
+              <div className="bg-[#830e4c]/5 border border-[#830e4c]/10 rounded-[2.5rem] p-7 text-center shadow-xl shadow-[#830e4c]/5 mt-2">
+                <div className="w-14 h-14 bg-[#830e4c]/10 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4">
+                  <ShieldCheck size={24} className="text-[#830e4c]" />
+                </div>
+                <h4 className="text-sm font-black text-[#830e4c] uppercase tracking-[0.2em] mb-3 italic">Verify Your Identity</h4>
+                <p className="text-[11px] text-neutral-600 font-medium leading-relaxed mb-6 px-4">
+                  For a safer marketplace, sellers are required to verify their <span className="font-black text-[#830e4c]">Phone Number</span> before publishing.
+                </p>
+
+                {verificationStep === 'input' ? (
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
+                        <Phone size={14} className="text-neutral-400" />
+                      </div>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="e.g., +234 800 000 0000"
+                        className="w-full bg-white border border-neutral-200 rounded-2xl pl-12 pr-4 py-4 text-xs font-black tracking-widest focus:outline-none focus:border-[#830e4c] transition-all"
+                      />
+                    </div>
+                    <button
+                      onClick={handleSendOtp}
+                      disabled={isSendingOtp || !phone}
+                      className="w-full bg-[#830e4c] text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] active:scale-95 transition-all shadow-lg shadow-[#830e4c]/20 flex items-center justify-center gap-2"
+                    >
+                      {isSendingOtp ? (
+                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <span>Send Verification Link</span>
+                          <ArrowRight size={14} />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="ENTER 6-DIGIT CODE"
+                        className="w-full bg-white border border-neutral-200 rounded-2xl px-4 py-4 text-center text-lg font-black tracking-[0.5em] focus:outline-none focus:border-[#830e4c] transition-all placeholder:text-[10px] placeholder:tracking-widest placeholder:font-medium"
+                      />
+                    </div>
+                    <button
+                      onClick={handleVerifyPhone}
+                      disabled={isVerifyingOtp || otpCode.length !== 6}
+                      className="w-full bg-[#830e4c] text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] active:scale-95 transition-all shadow-lg shadow-[#830e4c]/20 flex items-center justify-center gap-2"
+                    >
+                      {isVerifyingOtp ? (
+                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <span>Verify & Continue</span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setVerificationStep('input')}
+                      className="text-[9px] font-black text-neutral-400 uppercase tracking-widest hover:text-[#830e4c] transition-colors"
+                    >
+                      Change Number
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <>
