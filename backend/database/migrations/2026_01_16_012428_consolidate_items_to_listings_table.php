@@ -14,68 +14,44 @@ return new class extends Migration
     {
         $driverName = DB::getDriverName();
 
-        // 1. Drop the redundant empty 'listings' table if it exists
-        Schema::dropIfExists('listings');
-
-        // 2. Clear out all potential foreign keys pointing to 'items' or using 'listing' names
-        // In MySQL, we MUST do these in separate Schema::table calls to handle errors gracefully
-        $fkMap = [
-            'listing_stats' => ['listing_id', 'item_id'],
-            'swipes' => ['target_listing_id', 'offered_listing_id', 'target_item_id', 'offered_item_id'],
-            'user_matches' => ['listing1_id', 'listing2_id', 'item1_id', 'item2_id'],
-            'buy_requests' => ['listing_id', 'item_id'],
-            'message_requests' => ['listing_id', 'item_id'],
-            'transactions' => ['listing_id', 'item_id'],
-            'reports' => ['target_listing_id', 'target_item_id'],
-            'trade_offers' => ['offered_listing_id', 'target_listing_id', 'offered_item_id', 'target_item_id']
-        ];
-
-        foreach ($fkMap as $table => $columns) {
-            if (!Schema::hasTable($table)) continue;
-
-            foreach ($columns as $column) {
-                if (!Schema::hasColumn($table, $column)) continue;
-
-                $fkName = "{$table}_{$column}_foreign";
-                
-                try {
-                    // SEPARATE call for every drop to prevent MySQL SQLSTATE[42000] from stopping the migration
-                    Schema::table($table, function (Blueprint $t) use ($fkName) {
-                        $t->dropForeign($fkName);
-                    });
-                } catch (\Exception $e) {
-                    // Ignore: Foreign key likely doesn't exist with this specific name
-                }
-            }
+        // 1. Force Disable Foreign Key checks (This is the only way to safely rename on MySQL)
+        if ($driverName === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
         }
 
-        // 3. Perform the rename now that table 'items' is unlocked
+        // 2. Clear out any redundant empty tables that might be blocking the rename
+        Schema::dropIfExists('listings');
+
+        // 3. Rename the 'items' table to 'listings'
+        // This preserves all data, indexes, and primary keys perfectly.
+        // MySQL RENAME TABLE automatically updates incoming foreign keys from other tables!
         if (Schema::hasTable('items') && !Schema::hasTable('listings')) {
             if ($driverName === 'sqlite') {
                 DB::statement('ALTER TABLE items RENAME TO listings');
             } else {
-                Schema::rename('items', 'listings');
+                DB::statement('RENAME TABLE items TO listings');
             }
         }
 
-        // 4. Re-establish foreign keys pointing to the new 'listings' table
-        foreach ($fkMap as $table => $columns) {
-            if (!Schema::hasTable($table)) continue;
+        // 4. Fallback: If 'listings' still doesn't exist for some reason, create it as a clone
+        if (!Schema::hasTable('listings') && Schema::hasTable('items')) {
+             if ($driverName === 'mysql') {
+                DB::statement('CREATE TABLE listings LIKE items');
+                DB::statement('INSERT INTO listings SELECT * FROM items');
+             }
+        }
 
-            foreach ($columns as $column) {
-                if (!Schema::hasColumn($table, $column)) continue;
-
-                try {
-                    Schema::table($table, function (Blueprint $t) use ($column) {
-                        $t->foreign($column)->references('id')->on('listings')->cascadeOnDelete();
-                    });
-                } catch (\Exception $e) {
-                    // Log but don't crash
-                    \Log::info("Skip recreated FK for {$table}.{$column}: " . $e->getMessage());
-                }
-            }
+        // 5. Re-enable Foreign Key checks
+        if ($driverName === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
         }
     }
 
-    public function down(): void {}
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        // No rollback - we want to keep the data in 'listings'
+    }
 };
