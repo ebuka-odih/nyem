@@ -252,6 +252,13 @@ class Listing extends Model
             if (str_contains($url, '/storage/listings/images/') || str_contains($url, '/storage/items/images/')) {
                 // Extract the path after /storage/
                 $path = preg_replace('/^.*\/storage\/(.+)$/', '$1', $url);
+                
+                // CRITICAL FIX: Ensure we use 'items/images/' even if 'listings/images/' is present
+                // This matches the physical folder structure on the server
+                if (str_contains($path, 'listings/images/')) {
+                    $path = str_replace('listings/images/', 'items/images/', $path);
+                }
+                
                 // Generate correct URL using Storage facade
                 return Storage::disk('public')->url($path);
             }
@@ -269,14 +276,21 @@ class Listing extends Model
         if (str_starts_with($url, 'listings/images/') || str_starts_with($url, 'items/images/') || str_starts_with($url, 'storage/')) {
             // Remove 'storage/' prefix if present (Storage::url already handles the base path)
             $path = str_replace('storage/', '', $url);
-            // Also replace old items/images/ path with listings/images/
-            $path = str_replace('items/images/', 'listings/images/', $path);
+            
+            // CRITICAL FIX: The production server folder is still named 'items', so we MUST use 'items/images/' 
+            // even though the table is 'listings'. This ensures images load correctly.
+            // Replace 'listings/images/' with 'items/images/' to match physical folder
+            if (str_contains($path, 'listings/images/')) {
+                 $path = str_replace('listings/images/', 'items/images/', $path);
+            }
+            
             return Storage::disk('public')->url($path);
         }
 
-        // If it's just a filename or relative path, assume it's in listings/images
+        // If it's just a filename or relative path
         if (!str_contains($url, '/') && !str_contains($url, '\\')) {
-            return Storage::disk('public')->url('listings/images/' . $url);
+            // CRITICAL FIX: Use 'items/images/' because the production folder structure has NOT been renamed yet.
+            return Storage::disk('public')->url('items/images/' . $url);
         }
 
         // Default: try to use Storage facade to generate URL
