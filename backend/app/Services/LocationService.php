@@ -1,3 +1,9 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use Illuminate\Support\Collection;
 use Spatie\Geocoder\Facades\Geocoder;
 use Illuminate\Http\Request;
 
@@ -42,16 +48,20 @@ class LocationService
             ];
         }
 
-        // 3. Session (Guest)
-        if (session()->has('guest_latitude') && session()->has('guest_longitude')) {
-            return [
-                'latitude' => (float) session('guest_latitude'),
-                'longitude' => (float) session('guest_longitude')
-            ];
+        // 3. Session (Guest) - Only check if session is available
+        if ($request->hasSession()) {
+            $session = $request->session();
+            if ($session->has('guest_latitude') && $session->has('guest_longitude')) {
+                return [
+                    'latitude' => (float) $session->get('guest_latitude'),
+                    'longitude' => (float) $session->get('guest_longitude')
+                ];
+            }
         }
 
         return null;
     }
+
     /**
      * Earth's radius in kilometers
      */
@@ -151,7 +161,7 @@ class LocationService
     public function findNearbyUsers(
         float $latitude,
         float $longitude,
-        float $radiusKm = 50.0,
+        float $radiusKm = 100.0,
         array $excludeUserIds = [],
         int $limit = 50
     ): Collection {

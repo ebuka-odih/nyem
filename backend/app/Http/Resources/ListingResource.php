@@ -14,8 +14,7 @@ class ListingResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $user = $request->user();
-        $distanceKm = $this->calculateDistance($user);
+        $distanceKm = $this->calculateDistance($request);
         
         // Get photos array - default to empty array if null
         $photos = $this->photos ?? [];
@@ -109,15 +108,17 @@ class ListingResource extends JsonResource
      * Calculate distance between current user and listing owner
      * Priority: Use item coordinates > seller's user coordinates
      */
-    private function calculateDistance($user): ?float
+    private function calculateDistance(Request $request): ?float
     {
-        // Get user coordinates from user object or guest session
-        $userLat = $user ? $user->latitude : session('guest_latitude');
-        $userLon = $user ? $user->longitude : session('guest_longitude');
+        $locationService = app(\App\Services\LocationService::class);
+        $userCoords = $locationService->getRequestCoordinates($request);
 
-        if (!$userLat || !$userLon) {
+        if (!$userCoords) {
             return null;
         }
+
+        $userLat = $userCoords['latitude'];
+        $userLon = $userCoords['longitude'];
 
         // Use pre-calculated distance if available
         if (isset($this->distance_km)) {

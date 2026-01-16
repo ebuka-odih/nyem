@@ -114,12 +114,14 @@ class LocationController extends Controller
                 ],
             ], 200);
         } else {
-            // For guests, store in session
-            session([
-                'guest_latitude' => $coords['latitude'],
-                'guest_longitude' => $coords['longitude'],
-                'location_updated_at' => now(),
-            ]);
+            // For guests, store in session if available
+            if ($request->hasSession()) {
+                $request->session()->put([
+                    'guest_latitude' => $coords['latitude'],
+                    'guest_longitude' => $coords['longitude'],
+                    'location_updated_at' => now(),
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -184,8 +186,8 @@ class LocationController extends Controller
 
         // Determine search center point
         // Use provided coordinates, authenticated user coordinates, or guest session coordinates
-        $latitude = $validated['latitude'] ?? ($user ? $user->latitude : session('guest_latitude'));
-        $longitude = $validated['longitude'] ?? ($user ? $user->longitude : session('guest_longitude'));
+        $latitude = $validated['latitude'] ?? ($user ? $user->latitude : ($request->hasSession() ? $request->session()->get('guest_latitude') : null));
+        $longitude = $validated['longitude'] ?? ($user ? $user->longitude : ($request->hasSession() ? $request->session()->get('guest_longitude') : null));
 
         // If no coordinates available, return error
         if (is_null($latitude) || is_null($longitude)) {
@@ -280,18 +282,29 @@ class LocationController extends Controller
         }
 
         // Guest status from session
-        $hasGuestLocation = session()->has('guest_latitude') && session()->has('guest_longitude');
+        $hasGuestLocation = false;
+        $guestLat = null;
+        $guestLon = null;
+        $updatedAt = null;
+
+        if ($request->hasSession()) {
+            $session = $request->session();
+            $hasGuestLocation = $session->has('guest_latitude') && $session->has('guest_longitude');
+            $guestLat = $session->get('guest_latitude');
+            $guestLon = $session->get('guest_longitude');
+            $updatedAt = $session->get('location_updated_at');
+        }
         
         return response()->json([
             'success' => true,
             'message' => 'Guest location status retrieved successfully',
             'data' => [
                 'has_location' => $hasGuestLocation,
-                'latitude' => session('guest_latitude'),
-                'longitude' => session('guest_longitude'),
-                'location_updated_at' => session('location_updated_at') instanceof \Carbon\Carbon 
-                    ? session('location_updated_at')->toIso8601String() 
-                    : session('location_updated_at'),
+                'latitude' => $guestLat,
+                'longitude' => $guestLon,
+                'location_updated_at' => $updatedAt instanceof \Carbon\Carbon 
+                    ? $updatedAt->toIso8601String() 
+                    : $updatedAt,
             ],
         ], 200);
     }

@@ -257,8 +257,10 @@ class ListingService
 
         // Calculate distances and apply personalized ranking
         // Priority: Use item coordinates > seller's user coordinates
-        $userLat = $user ? $user->latitude : session('guest_latitude');
-        $userLon = $user ? $user->longitude : session('guest_longitude');
+        $currentRequest = request();
+        $userCoords = $currentRequest ? $this->locationService->getRequestCoordinates($currentRequest) : null;
+        $userLat = $userCoords['latitude'] ?? null;
+        $userLon = $userCoords['longitude'] ?? null;
 
         if ($userLat && $userLon) {
             $maxDistanceKm = 100; // Default 100km radius, can be made configurable
@@ -266,6 +268,7 @@ class ListingService
             $listings = $listings->map(function ($listing) use ($userLat, $userLon, $userLikedCategories) {
                 $distanceKm = null;
                 
+                /*
                 // If listing has no coordinates, try to resolve from city/area using Geocoder
                 if (!$listing->latitude || !$listing->longitude) {
                     $locationString = $listing->city;
@@ -282,6 +285,7 @@ class ListingService
                         }
                     }
                 }
+                */
 
                 // Priority 1: Use item's own coordinates if available
                 if ($listing->latitude && $listing->longitude) {
@@ -472,22 +476,49 @@ class ListingService
      */
     public function attachDistance(Listing $listing, ?User $user): void
     {
-        if ($user && $user->hasLocation() && $listing->user && $listing->user->hasLocation()) {
-            $distanceKm = $this->locationService->calculateDistance(
-                $user->latitude,
-                $user->longitude,
-                $listing->user->latitude,
-                $listing->user->longitude,
-                'km'
-            );
-            $distanceMiles = $this->locationService->kmToMiles($distanceKm);
+        $currentRequest = request();
+        $userCoords = $currentRequest ? $this->locationService->getRequestCoordinates($currentRequest) : null;
+        
+        if ($userCoords) {
+            $userLat = $userCoords['latitude'];
+            $userLon = $userCoords['longitude'];
             
-            $listing->distance_km = round($distanceKm, 1);
-            $listing->distance_miles = round($distanceMiles, 1);
-        } else {
-            $listing->distance_km = null;
-            $listing->distance_miles = null;
+            $sellerLat = null;
+            $sellerLon = null;
+
+            // Priority 1: Use item's own coordinates if available
+            if ($listing->latitude && $listing->longitude) {
+                $sellerLat = (float) $listing->latitude;
+                $sellerLon = (float) $listing->longitude;
+            }
+            // Priority 2: Fall back to seller's user coordinates
+            elseif ($listing->user && $listing->user->hasLocation()) {
+                $sellerLat = (float) $listing->user->latitude;
+                $sellerLon = (float) $listing->user->longitude;
+            }
+
+            if ($sellerLat && $sellerLon) {
+                try {
+                    $distanceKm = $this->locationService->calculateDistance(
+                        (float) $userLat,
+                        (float) $userLon,
+                        $sellerLat,
+                        $sellerLon,
+                        'km'
+                    );
+                    $distanceMiles = $this->locationService->kmToMiles($distanceKm);
+
+                    $listing->distance_km = round($distanceKm, 1);
+                    $listing->distance_miles = round($distanceMiles, 1);
+                    return;
+                } catch (\Exception $e) {
+                    \Log::warning('Distance calculation failed in attachDistance: ' . $e->getMessage());
+                }
+            }
         }
+
+        $listing->distance_km = null;
+        $listing->distance_miles = null;
     }
 }
 
