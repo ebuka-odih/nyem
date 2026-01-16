@@ -320,28 +320,26 @@ class ListingService
                 $listing->distance_km = $distanceKm;
                 
                 // Calculate personalized score
+                // We use a very high weight for recency to ensure it dominates.
+                // One hour difference (3600s) should much outweigh max distance boost (1000).
                 $recencyScore = $listing->created_at->timestamp;
                 $distanceScore = $distanceKm !== null ? (1000 / max($distanceKm, 0.1)) : 0; 
                 $categoryScore = 0;
                 if (!empty($userLikedCategories) && $listing->category_id && in_array($listing->category_id, $userLikedCategories)) {
-                    // Boost listings from preferred categories
-                    $categoryScore = 500; // Significant boost for preferred categories
+                    $categoryScore = 500;
                 }
                 
-                // Combined score: recency (most important) + distance + category preference
-                // We use negative recency to sort descending (newest first), then add distance and category boosts
-                $listing->personalized_score = $recencyScore + $distanceScore + $categoryScore;
+                // Formula: recency (as base) + small boosts for distance and preference.
+                // High recency weight ensures "Latest" is the primary rule.
+                $listing->personalized_score = $recencyScore + ($distanceScore / 10000) + ($categoryScore / 5000);
                 
                 return $listing;
             })
-            // Filter out listings beyond max distance (keep null distances for now)
+            // Filter out listings beyond max distance
             ->filter(function ($listing) use ($maxDistanceKm) {
                 return $listing->distance_km === null || $listing->distance_km <= $maxDistanceKm;
             })
-            // Sort by personalized score (highest first) - this prioritizes:
-            // 1. Newest listings (recency score)
-            // 2. Closer listings (distance score)
-            // 3. Preferred categories (category score)
+            // Sort by personalized score (highest first)
             ->sortByDesc('personalized_score')
             ->values();
         } else {
@@ -351,9 +349,9 @@ class ListingService
                     $recencyScore = $listing->created_at->timestamp;
                     $categoryScore = 0;
                     if ($listing->category_id && in_array($listing->category_id, $userLikedCategories)) {
-                        $categoryScore = 500; // Boost for preferred categories
+                        $categoryScore = 500;
                     }
-                    $listing->personalized_score = $recencyScore + $categoryScore;
+                    $listing->personalized_score = $recencyScore + ($categoryScore / 5000);
                     return $listing;
                 })
                 ->sortByDesc('personalized_score')

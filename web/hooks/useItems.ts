@@ -109,8 +109,10 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
   // Sync fetched items with local items state
   useEffect(() => {
     if (fetchedItems && fetchedItems.length > 0 && items.length === 0 && !hasRestoredRef.current) {
+      // Reverse so latest items are at the end of the array (top of the stack)
+      let finalItems = [...fetchedItems].reverse();
+
       // Add Welcome Card if needed
-      let finalItems = [...fetchedItems];
       const hasSeenWelcome = localStorage.getItem('has_seen_welcome_card') === 'true';
       if (!hasSeenWelcome) {
         finalItems.push(createWelcomeItem());
