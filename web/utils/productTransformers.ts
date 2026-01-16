@@ -77,7 +77,7 @@ export const transformListingToProduct = (listing: any): Product => {
       : (listing.created_at?.date || listing.created_at),
     vendor: {
       id: user.id || listing.user_id || listing.owner?.id,
-      name: user.username || user.name || 'Unknown Seller',
+      name: user.name || user.username || 'Unknown Seller',
       avatar: user.profile_photo || user.image || 'https://i.pravatar.cc/150?u=default',
       location: fullLocation,
       rating: 0, // No default rating - show 0 if user has no reviews

@@ -368,7 +368,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
                   </div>
                 </div>
                 <div className="flex-1 text-left flex flex-col gap-1">
-                  <h4 className="text-base font-black text-neutral-900 uppercase tracking-tight">{isOwnListing && currentUser?.username ? currentUser.username : (product.vendor.name)}</h4>
+                  <h4 className="text-base font-black text-neutral-900 uppercase tracking-tight">{isOwnListing ? (currentUser?.name || currentUser?.username || product.vendor.name) : (product.vendor.name)}</h4>
                   <div className="flex items-center gap-2">
                     <Star size={14} fill="#FFD700" className="text-[#FFD700]" />
                     <span className="text-xs font-black text-neutral-900">{product.vendor.rating > 0 ? product.vendor.rating.toFixed(1) : '0.0'}</span>

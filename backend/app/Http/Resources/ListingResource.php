@@ -69,6 +69,7 @@ class ListingResource extends JsonResource
             'user' => [
                 'id' => $this->user->id,
                 'username' => $this->user->username,
+                'name' => $this->user->name,
                 'profile_photo' => $this->user->profile_photo ?? null,
                 'city' => ($this->user->cityLocation && $this->user->cityLocation->name) ? $this->user->cityLocation->name : ($this->user->city ?? $this->user->location ?? 'Unknown'),
                 'area' => ($this->user->areaLocation && $this->user->areaLocation->name) ? $this->user->areaLocation->name : null,
@@ -78,7 +79,7 @@ class ListingResource extends JsonResource
             ],
             'owner' => [
                 'id' => $this->user->id,
-                'name' => $this->user->username,
+                'name' => $this->user->name ?? $this->user->username,
                 'image' => $this->user->profile_photo ?? null,
                 'location' => $this->formatUserLocation(),
                 'distance' => $distanceDisplay,

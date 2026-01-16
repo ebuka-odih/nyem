@@ -52,7 +52,7 @@ export const SellerProfileView: React.FC<SellerProfileViewProps> = ({ vendor, on
         </div>
 
         <div className="text-center space-y-2">
-          <h2 className="text-2xl font-black text-neutral-900 tracking-tighter uppercase italic">{isOwnProfile && currentUser?.username ? currentUser.username : vendor.name}</h2>
+          <h2 className="text-2xl font-black text-neutral-900 tracking-tighter uppercase italic">{isOwnProfile ? (currentUser?.name || currentUser?.username || vendor.name) : vendor.name}</h2>
           <p className="text-xs font-black text-neutral-400 uppercase tracking-[0.2em] flex items-center justify-center gap-1.5">
             <MapPin size={12} /> {vendor.location}
           </p>

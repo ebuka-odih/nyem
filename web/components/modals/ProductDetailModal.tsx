@@ -136,7 +136,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </div>
                 </div>
                 <div className="flex-col gap-2 min-w-0">
-                  <h4 className="text-xl font-black text-neutral-900 uppercase tracking-tighter italic leading-none truncate">{isOwnListing && currentUser?.username ? currentUser.username : product.vendor.name}</h4>
+                  <h4 className="text-xl font-black text-neutral-900 uppercase tracking-tighter italic leading-none truncate">{isOwnListing ? (currentUser?.name || currentUser?.username || product.vendor.name) : product.vendor.name}</h4>
                   <div className="flex flex-col gap-1">
                     <RatingStars rating={product.vendor.rating} />
                     <div className="flex items-center gap-1 text-neutral-400">
