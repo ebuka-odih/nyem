@@ -26,7 +26,7 @@ class UpdateListingRequest extends FormRequest
             'description' => 'sometimes|nullable|string',
             'category_id' => ['sometimes', 'integer', 'exists:categories,id'],
             'condition' => ['sometimes', Rule::in(Listing::getConditionOptions())],
-            'photos' => 'sometimes|array|min:1',
+            'photos' => 'sometimes|array|min:2',
             'photos.*' => 'string|max:2048',
             'type' => ['sometimes', Rule::in(Listing::getTypeOptions())],
             'price' => 'sometimes|nullable|numeric|min:0',
@@ -45,6 +45,7 @@ class UpdateListingRequest extends FormRequest
             'category_id.exists' => 'The selected category is invalid.',
             'condition.in' => 'The selected condition is invalid.',
             'status.in' => 'The selected status is invalid.',
+            'photos.min' => 'You must have at least 2 photos.',
         ];
     }
 }

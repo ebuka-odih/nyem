@@ -230,8 +230,10 @@ export const UploadPage: React.FC = () => {
       setError('Listing title is required');
       return;
     }
-    if (images.length === 0) {
-      setError('At least one image is required');
+    if (images.length < 2) {
+      setError(images.length === 1
+        ? 'You have only 1 image. Please upload at least one more.'
+        : 'At least 2 images are required');
       return;
     }
     if (!selectedCategoryId) {
@@ -441,7 +443,9 @@ export const UploadPage: React.FC = () => {
                 <div className="space-y-4 shrink-0">
                   <div className="flex justify-between items-end px-1">
                     <label className="text-[11px] font-black text-neutral-900 uppercase tracking-[0.2em]">Product Imagery</label>
-                    <span className="text-[9px] font-black text-neutral-400 uppercase tracking-widest">{images.length}/4 Required</span>
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${images.length === 1 ? 'text-amber-600' : 'text-neutral-400'}`}>
+                      {images.length}/4 (Min 2 Required)
+                    </span>
                   </div>
 
                   <div className="grid grid-cols-4 gap-3">
@@ -479,12 +483,17 @@ export const UploadPage: React.FC = () => {
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
-                        className={`aspect-square rounded-2xl bg-white border-2 border-dashed border-neutral-200 flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        className={`aspect-square rounded-2xl bg-white border-2 border-dashed ${images.length === 1 ? 'border-amber-400 bg-amber-50/50' : 'border-neutral-200'} flex flex-col items-center justify-center text-neutral-400 hover:text-[#830e4c] hover:border-[#830e4c33] hover:bg-[#830e4c1a]/30 transition-all active:scale-95 group shadow-sm ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
                         {isUploading ? (
                           <div className="w-6 h-6 border-2 border-[#830e4c] border-t-transparent rounded-full animate-spin" />
                         ) : (
-                          <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
+                          <>
+                            <ImageIcon size={20} className={`group-hover:scale-110 transition-transform ${images.length === 1 ? 'text-amber-500' : ''}`} />
+                            {images.length === 1 && (
+                              <span className="text-[8px] font-black text-amber-600 uppercase mt-1 tracking-tight">Add 1 More</span>
+                            )}
+                          </>
                         )}
                       </button>
                     )}

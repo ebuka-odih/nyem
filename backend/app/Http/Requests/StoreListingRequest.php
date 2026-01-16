@@ -26,7 +26,7 @@ class StoreListingRequest extends FormRequest
             'description' => 'nullable|string',
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'condition' => ['required', Rule::in(Listing::getConditionOptions())],
-            'photos' => 'nullable|array|min:1',
+            'photos' => 'required|array|min:2',
             'photos.*' => 'string|max:2048',
             'type' => ['nullable', Rule::in(Listing::getTypeOptions())],
             'price' => 'nullable|numeric|min:0|required_if:type,marketplace',
@@ -46,6 +46,8 @@ class StoreListingRequest extends FormRequest
             'category_id.exists' => 'The selected category is invalid.',
             'condition.required' => 'Please select a condition.',
             'condition.in' => 'The selected condition is invalid.',
+            'photos.required' => 'At least 2 photos are required.',
+            'photos.min' => 'You must upload at least 2 photos.',
             'price.required_if' => 'Price is required for marketplace listings.',
             'looking_for.required_if' => 'Looking for is required for barter listings.',
         ];
