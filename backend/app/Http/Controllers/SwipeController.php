@@ -45,7 +45,7 @@ class SwipeController extends Controller
         
         if (!$targetListing) {
             // Fallback: search explicitly by ID in both tables if model find failed
-            $existsInItems = \DB::table('items')->where('id', $targetListingId)->exists();
+            $existsInItems = \DB::table('listings')->where('id', $targetListingId)->exists();
             $existsInListings = \DB::table('listings')->where('id', $targetListingId)->exists();
             
             \Log::error('Swipe Failed: Listing not found', [
