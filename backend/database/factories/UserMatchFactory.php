@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Item;
+use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -24,8 +24,8 @@ class UserMatchFactory extends Factory
         return [
             'user1_id' => $userA,
             'user2_id' => $userB,
-            'item1_id' => Item::factory()->for($userA, 'user'),
-            'item2_id' => Item::factory()->for($userB, 'user'),
+            'listing1_id' => Listing::factory()->for($userA, 'user'),
+            'listing2_id' => Listing::factory()->for($userB, 'user'),
         ];
     }
 }

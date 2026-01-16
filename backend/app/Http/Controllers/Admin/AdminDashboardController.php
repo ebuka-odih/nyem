@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Item;
+use App\Models\Listing;
 use App\Models\Message;
 use App\Models\Report;
 use App\Models\Swipe;
@@ -33,9 +33,9 @@ class AdminDashboardController extends Controller
                 'this_week' => UserMatch::whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()])->count(),
             ],
             'items' => [
-                'total' => Item::count(),
-                'active' => Item::where('status', 'active')->count(),
-                'today' => Item::whereDate('created_at', today())->count(),
+                'total' => Listing::count(),
+                'active' => Listing::where('status', 'active')->count(),
+                'today' => Listing::whereDate('created_at', today())->count(),
             ],
             'swipes' => [
                 'total' => Swipe::count(),

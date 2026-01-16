@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\Item;
+use App\Models\Listing;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -41,16 +41,16 @@ class DatabaseSeeder extends Seeder
             'otp_verified_at' => now(),
         ]);
 
-        Item::factory(10)->create([
+        Listing::factory(10)->create([
             'user_id' => $primary->id,
             'city' => $primary->city,
         ]);
         // Make some items in Abuja so secondary user can see a feed
-        Item::factory(5)->create([
+        Listing::factory(5)->create([
             'user_id' => $primary->id,
             'city' => 'Abuja',
         ]);
-        Item::factory(10)->create([
+        Listing::factory(10)->create([
             'user_id' => $secondary->id,
             'city' => $secondary->city,
         ]);

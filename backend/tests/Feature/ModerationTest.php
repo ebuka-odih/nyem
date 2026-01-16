@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Item;
+use App\Models\Listing;
 use App\Models\User;
 use App\Models\UserMatch;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,15 +20,15 @@ class ModerationTest extends TestCase
         $tokenA = $userA->createToken('test')->plainTextToken;
         $tokenB = $userB->createToken('test')->plainTextToken;
 
-        $itemA = Item::factory()->create(['user_id' => $userA->id, 'city' => $userA->city]);
-        $itemB = Item::factory()->create(['user_id' => $userB->id, 'city' => $userB->city]);
+        $listingA = Listing::factory()->create(['user_id' => $userA->id, 'city' => $userA->city]);
+        $listingB = Listing::factory()->create(['user_id' => $userB->id, 'city' => $userB->city]);
 
         $firstUserId = min($userA->id, $userB->id);
         $match = UserMatch::create([
             'user1_id' => $firstUserId,
             'user2_id' => max($userA->id, $userB->id),
-            'item1_id' => $firstUserId === $userA->id ? $itemA->id : $itemB->id,
-            'item2_id' => $firstUserId === $userA->id ? $itemB->id : $itemA->id,
+            'listing1_id' => $firstUserId === $userA->id ? $listingA->id : $listingB->id,
+            'listing2_id' => $firstUserId === $userA->id ? $listingB->id : $listingA->id,
         ]);
 
         $this->withToken($tokenA)->postJson('/api/block', [

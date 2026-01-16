@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Item;
+use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,7 +20,7 @@ class SwipeFactory extends Factory
     {
         return [
             'from_user_id' => User::factory(),
-            'target_item_id' => Item::factory(),
+            'target_listing_id' => Listing::factory(),
             'direction' => fake()->randomElement(['left', 'right']),
         ];
     }

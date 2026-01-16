@@ -3,7 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Category;
-use App\Models\Item;
+use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -38,7 +38,7 @@ class DemoDataSeeder extends Seeder
         );
 
         // Delete existing items for demo user to replace with real items
-        Item::where('user_id', $user->id)->delete();
+        Listing::where('user_id', $user->id)->delete();
 
         // Create 5 real items for the demo user
         $items = [
@@ -109,7 +109,7 @@ class DemoDataSeeder extends Seeder
                 $categoryId = Category::first()?->id ?? 1;
             }
             
-            Item::create([
+            Listing::create([
                 'user_id' => $user->id,
                 'category_id' => $categoryId,
                 ...$itemData,
@@ -131,7 +131,7 @@ class DemoDataSeeder extends Seeder
         );
 
         // Delete existing items for tester user to replace with real items
-        Item::where('user_id', $testerUser->id)->delete();
+        Listing::where('user_id', $testerUser->id)->delete();
 
         // Create 4 real items for the tester user
         $testerItems = [
@@ -191,7 +191,7 @@ class DemoDataSeeder extends Seeder
                 $categoryId = Category::first()?->id ?? 1;
             }
             
-            Item::create([
+            Listing::create([
                 'user_id' => $testerUser->id,
                 'category_id' => $categoryId,
                 ...$itemData,
@@ -268,7 +268,7 @@ class DemoDataSeeder extends Seeder
                 $categoryId = $shopCategory?->id ?? 1;
             }
             
-            Item::create([
+            Listing::create([
                 'user_id' => $user->id,
                 'category_id' => $categoryId,
                 ...$itemData,

@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Block;
-use App\Models\Item;
+use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -30,13 +30,13 @@ class ItemFlowTest extends TestCase
         $this->assertEquals('Paris', $item['city']);
 
         $otherUser = User::factory()->create(['city' => 'Paris']);
-        Item::factory()->create([
+        Listing::factory()->create([
             'user_id' => $otherUser->id,
             'city' => 'Paris',
             'category' => 'Fashion',
         ]);
 
-        Item::factory()->create(['city' => 'Berlin']);
+        Listing::factory()->create(['city' => 'Berlin']);
 
         $feedResponse = $this->withToken($token)->getJson('/api/items/feed')
             ->assertOk()

@@ -3,13 +3,14 @@
 namespace Database\Factories;
 
 use App\Models\Category;
+use App\Models\Listing;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Item>
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Listing>
  */
-class ItemFactory extends Factory
+class ListingFactory extends Factory
 {
     /**
      * Define the model's default state.
