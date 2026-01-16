@@ -245,6 +245,9 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   }, [items, activeIndex, removeItem, fetchWishlist, onLogin, setTriggerDir]);
 
   // Handle triggerDir changes from parent
+  // FIXED: Removed this useEffect because SwipeCard handles the animation and then calls onSwipe (which calls handleSwipe).
+  // Calling it here causes the item to be removed immediately before animation completes, causing "bounce back".
+  /*
   useEffect(() => {
     if (triggerDir && items.length > 0 && activeIndex >= 0) {
       const swipedItem = items[activeIndex];
@@ -252,8 +255,8 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
         handleSwipe(triggerDir);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [triggerDir]);
+  */
 
   const handleShare = async (product: Product | null = null) => {
     const itemToShare = product || items[activeIndex] || selectedProduct;

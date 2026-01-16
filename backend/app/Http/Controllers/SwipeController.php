@@ -25,7 +25,7 @@ class SwipeController extends Controller
         
         // Manual validation for better error messages and logging
         $validator = \Validator::make($request->all(), [
-            'target_listing_id' => 'required',
+            'target_listing_id' => 'required_without:target_item_id',
             'target_item_id' => 'sometimes',
             'direction' => 'required|in:left,right,up',
             'offered_listing_id' => 'nullable',
