@@ -1178,6 +1178,17 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                     {user.bio}
                   </p>
                 )}
+
+                {user && !user.phone_verified_at && (
+                  <button
+                    onClick={() => setCurrentView('security')}
+                    className="mt-4 flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-100 rounded-full text-[10px] font-black text-amber-600 uppercase tracking-widest hover:bg-amber-100 transition-all active:scale-95"
+                  >
+                    <Smartphone size={14} />
+                    Verify Phone to Sell
+                    <ChevronRight size={14} />
+                  </button>
+                )}
               </div>
             </div>
 

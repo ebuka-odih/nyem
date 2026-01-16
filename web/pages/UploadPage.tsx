@@ -478,7 +478,7 @@ export const UploadPage: React.FC = () => {
                   Navigate to Settings
                 </button>
               </div>
-            ) : !userData?.phone_verified_at ? (
+            ) : (!userData?.phone_verified_at && myListings.length >= 3 && !editingItem) ? (
               <div className="bg-[#830e4c]/5 border border-[#830e4c]/10 rounded-[2.5rem] p-7 text-center shadow-xl shadow-[#830e4c]/5 mt-2">
                 <div className="w-14 h-14 bg-[#830e4c]/10 rounded-[1.5rem] flex items-center justify-center mx-auto mb-4">
                   <ShieldCheck size={24} className="text-[#830e4c]" />

@@ -43,7 +43,7 @@ class ListingController extends Controller
                 'message' => $e->getMessage(),
                 'requires_phone_verification' => $code === 403,
                 'listings_count' => $request->user()->listings()->count(),
-                'free_limit' => 2,
+                'free_limit' => 3,
             ], $code);
         }
     }
