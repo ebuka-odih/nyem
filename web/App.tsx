@@ -13,6 +13,7 @@ import { OtpVerificationPage } from './pages/OtpVerificationPage';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { DiscoverPage } from './pages/DiscoverPage';
 import { SellerProfilePage } from './pages/SellerProfilePage';
+import { AboutPage } from './pages/AboutPage';
 import { LoginPrompt } from './components/LoginPrompt';
 import { LocationPermissionModal } from './components/LocationPermissionModal';
 import { SwipeControls } from './components/SwipeControls';
@@ -502,6 +503,7 @@ const App = () => {
         <Route path="/matches" element={<MatchesRoute />} />
         <Route path="/chat/:id" element={<MatchesRoute />} />
         <Route path="/profile" element={<ProfileRoute />} />
+        <Route path="/about" element={<AboutPage />} />
 
         {/* Default redirect */}
         <Route path="/" element={<Navigate to={hasValidToken ? "/discover" : "/welcome"} replace />} />

@@ -265,7 +265,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
         </button>
       </div>
 
-      <div className="mt-auto pt-10 text-center space-y-4">
+      <div className="mt-auto pt-10 text-center space-y-6">
         <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">
           New to Nyem? <button onClick={onGoToRegister} className="text-[#830e4c]">Join the community</button>
         </p>
@@ -275,6 +275,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onGoToRegister, o
         >
           Continue as Guest &rarr;
         </button>
+
+        <div className="flex justify-center items-center gap-4 opacity-30 pt-4">
+          <button
+            onClick={() => window.location.href = '/about'}
+            className="text-[8px] font-black text-neutral-900 uppercase tracking-widest"
+          >
+            About
+          </button>
+          <div className="w-1 h-1 rounded-full bg-neutral-900" />
+          <button className="text-[8px] font-black text-neutral-900 uppercase tracking-widest">Terms</button>
+          <div className="w-1 h-1 rounded-full bg-neutral-900" />
+          <button className="text-[8px] font-black text-neutral-900 uppercase tracking-widest">Privacy</button>
+        </div>
       </div>
     </motion.div>
   );

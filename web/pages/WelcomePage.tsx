@@ -1,14 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Zap, 
-  ShoppingBag, 
-  Briefcase, 
-  RefreshCw, 
+import {
+  Zap,
+  ShoppingBag,
+  Briefcase,
+  RefreshCw,
   ArrowRight,
   UserPlus,
   LogIn
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface WelcomePageProps {
   onStart: () => void;
@@ -29,14 +30,15 @@ const containerVariants = {
 
 const itemVariants = {
   hidden: { y: 20, opacity: 0 },
-  visible: { 
-    y: 0, 
-    opacity: 1, 
-    transition: { type: 'spring', stiffness: 300, damping: 25 } 
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { type: 'spring', stiffness: 300, damping: 25 }
   }
 };
 
 export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRegister }) => {
+  const navigate = useNavigate();
   const features = [
     {
       title: 'Marketplace',
@@ -62,7 +64,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
   ];
 
   return (
-    <motion.div 
+    <motion.div
       initial="hidden"
       animate="visible"
       variants={containerVariants}
@@ -76,11 +78,11 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
           </div>
           <span className="text-4xl font-black tracking-tighter uppercase italic text-[#830e4c]">Nyem</span>
         </div>
-        
+
         <h1 className="text-4xl font-black text-neutral-900 tracking-tighter uppercase italic leading-[0.85] mb-4">
           Your Local <br /> Marketplace
         </h1>
-        
+
         <p className="text-neutral-400 text-[10px] font-black uppercase tracking-[0.2em] max-w-[260px] leading-relaxed">
           Connect with your community to buy, sell, trade, and hire — all in one app.
         </p>
@@ -89,8 +91,8 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
       {/* Feature Cards */}
       <div className="w-full max-w-sm space-y-3 mb-8">
         {features.map((f, i) => (
-          <motion.div 
-            key={i} 
+          <motion.div
+            key={i}
             variants={itemVariants}
             className="flex items-center gap-4 p-4 bg-neutral-50 border border-neutral-100 rounded-[2rem] hover:bg-white transition-all group"
           >
@@ -107,7 +109,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
 
       {/* Action Section */}
       <motion.div variants={itemVariants} className="w-full max-w-sm space-y-4">
-        <button 
+        <button
           onClick={onStart}
           className="w-full bg-[#830e4c] text-white py-6 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[11px] shadow-[0_20px_40px_-10px_rgba(131,14,76,0.3)] active:scale-95 transition-all flex items-center justify-center gap-3"
         >
@@ -116,14 +118,14 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
         </button>
 
         <div className="grid grid-cols-2 gap-3">
-          <button 
+          <button
             onClick={onLogin}
             className="bg-white border border-neutral-100 text-neutral-400 py-3 rounded-2xl font-black uppercase tracking-[0.2em] text-[9px] active:scale-95 transition-all flex items-center justify-center gap-2 hover:text-[#830e4c] hover:border-[#830e4c33] shadow-sm"
           >
             <LogIn size={14} strokeWidth={3} />
             Login
           </button>
-          <button 
+          <button
             onClick={onRegister}
             className="bg-neutral-50 border border-transparent text-neutral-400 py-3 rounded-2xl font-black uppercase tracking-[0.2em] text-[9px] active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-[#830e4c1a] hover:text-[#830e4c] hover:border-[#830e4c33] shadow-sm"
           >
@@ -133,7 +135,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
         </div>
 
         <div className="text-center pt-2">
-          <button 
+          <button
             onClick={onStart}
             className="text-[10px] font-black text-neutral-300 uppercase tracking-[0.2em] hover:text-[#830e4c] transition-colors"
           >
@@ -143,7 +145,14 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
       </motion.div>
 
       {/* Footer Links */}
-      <motion.div variants={itemVariants} className="mt-8 flex justify-center items-center gap-4 opacity-30 w-full">
+      <motion.div variants={itemVariants} className="mt-8 flex justify-center items-center gap-4 opacity-30 w-full mb-8">
+        <button
+          onClick={() => navigate('/about')}
+          className="text-[8px] font-black text-neutral-900 uppercase tracking-widest"
+        >
+          About
+        </button>
+        <div className="w-1 h-1 rounded-full bg-neutral-900" />
         <button className="text-[8px] font-black text-neutral-900 uppercase tracking-widest">Terms</button>
         <div className="w-1 h-1 rounded-full bg-neutral-900" />
         <button className="text-[8px] font-black text-neutral-900 uppercase tracking-widest">Privacy</button>

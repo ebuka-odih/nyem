@@ -18,13 +18,13 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
       className="flex flex-col px-8 pt-[calc(env(safe-area-inset-top,0px)+32px)] pb-12 w-full h-full overflow-y-auto no-scrollbar max-w-[768px] mx-auto"
     >
-      <button 
+      <button
         onClick={onGoToLogin}
         className="w-10 h-10 bg-neutral-100 rounded-2xl flex items-center justify-center text-[#830e4c] mb-8 active:scale-90 transition-all self-start"
       >
@@ -48,8 +48,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Full Name</label>
           <div className="relative">
             <User className="absolute left-6 top-1/2 -translate-y-1/2 text-[#830e4c]" size={18} />
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Alex Thompson"
@@ -62,8 +62,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Email Address</label>
           <div className="relative">
             <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-[#830e4c]" size={18} />
-            <input 
-              type="email" 
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="alex@example.com"
@@ -76,8 +76,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
           <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest px-1">Password</label>
           <div className="relative">
             <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-[#830e4c]" size={18} />
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
@@ -94,40 +94,40 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
       )}
 
       <div className="space-y-4">
-        <button 
+        <button
           onClick={async () => {
             setError(null);
-            
+
             // Validate inputs
             if (!name.trim()) {
               setError('Please enter your full name');
               return;
             }
-            
+
             if (!email.trim()) {
               setError('Please enter your email address');
               return;
             }
-            
+
             // Validate email format
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email.trim())) {
               setError('Please enter a valid email address');
               return;
             }
-            
+
             if (!password.trim()) {
               setError('Please enter a password');
               return;
             }
-            
+
             if (password.length < 6) {
               setError('Password must be at least 6 characters');
               return;
             }
-            
+
             setLoading(true);
-            
+
             try {
               // Register user (validates and prepares for OTP)
               await apiFetch(ENDPOINTS.auth.register, {
@@ -138,7 +138,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
                   password: password.trim(),
                 },
               });
-              
+
               // Send email OTP
               await apiFetch(ENDPOINTS.auth.sendEmailOtp, {
                 method: 'POST',
@@ -146,7 +146,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
                   email: email.trim(),
                 },
               });
-              
+
               // Navigate to OTP verification page
               onRegister(email.trim(), name.trim(), password.trim());
             } catch (err: any) {
@@ -169,16 +169,29 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onRegister, onGoToLo
         </button>
       </div>
 
-      <div className="mt-auto pt-10 text-center space-y-4">
+      <div className="mt-auto pt-10 text-center space-y-6">
         <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">
           Already a member? <button onClick={onGoToLogin} className="text-[#830e4c]">Sign in instead</button>
         </p>
-        <button 
+        <button
           onClick={onSkip}
           className="text-[10px] font-black text-neutral-300 uppercase tracking-widest hover:text-[#830e4c] transition-colors"
         >
           Continue as Guest &rarr;
         </button>
+
+        <div className="flex justify-center items-center gap-4 opacity-30 pt-4">
+          <button
+            onClick={() => window.location.href = '/about'}
+            className="text-[8px] font-black text-neutral-900 uppercase tracking-widest"
+          >
+            About
+          </button>
+          <div className="w-1 h-1 rounded-full bg-neutral-900" />
+          <button className="text-[8px] font-black text-neutral-900 uppercase tracking-widest">Terms</button>
+          <div className="w-1 h-1 rounded-full bg-neutral-900" />
+          <button className="text-[8px] font-black text-neutral-900 uppercase tracking-widest">Privacy</button>
+        </div>
       </div>
     </motion.div>
   );

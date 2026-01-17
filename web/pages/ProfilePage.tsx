@@ -35,7 +35,8 @@ import {
   Eye,
   EyeOff,
   Phone,
-  ArrowRight
+  ArrowRight,
+  Info
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { compressAndConvertImage } from '../utils/imageUtils';
@@ -827,6 +828,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
     { id: 'payments', label: 'Escrow & Payments', icon: CreditCard, color: 'text-emerald-600' },
     { id: 'security', label: 'Security & Password', icon: ShieldCheck, color: 'text-neutral-900' },
     { id: 'history', label: 'Trade History', icon: History, color: 'text-neutral-900' },
+    { id: 'about', label: 'About Nyem', icon: Info, color: 'text-[#830e4c]' },
   ];
 
 
@@ -1320,7 +1322,13 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({ forceSettingsTab, onSi
                   {menuItems.map((item) => (
                     <button
                       key={item.label}
-                      onClick={() => setCurrentView(item.id as SubPageView)}
+                      onClick={() => {
+                        if (item.id === 'about') {
+                          navigate('/about');
+                        } else {
+                          setCurrentView(item.id as SubPageView);
+                        }
+                      }}
                       className="w-full flex items-center justify-between p-4 bg-white border border-neutral-100 rounded-[1.5rem] hover:bg-neutral-50 active:scale-[0.99] transition-all"
                     >
                       <div className="flex items-center gap-4">
