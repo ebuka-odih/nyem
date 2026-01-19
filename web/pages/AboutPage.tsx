@@ -7,6 +7,7 @@ import {
     Globe,
     Info,
     ChevronLeft,
+    MapPin,
     ArrowRight
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -103,11 +104,23 @@ export const AboutPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="pt-6 border-t border-black/5">
-                                    <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest md:text-[10px]">Official Website</p>
-                                    <div className="flex items-center gap-2 text-[#830e4c]">
-                                        <Globe size={16} />
-                                        <a href="https://www.nyem.online" target="_blank" rel="noopener noreferrer" className="text-sm font-black uppercase tracking-tight md:text-base">www.nyem.online</a>
+                                <div className="pt-6 border-t border-black/5 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest md:text-[10px]">Official Website</p>
+                                        <div className="flex items-center gap-2 text-[#830e4c]">
+                                            <Globe size={16} />
+                                            <a href="https://www.nyem.online" target="_blank" rel="noopener noreferrer" className="text-sm font-black uppercase tracking-tight md:text-base">www.nyem.online</a>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1">
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-widest md:text-[10px]">Contact Address</p>
+                                        <div className="flex items-start gap-2 text-neutral-600">
+                                            <MapPin size={16} className="shrink-0 mt-0.5" />
+                                            <h4 className="text-sm font-black uppercase tracking-tight md:text-base leading-tight">
+                                                PARADISE COURT ESTATE IDU, <br /> ABUJA
+                                            </h4>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
