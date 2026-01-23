@@ -32,3 +32,4 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::get('/items', [AdminListingsController::class, 'index'])->name('items'); // Backward compatibility
     Route::get('/categories', [AdminCategoriesController::class, 'index'])->name('categories');
 });
+Route::view('/qrcode', 'qrcode')->name('qrcode');
