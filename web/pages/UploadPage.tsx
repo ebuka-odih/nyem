@@ -80,7 +80,17 @@ export const UploadPage: React.FC = () => {
   // Sync phone from userData
   useEffect(() => {
     if (userData?.phone && !phone) {
-      setPhone(userData.phone);
+      // Strip +234 or 234 if present to show only local number
+      let localPhone = userData.phone;
+      if (localPhone.startsWith('+234')) {
+        localPhone = localPhone.substring(4);
+      } else if (localPhone.startsWith('234')) {
+        localPhone = localPhone.substring(3);
+      }
+      // Remove any leading zero if user wants, but typically 23480... becomes 80...
+      // If the stored number was 080..., then it's fine.
+      // E.164 usually is +23480... -> strip +234 gives 80...
+      setPhone(localPhone);
     }
   }, [userData?.phone]);
 
@@ -252,9 +262,13 @@ export const UploadPage: React.FC = () => {
     try {
       setIsSendingOtp(true);
       setError(null);
+
+      // format to international
+      const formattedPhone = phone.startsWith('0') ? `+234${phone.substring(1)}` : `+234${phone}`;
+
       const result = await apiFetch<{ message: string, expires_at: string }>(ENDPOINTS.auth.sendOtp, {
         method: 'POST',
-        body: { phone }
+        body: { phone: formattedPhone }
       });
 
       setVerificationStep('otp');
@@ -276,10 +290,14 @@ export const UploadPage: React.FC = () => {
       setIsVerifyingOtp(true);
       setError(null);
       const token = getStoredToken();
+
+      // format to international
+      const formattedPhone = phone.startsWith('0') ? `+234${phone.substring(1)}` : `+234${phone}`;
+
       await apiFetch(ENDPOINTS.auth.verifyPhoneForSeller, {
         method: 'POST',
         token,
-        body: { phone, code: otpCode }
+        body: { phone: formattedPhone, code: otpCode }
       });
 
       // Success! Refetch profile to update phone_verified_at
@@ -498,14 +516,18 @@ export const UploadPage: React.FC = () => {
                   <div className="space-y-4">
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none">
-                        <Phone size={14} className="text-neutral-400" />
+                        <span className="text-neutral-900 font-black text-xs mr-2">+234</span>
+                        <div className="w-px h-4 bg-neutral-200 ml-1"></div>
                       </div>
                       <input
                         type="tel"
                         value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="e.g., +234 800 000 0000"
-                        className="w-full bg-white border border-neutral-200 rounded-2xl pl-12 pr-4 py-4 text-xs font-black tracking-widest focus:outline-none focus:border-[#830e4c] transition-all"
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setPhone(val);
+                        }}
+                        placeholder="800 000 0000"
+                        className="w-full bg-white border border-neutral-200 rounded-2xl pl-20 pr-4 py-4 text-xs font-black tracking-widest focus:outline-none focus:border-[#830e4c] transition-all"
                       />
                     </div>
                     <button
