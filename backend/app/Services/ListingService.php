@@ -372,26 +372,12 @@ class ListingService
                 return $listing->distance_km === null || $listing->distance_km <= $maxDistanceKm;
             })
             // Sort by personalized score (highest first)
-            ->sortByDesc('personalized_score')
-            ->values();
-        } else {
-            // If user doesn't have location, still apply category-based personalization
-            if (!empty($userLikedCategories)) {
-                $listings = $listings->map(function ($listing) use ($userLikedCategories) {
-                    $recencyScore = $listing->created_at->timestamp;
-                    $categoryScore = 0;
-                    if ($listing->category_id && in_array($listing->category_id, $userLikedCategories)) {
-                        $categoryScore = 500;
-                    }
-                    $listing->personalized_score = $recencyScore + ($categoryScore / 5000);
-                    return $listing;
-                })
-                ->sortByDesc('personalized_score')
+                // Sort by created_at desc (newest first)
+                ->sortByDesc('created_at')
                 ->values();
-            } else {
-                // No personalization, just ensure newest first
-                $listings = $listings->sortByDesc('created_at')->values();
-            }
+        } else {
+            // No personalization, just ensure newest first
+            $listings = $listings->sortByDesc('created_at')->values();
         }
 
         return $listings;
