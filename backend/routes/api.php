@@ -23,6 +23,7 @@ use App\Http\Controllers\EscrowController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReviewController;
 use App\Http\Controllers\FollowController;
+use App\Http\Controllers\VerificationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -49,6 +50,10 @@ Route::post('/listings/{listing}/view', [ListingController::class, 'trackView'])
 Route::post('/listings/{listing}/share', [ListingController::class, 'trackShare']);
 Route::post('/items/{listing}/view', [ListingController::class, 'trackView']); // Backward compatibility alias
 Route::post('/items/{listing}/share', [ListingController::class, 'trackShare']); // Backward compatibility alias
+ 
+// Termii SMS Verification Test Endpoints
+Route::post('/verification/send-sms', [VerificationController::class, 'sendSmsOtp']);
+Route::post('/verification/verify-sms', [VerificationController::class, 'verifySmsOtp']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/send-otp', [AuthController::class, 'sendOtp']);

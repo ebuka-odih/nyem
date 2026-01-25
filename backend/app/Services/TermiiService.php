@@ -34,9 +34,10 @@ class TermiiService
      * 
      * @param string $to Phone number to send to
      * @param string $message Message content
+     * @param string|null $channel Optional channel override
      * @return array Response with success status and message
      */
-    public function sendSms(string $to, string $message): array
+    public function sendSms(string $to, string $message, ?string $channel = null): array
     {
         try {
             // Termii expects phone numbers in a specific format (usually without + for Nigerian numbers, or with country code)
@@ -49,7 +50,7 @@ class TermiiService
                 'from' => $this->from,
                 'sms' => $message,
                 'type' => 'plain',
-                'channel' => $this->channel,
+                'channel' => $channel ?? $this->channel,
             ]);
 
             $data = $response->json();
@@ -99,9 +100,10 @@ class TermiiService
      */
     public function sendOtpCode(string $phone, string $code): array
     {
-        $message = "Your Nyem verification code is: {$code}. This code expires in 7 minutes.";
+        $message = "(Nyem) Verification Pin is {$code}, it expires in 10mins .";
         
-        return $this->sendSms($phone, $message);
+        // Use 'dnd' channel for OTPs to ensure delivery
+        return $this->sendSms($phone, $message, 'dnd');
     }
 
     /**
