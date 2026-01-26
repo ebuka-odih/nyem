@@ -53,6 +53,8 @@ class AuthController extends Controller
      */
     public function sendOtp(Request $request)
     {
+        Log::info('sendOtp request received', ['data' => $request->all()]);
+        
         $data = $request->validate([
             'phone' => 'required_without:email|nullable|string|max:20',
             'email' => 'required_without:phone|nullable|string|email|max:255',
@@ -82,14 +84,19 @@ class AuthController extends Controller
         }
 
         OtpCode::create($otpData);
+        Log::info('OTP created in database', ['identifier' => $data['phone'] ?? $data['email']]);
 
         // Send OTP via appropriate channel
         if (!empty($data['phone'])) {
+            Log::info('Attempting to send SMS OTP', ['phone' => $data['phone']]);
+            
             // Try Termii first if configured
             if ($this->termiiService) {
+                Log::info('Using TermiiService');
                 $smsResult = $this->termiiService->sendOtpCode($data['phone'], $code);
                 
                 if ($smsResult['success']) {
+                    Log::info('OTP sent successfully via Termii');
                     return response()->json([
                         'message' => 'OTP sent successfully via Termii',
                         'expires_at' => $expiry,
@@ -97,7 +104,7 @@ class AuthController extends Controller
                     ], 200);
                 }
                 
-                Log::warning('Termii failed, trying Twilio', [
+                Log::warning('Termii failed', [
                     'phone' => $data['phone'],
                     'error' => $smsResult['message'],
                 ]);
@@ -105,9 +112,11 @@ class AuthController extends Controller
 
             // Fallback to Twilio if configured
             if ($this->twilioService) {
+                Log::info('Using TwilioService');
                 $smsResult = $this->twilioService->sendOtpCode($data['phone'], $code);
 
                 if ($smsResult['success']) {
+                    Log::info('OTP sent successfully via Twilio');
                     return response()->json([
                         'message' => 'OTP sent successfully via Twilio',
                         'expires_at' => $expiry,
@@ -124,15 +133,25 @@ class AuthController extends Controller
             // If both failed or not configured
             Log::warning('No SMS service could send the OTP', [
                 'phone' => $data['phone'],
+                'termii_configured' => $this->termiiService !== null,
+                'twilio_configured' => $this->twilioService !== null,
             ]);
 
             // Still return success to prevent phone number enumeration
-            return response()->json([
+            // But include error info in local for debugging
+            $response = [
                 'message' => 'OTP code generated. Please check your phone.',
                 'expires_at' => $expiry,
                 'debug_code' => app()->environment('local', 'testing') ? $code : null,
-            ], 200);
+            ];
+
+            if (app()->environment('local', 'testing')) {
+                $response['error_detail'] = 'No SMS service was able to send the message. Check backend logs.';
+            }
+
+            return response()->json($response, 200);
         } elseif (!empty($data['email'])) {
+            Log::info('Attempting to send Email OTP', ['email' => $data['email']]);
             // Send via email
             $emailResult = $this->emailService->sendOtpCode($data['email'], $code);
 

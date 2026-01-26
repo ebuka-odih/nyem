@@ -37,9 +37,11 @@ class CategoryController extends Controller
                 ->first();
             
             if ($parentCategory) {
-                // Return only sub-categories of this parent
-                $query->where('parent_id', $parentCategory->id)
-                    ->where('type', 'sub');
+                // Return sub-categories of this parent
+                // We don't strictly enforce type='sub' here to be more robust against data inconsistencies
+                // as long as it has the correct parent_id
+                $query->where('parent_id', $parentCategory->id);
+                
                 \Log::info('[CategoryController] Found parent category:', ['id' => $parentCategory->id, 'name' => $parentCategory->name]);
             } else {
                 // Parent not found, return empty array
@@ -53,7 +55,7 @@ class CategoryController extends Controller
             $query->where('type', 'sub');
         }
         
-        $categories = $query->orderBy('order')->get(['id', 'name', 'order']);
+        $categories = $query->orderBy('order')->orderBy('id')->get(['id', 'name', 'order']);
         \Log::info('[CategoryController] Returning categories:', [
             'count' => $categories->count(),
             'ids' => $categories->pluck('id')->toArray(),

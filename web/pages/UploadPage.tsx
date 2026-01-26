@@ -105,6 +105,12 @@ export const UploadPage: React.FC = () => {
     description: listing.description,
   }));
 
+  useEffect(() => {
+    console.log('UploadPage - userData:', userData);
+    console.log('UploadPage - myListings count:', myListings.length);
+    console.log('UploadPage - phone verified:', userData?.phone_verified_at);
+  }, [userData, myListings.length]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submitting = createListingMutation.isPending || updateListingMutation.isPending;
 
@@ -254,7 +260,9 @@ export const UploadPage: React.FC = () => {
   }, [editId, myListings, editingItem]);
 
   const handleSendOtp = async () => {
+    console.log('handleSendOtp called. Phone:', phone);
     if (!phone || phone.length < 10) {
+      console.warn('Invalid phone number:', phone);
       setError('Please enter a valid phone number');
       return;
     }
@@ -263,17 +271,37 @@ export const UploadPage: React.FC = () => {
       setIsSendingOtp(true);
       setError(null);
 
-      // format to international
-      const formattedPhone = phone.startsWith('0') ? `+234${phone.substring(1)}` : `+234${phone}`;
+      // format to international - handle numbers already having 234 prefix
+      let cleanPhone = phone.replace(/[^0-9]/g, '');
+      if (cleanPhone.startsWith('234') && cleanPhone.length > 10) {
+        cleanPhone = cleanPhone.substring(3); // remove 234 temporarily
+      }
+      if (cleanPhone.startsWith('0')) {
+        cleanPhone = cleanPhone.substring(1); // remove leading 0
+      }
 
-      const result = await apiFetch<{ message: string, expires_at: string }>(ENDPOINTS.auth.sendOtp, {
+      const formattedPhone = `+234${cleanPhone}`;
+      console.log('Sending OTP to:', formattedPhone);
+
+      const result = await apiFetch<{ message: string, expires_at: string, debug_code?: string, error_detail?: string }>(ENDPOINTS.auth.sendOtp, {
         method: 'POST',
         body: { phone: formattedPhone }
       });
 
+      console.log('OTP send result:', result);
+
+      if (result.debug_code) {
+        console.log('DEBUG: OTP Code is', result.debug_code);
+      }
+
+      if (result.error_detail) {
+        alert("Verification Warning: " + result.error_detail);
+      }
+
       setVerificationStep('otp');
       setExpiryTime(result.expires_at);
     } catch (err: any) {
+      console.error('Failed to send OTP:', err);
       setError(err.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsSendingOtp(false);
@@ -281,7 +309,9 @@ export const UploadPage: React.FC = () => {
   };
 
   const handleVerifyPhone = async () => {
+    console.log('handleVerifyPhone called. Code:', otpCode);
     if (otpCode.length !== 6) {
+      console.warn('Invalid OTP code length:', otpCode.length);
       setError('Please enter the 6-digit code');
       return;
     }
@@ -293,18 +323,22 @@ export const UploadPage: React.FC = () => {
 
       // format to international
       const formattedPhone = phone.startsWith('0') ? `+234${phone.substring(1)}` : `+234${phone}`;
+      console.log('Verifying OTP for:', formattedPhone);
 
-      await apiFetch(ENDPOINTS.auth.verifyPhoneForSeller, {
+      const result = await apiFetch(ENDPOINTS.auth.verifyPhoneForSeller, {
         method: 'POST',
         token,
         body: { phone: formattedPhone, code: otpCode }
       });
+
+      console.log('Verification result:', result);
 
       // Success! Refetch profile to update phone_verified_at
       await fetchUserListings();
       setVerificationStep('input');
       setOtpCode('');
     } catch (err: any) {
+      console.error('Verification failed:', err);
       setError(err.message || 'Verification failed. Please check the code.');
     } finally {
       setIsVerifyingOtp(false);

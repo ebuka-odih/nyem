@@ -67,6 +67,15 @@ class TermiiService
                     'data' => $data,
                 ];
             } else {
+                // FALLBACK: If 'dnd' failed, try 'generic' if it's not already generic
+                if (($channel ?? $this->channel) === 'dnd') {
+                    Log::warning('Termii dnd channel failed, retrying with generic channel', [
+                        'to' => $to,
+                        'response' => $data,
+                    ]);
+                    return $this->sendSms($to, $message, 'generic');
+                }
+
                 Log::error('Termii SMS failed', [
                     'to' => $to,
                     'status' => $response->status(),
