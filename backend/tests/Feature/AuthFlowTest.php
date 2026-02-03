@@ -12,22 +12,22 @@ class AuthFlowTest extends TestCase
     public function test_user_can_send_and_verify_otp(): void
     {
         $sendResponse = $this->postJson('/api/auth/send-otp', [
-            'phone' => '1234567890',
+            'email' => 'alice@example.com',
         ])->assertOk();
 
         $otpCode = $sendResponse->json('debug_code');
         $this->assertNotEmpty($otpCode);
 
         $verifyResponse = $this->postJson('/api/auth/verify-otp', [
-            'phone' => '1234567890',
+            'email' => 'alice@example.com',
             'code' => $otpCode,
-            'username' => 'alice',
-            'city' => 'Nairobi',
-        ])->assertOk();
+            'name' => 'Alice Example',
+            'password' => 'secret123',
+        ])->assertCreated();
 
         $verifyResponse->assertJsonStructure([
             'token',
-            'user' => ['id', 'phone', 'username', 'city'],
+            'user' => ['id', 'email', 'username'],
             'new_user',
         ]);
     }

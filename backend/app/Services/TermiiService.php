@@ -116,6 +116,110 @@ class TermiiService
     }
 
     /**
+     * Send OTP token via Termii Token API
+     *
+     * @param string $phone Phone number
+     * @return array Response with success status and pin_id
+     */
+    public function sendTokenOtp(string $phone): array
+    {
+        try {
+            $to = $this->formatPhoneNumber($phone);
+
+            $payload = [
+                'api_key' => $this->apiKey,
+                'message_type' => 'NUMERIC',
+                'to' => $to,
+                'from' => $this->from,
+                'channel' => 'dnd',
+                'pin_attempts' => 10,
+                'pin_time_to_live' => 10,
+                'pin_length' => 6,
+                'pin_placeholder' => '< 123456 >',
+                'message_text' => 'Your pin is < 123456 >',
+                'pin_type' => 'NUMERIC',
+            ];
+
+            $response = Http::post("{$this->baseUrl}/api/sms/otp/send", $payload);
+            $data = $response->json();
+
+            if ($response->successful()) {
+                $pinId = $data['pin_id']
+                    ?? $data['pinId']
+                    ?? ($data['data']['pin_id'] ?? null);
+
+                return [
+                    'success' => true,
+                    'message' => 'OTP sent successfully',
+                    'pin_id' => $pinId,
+                    'data' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to send OTP: ' . ($data['message'] ?? 'Unknown error'),
+                'data' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Termii Token OTP Exception', [
+                'to' => $phone,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Termii token error: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Verify OTP token via Termii Token API
+     *
+     * @param string $pinId Pin ID from Termii
+     * @param string $pin OTP provided by user
+     * @return array Response with success status
+     */
+    public function verifyTokenOtp(string $pinId, string $pin): array
+    {
+        try {
+            $payload = [
+                'api_key' => $this->apiKey,
+                'pin_id' => $pinId,
+                'pin' => $pin,
+            ];
+
+            $response = Http::post("{$this->baseUrl}/api/sms/otp/verify", $payload);
+            $data = $response->json();
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'message' => 'OTP verified successfully',
+                    'data' => $data,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to verify OTP: ' . ($data['message'] ?? 'Unknown error'),
+                'data' => $data,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Termii Token OTP Verify Exception', [
+                'pin_id' => $pinId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Termii verify error: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Format phone number for Termii
      * 
      * @param string $phone Phone number

@@ -35,26 +35,21 @@ class VerificationController extends Controller
         }
 
         $phone = $request->phone;
-        
-        // Generate 6 digit OTP
-        $otp = (string) rand(100000, 999999);
-        
-        // Store in OtpCode table (expires in 10 minutes to match message)
-        \App\Models\OtpCode::create([
-            'phone' => $phone,
-            'code' => $otp,
-            'expires_at' => now()->addMinutes(10),
-            'consumed' => false
-        ]);
 
-        $result = $this->termiiService->sendOtpCode($phone, $otp);
+        $result = $this->termiiService->sendTokenOtp($phone);
 
-        if ($result['success']) {
+        if ($result['success'] && !empty($result['pin_id'])) {
+            \App\Models\OtpCode::create([
+                'phone' => $phone,
+                'pin_id' => $result['pin_id'],
+                'provider' => 'termii',
+                'expires_at' => now()->addMinutes(10),
+                'consumed' => false
+            ]);
             return response()->json([
                 'success' => true,
                 'message' => 'OTP sent successfully',
-                // Return OTP in local/debug for easier testing
-                'debug_otp' => config('app.debug') ? $otp : null,
+                'debug_otp' => null,
             ]);
         }
 
@@ -87,8 +82,30 @@ class VerificationController extends Controller
         $otp = \App\Models\OtpCode::where('phone', $phone)
             ->latest()
             ->first();
-        
-        if (!$otp || !$otp->isValidForPhone($phone, $code)) {
+
+        if (!$otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired OTP',
+            ], 400);
+        }
+
+        if ($otp->provider === 'termii' && $otp->pin_id) {
+            if ($otp->expires_at && $otp->expires_at->isPast()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired OTP',
+                ], 400);
+            }
+
+            $verifyResult = $this->termiiService->verifyTokenOtp($otp->pin_id, $code);
+            if (!$verifyResult['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid or expired OTP',
+                ], 400);
+            }
+        } elseif (!$otp->isValidForPhone($phone, $code)) {
              return response()->json([
                 'success' => false,
                 'message' => 'Invalid or expired OTP',

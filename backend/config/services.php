@@ -64,7 +64,7 @@ return [
     'termii' => [
         'api_key' => env('TERMII_API'),
         'secret_key' => env('TERMII_SECRET_KEY'),
-        'base_url' => env('BASE_URL', 'https://v3.api.termii.com'),
+        'base_url' => env('TERMII_BASE_URL', env('BASE_URL', 'https://api.ng.termii.com')),
         'from' => env('TERMII_FROM', 'NYEM'), // Default sender ID
         'channel' => env('TERMII_CHANNEL', 'generic'), // dnd, whatsapp, or generic
     ],

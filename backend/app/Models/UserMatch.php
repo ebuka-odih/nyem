@@ -34,7 +34,23 @@ class UserMatch extends Model
         return $this->belongsTo(Listing::class, 'listing1_id');
     }
 
+    /**
+     * Backward compatibility alias for listing1.
+     */
+    public function item1()
+    {
+        return $this->belongsTo(Listing::class, 'listing1_id');
+    }
+
     public function listing2()
+    {
+        return $this->belongsTo(Listing::class, 'listing2_id');
+    }
+
+    /**
+     * Backward compatibility alias for listing2.
+     */
+    public function item2()
     {
         return $this->belongsTo(Listing::class, 'listing2_id');
     }
