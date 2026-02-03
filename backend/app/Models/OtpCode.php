@@ -15,6 +15,8 @@ class OtpCode extends Model
         'phone',
         'email',
         'code',
+        'pin_id',
+        'provider',
         'expires_at',
         'consumed',
     ];

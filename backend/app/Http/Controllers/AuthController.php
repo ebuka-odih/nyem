@@ -21,6 +21,7 @@ class AuthController extends Controller
     protected $termiiService;
     protected $emailService;
     protected $googleAuthService;
+    protected $lastTermiiError = null;
 
     public function __construct()
     {
@@ -34,8 +35,10 @@ class AuthController extends Controller
         // Initialize TermiiService
         try {
             $this->termiiService = app(TermiiService::class);
+            file_put_contents('/tmp/nyem_sms.log', "Termii initialized: SUCCESS\n", FILE_APPEND);
         } catch (\Exception $e) {
             $this->termiiService = null;
+            file_put_contents('/tmp/nyem_sms.log', "Termii initialized: FAILED - " . $e->getMessage() . "\n", FILE_APPEND);
         }
 
         // Initialize EmailService
@@ -43,6 +46,47 @@ class AuthController extends Controller
         
         // Initialize GoogleAuthService
         $this->googleAuthService = app(GoogleAuthService::class);
+    }
+
+    public function testSms(Request $request)
+    {
+        $phone = $request->query('phone', '08000000000');
+        $results = [];
+
+        $results['termii'] = [
+            'initialized' => $this->termiiService !== null,
+            'config' => [
+                'api_key' => substr(config('services.termii.api_key'), 0, 5) . '...',
+                'from' => config('services.termii.from'),
+                'channel' => config('services.termii.channel'),
+            ]
+        ];
+
+        if ($this->termiiService) {
+            try {
+                $results['termii']['test_send'] = $this->termiiService->sendSms($phone, "Test message from Nyem");
+            } catch (\Exception $e) {
+                $results['termii']['test_send'] = ['success' => false, 'error' => $e->getMessage()];
+            }
+        }
+
+        $results['twilio'] = [
+            'initialized' => $this->twilioService !== null,
+            'config' => [
+                'account_sid' => substr(config('services.twilio.account_sid'), 0, 5) . '...',
+                'from' => config('services.twilio.from'),
+            ]
+        ];
+
+        if ($this->twilioService) {
+            try {
+                $results['twilio']['test_send'] = $this->twilioService->sendSms($phone, "Test message from Nyem");
+            } catch (\Exception $e) {
+                $results['twilio']['test_send'] = ['success' => false, 'error' => $e->getMessage()];
+            }
+        }
+
+        return response()->json($results);
     }
 
     /**
@@ -65,45 +109,41 @@ class AuthController extends Controller
             return response()->json(['message' => 'Either phone or email is required'], 422);
         }
 
-        // Generate 6-digit OTP code
-        $code = (string) random_int(100000, 999999);
-        $expiry = now()->addMinutes(7);
-
-        // Store OTP in database
-        $otpData = [
-            'code' => $code,
-            'expires_at' => $expiry,
-        ];
-
         if (!empty($data['phone'])) {
-            $otpData['phone'] = $data['phone'];
-        }
-
-        if (!empty($data['email'])) {
-            $otpData['email'] = $data['email'];
-        }
-
-        OtpCode::create($otpData);
-        Log::info('OTP created in database', ['identifier' => $data['phone'] ?? $data['email']]);
-
-        // Send OTP via appropriate channel
-        if (!empty($data['phone'])) {
+            $msg = "--- sendOtp request received at " . now()->toDateTimeString() . " ---\n";
+            $msg .= "Phone: " . $data['phone'] . "\n";
+            file_put_contents('/tmp/nyem_sms.log', $msg, FILE_APPEND);
+            
             Log::info('Attempting to send SMS OTP', ['phone' => $data['phone']]);
             
             // Try Termii first if configured
             if ($this->termiiService) {
                 Log::info('Using TermiiService');
-                $smsResult = $this->termiiService->sendOtpCode($data['phone'], $code);
+                $smsResult = $this->termiiService->sendTokenOtp($data['phone']);
                 
-                if ($smsResult['success']) {
+                if ($smsResult['success'] && !empty($smsResult['pin_id'])) {
+                    $expiry = now()->addMinutes(10);
+                    OtpCode::create([
+                        'phone' => $data['phone'],
+                        'pin_id' => $smsResult['pin_id'],
+                        'provider' => 'termii',
+                        'expires_at' => $expiry,
+                    ]);
+                    Log::info('OTP created in database (termii token)', [
+                        'identifier' => $data['phone'],
+                        'pin_id' => $smsResult['pin_id'],
+                    ]);
+                    file_put_contents('/tmp/nyem_sms.log', "Termii SUCCESS: " . json_encode($smsResult) . "\n", FILE_APPEND);
                     Log::info('OTP sent successfully via Termii');
                     return response()->json([
                         'message' => 'OTP sent successfully via Termii',
                         'expires_at' => $expiry,
-                        'debug_code' => app()->environment('local', 'testing') ? $code : null,
+                        'debug_code' => null,
                     ], 200);
                 }
                 
+                $this->lastTermiiError = $smsResult['message'];
+                file_put_contents('/tmp/nyem_sms.log', "Termii FAILED: " . json_encode($smsResult) . "\n", FILE_APPEND);
                 Log::warning('Termii failed', [
                     'phone' => $data['phone'],
                     'error' => $smsResult['message'],
@@ -112,6 +152,15 @@ class AuthController extends Controller
 
             // Fallback to Twilio if configured
             if ($this->twilioService) {
+                $code = (string) random_int(100000, 999999);
+                $expiry = now()->addMinutes(10);
+                OtpCode::create([
+                    'phone' => $data['phone'],
+                    'code' => $code,
+                    'expires_at' => $expiry,
+                ]);
+                Log::info('OTP created in database (twilio fallback)', ['identifier' => $data['phone']]);
+
                 Log::info('Using TwilioService');
                 $smsResult = $this->twilioService->sendOtpCode($data['phone'], $code);
 
@@ -130,6 +179,7 @@ class AuthController extends Controller
                 ]);
             }
 
+            file_put_contents('/tmp/nyem_sms.log', "ALL SERVICES FAILED\n", FILE_APPEND);
             // If both failed or not configured
             Log::warning('No SMS service could send the OTP', [
                 'phone' => $data['phone'],
@@ -141,16 +191,31 @@ class AuthController extends Controller
             // But include error info in local for debugging
             $response = [
                 'message' => 'OTP code generated. Please check your phone.',
-                'expires_at' => $expiry,
-                'debug_code' => app()->environment('local', 'testing') ? $code : null,
+                'expires_at' => now()->addMinutes(10),
+                'debug_code' => null,
             ];
 
             if (app()->environment('local', 'testing')) {
-                $response['error_detail'] = 'No SMS service was able to send the message. Check backend logs.';
+                $termiiStatus = $this->termiiService ? 'Initialized' : 'FAILED to initialize (check API key)';
+                $twilioStatus = $this->twilioService ? 'Initialized' : 'Not configured';
+                $lastError = $this->lastTermiiError ? " | Termii Error: " . $this->lastTermiiError : "";
+                $response['error_detail'] = "No SMS service could send the message. Termii: $termiiStatus, Twilio: $twilioStatus$lastError. Check laravel.log for errors.";
             }
 
             return response()->json($response, 200);
         } elseif (!empty($data['email'])) {
+            // Generate 6-digit OTP code
+            $code = (string) random_int(100000, 999999);
+            $expiry = now()->addMinutes(7);
+
+            // Store OTP in database
+            OtpCode::create([
+                'email' => $data['email'],
+                'code' => $code,
+                'expires_at' => $expiry,
+            ]);
+            Log::info('OTP created in database', ['identifier' => $data['email']]);
+
             Log::info('Attempting to send Email OTP', ['email' => $data['email']]);
             // Send via email
             $emailResult = $this->emailService->sendOtpCode($data['email'], $code);
@@ -258,11 +323,28 @@ class AuthController extends Controller
 
         $otp = $otpQuery->latest()->first();
 
-        if (! $otp || ! $otp->isValidFor($identifier, $data['code'])) {
+        if (! $otp) {
             return response()->json(['message' => 'Invalid or expired OTP'], 422);
         }
 
-        $otp->update(['consumed' => true]);
+        if (!empty($data['phone']) && $otp->provider === 'termii' && $otp->pin_id) {
+            if ($otp->expires_at && $otp->expires_at->isPast()) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            if (! $this->termiiService) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            $verifyResult = $this->termiiService->verifyTokenOtp($otp->pin_id, $data['code']);
+            if (! $verifyResult['success']) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            $otp->update(['consumed' => true]);
+        } else {
+            if (! $otp->isValidFor($identifier, $data['code'])) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            $otp->update(['consumed' => true]);
+        }
 
         // Handle phone OTP verification (for seller verification)
         if (!empty($data['phone'])) {
@@ -627,11 +709,28 @@ class AuthController extends Controller
             ->latest()
             ->first();
 
-        if (! $otp || ! $otp->isValidForPhone($data['phone'], $data['code'])) {
+        if (! $otp) {
             return response()->json(['message' => 'Invalid or expired OTP'], 422);
         }
 
-        $otp->update(['consumed' => true]);
+        if ($otp->provider === 'termii' && $otp->pin_id) {
+            if ($otp->expires_at && $otp->expires_at->isPast()) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            if (! $this->termiiService) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            $verifyResult = $this->termiiService->verifyTokenOtp($otp->pin_id, $data['code']);
+            if (! $verifyResult['success']) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            $otp->update(['consumed' => true]);
+        } else {
+            if (! $otp->isValidForPhone($data['phone'], $data['code'])) {
+                return response()->json(['message' => 'Invalid or expired OTP'], 422);
+            }
+            $otp->update(['consumed' => true]);
+        }
 
         // Update user's phone and verification status
         $user->phone = $data['phone'];
