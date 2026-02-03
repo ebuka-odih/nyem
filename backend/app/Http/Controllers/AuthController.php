@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\OtpCode;
 use App\Models\User;
-use App\Services\TwilioService;
 use App\Services\TermiiService;
 use App\Services\EmailService;
 use App\Services\GoogleAuthService;
@@ -17,7 +16,6 @@ use Illuminate\Support\Facades\Http;
 
 class AuthController extends Controller
 {
-    protected $twilioService;
     protected $termiiService;
     protected $emailService;
     protected $googleAuthService;
@@ -25,13 +23,6 @@ class AuthController extends Controller
 
     public function __construct()
     {
-        // Initialize TwilioService only if credentials are configured
-        try {
-            $this->twilioService = app(TwilioService::class);
-        } catch (\Exception $e) {
-            $this->twilioService = null;
-        }
-
         // Initialize TermiiService
         try {
             $this->termiiService = app(TermiiService::class);
@@ -67,22 +58,6 @@ class AuthController extends Controller
                 $results['termii']['test_send'] = $this->termiiService->sendSms($phone, "Test message from Nyem");
             } catch (\Exception $e) {
                 $results['termii']['test_send'] = ['success' => false, 'error' => $e->getMessage()];
-            }
-        }
-
-        $results['twilio'] = [
-            'initialized' => $this->twilioService !== null,
-            'config' => [
-                'account_sid' => substr(config('services.twilio.account_sid'), 0, 5) . '...',
-                'from' => config('services.twilio.from'),
-            ]
-        ];
-
-        if ($this->twilioService) {
-            try {
-                $results['twilio']['test_send'] = $this->twilioService->sendSms($phone, "Test message from Nyem");
-            } catch (\Exception $e) {
-                $results['twilio']['test_send'] = ['success' => false, 'error' => $e->getMessage()];
             }
         }
 
@@ -150,41 +125,11 @@ class AuthController extends Controller
                 ]);
             }
 
-            // Fallback to Twilio if configured
-            if ($this->twilioService) {
-                $code = (string) random_int(100000, 999999);
-                $expiry = now()->addMinutes(10);
-                OtpCode::create([
-                    'phone' => $data['phone'],
-                    'code' => $code,
-                    'expires_at' => $expiry,
-                ]);
-                Log::info('OTP created in database (twilio fallback)', ['identifier' => $data['phone']]);
-
-                Log::info('Using TwilioService');
-                $smsResult = $this->twilioService->sendOtpCode($data['phone'], $code);
-
-                if ($smsResult['success']) {
-                    Log::info('OTP sent successfully via Twilio');
-                    return response()->json([
-                        'message' => 'OTP sent successfully via Twilio',
-                        'expires_at' => $expiry,
-                        'debug_code' => app()->environment('local', 'testing') ? $code : null,
-                    ], 200);
-                }
-
-                Log::warning('Failed to send OTP via Twilio', [
-                    'phone' => $data['phone'],
-                    'error' => $smsResult['message'],
-                ]);
-            }
-
             file_put_contents('/tmp/nyem_sms.log', "ALL SERVICES FAILED\n", FILE_APPEND);
             // If both failed or not configured
             Log::warning('No SMS service could send the OTP', [
                 'phone' => $data['phone'],
                 'termii_configured' => $this->termiiService !== null,
-                'twilio_configured' => $this->twilioService !== null,
             ]);
 
             // Still return success to prevent phone number enumeration
@@ -197,9 +142,8 @@ class AuthController extends Controller
 
             if (app()->environment('local', 'testing')) {
                 $termiiStatus = $this->termiiService ? 'Initialized' : 'FAILED to initialize (check API key)';
-                $twilioStatus = $this->twilioService ? 'Initialized' : 'Not configured';
                 $lastError = $this->lastTermiiError ? " | Termii Error: " . $this->lastTermiiError : "";
-                $response['error_detail'] = "No SMS service could send the message. Termii: $termiiStatus, Twilio: $twilioStatus$lastError. Check laravel.log for errors.";
+                $response['error_detail'] = "No SMS service could send the message. Termii: $termiiStatus$lastError. Check laravel.log for errors.";
             }
 
             return response()->json($response, 200);
