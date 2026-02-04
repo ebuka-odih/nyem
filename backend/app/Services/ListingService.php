@@ -275,6 +275,17 @@ class ListingService
         $userLat = $userCoords['latitude'] ?? null;
         $userLon = $userCoords['longitude'] ?? null;
 
+        $sortByLatest = static function ($listing): int {
+            if (!$listing || !$listing->created_at) {
+                return 0;
+            }
+            if ($listing->created_at instanceof \Carbon\CarbonInterface) {
+                return $listing->created_at->getTimestamp();
+            }
+            $timestamp = strtotime((string) $listing->created_at);
+            return $timestamp !== false ? $timestamp : 0;
+        };
+
         if ($userLat && $userLon) {
             $maxDistanceKm = 100; // Default 100km radius, can be made configurable
             
@@ -371,13 +382,12 @@ class ListingService
             ->filter(function ($listing) use ($maxDistanceKm) {
                 return $listing->distance_km === null || $listing->distance_km <= $maxDistanceKm;
             })
-            // Sort by personalized score (highest first)
-                // Sort by created_at desc (newest first)
-                ->sortByDesc('created_at')
+            // Sort by created_at desc (newest first)
+                ->sortByDesc($sortByLatest)
                 ->values();
         } else {
             // No personalization, just ensure newest first
-            $listings = $listings->sortByDesc('created_at')->values();
+            $listings = $listings->sortByDesc($sortByLatest)->values();
         }
 
         return $listings;
@@ -537,4 +547,3 @@ class ListingService
         $listing->distance_miles = null;
     }
 }
-
