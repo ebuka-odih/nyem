@@ -217,7 +217,7 @@ export const SellerProfilePage: React.FC = () => {
     ];
 
     return (
-        <div className="h-[100svh] bg-slate-100 flex flex-col overflow-hidden relative items-center pb-0">
+        <div className="min-h-[100dvh] h-full bg-slate-100 flex flex-col overflow-hidden relative items-center pb-0">
             <div className="w-full max-w-full sm:max-w-[768px] h-full flex flex-col relative bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)] pb-0">
                 <header className="shrink-0 flex items-center justify-between py-4 px-6 bg-white border-b border-neutral-100 z-30">
                     <button onClick={() => navigate(-1)} className="p-3 bg-neutral-50 rounded-2xl active:scale-90 transition-all">

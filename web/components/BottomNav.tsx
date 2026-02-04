@@ -57,7 +57,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     // Otherwise, let the Link handle navigation
   };
 
-  const safeAreaBottom = `calc(8px + env(safe-area-inset-bottom, 0px))`;
+  const safeAreaBottom = `max(10px, env(safe-area-inset-bottom, 0px))`;
 
   return (
     <nav
@@ -124,4 +124,3 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     </nav>
   );
 };
-

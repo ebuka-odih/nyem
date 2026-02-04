@@ -21,7 +21,7 @@ export const SwipeControls: React.FC<SwipeControlsProps> = ({
 }) => {
   return (
     <div className="flex justify-center w-full pointer-events-none pb-1">
-      <div className="flex items-center justify-center gap-3 pointer-events-auto px-6 py-4 rounded-[3rem] bg-white/5 backdrop-blur-xl border border-white/40 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5">
+      <div className="flex items-center justify-center gap-3 pointer-events-auto px-6 py-4 rounded-[3rem] bg-white/[0.03] backdrop-blur-xl border border-white/40 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] ring-1 ring-black/5">
         
         {/* Undo */}
         <MotionButton 

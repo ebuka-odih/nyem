@@ -36,7 +36,7 @@ export const AboutPage: React.FC = () => {
     const navigate = useNavigate();
 
     return (
-        <div className="h-[100svh] bg-white flex flex-col overflow-hidden relative">
+        <div className="min-h-[100dvh] h-full bg-white flex flex-col overflow-hidden relative">
             {/* Header */}
             <header className="shrink-0 bg-white/80 backdrop-blur-xl z-50 px-6 py-4 flex items-center justify-between border-b border-neutral-100">
                 <button

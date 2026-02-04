@@ -19,7 +19,7 @@ export const GeneralLayout: React.FC<GeneralLayoutProps> = ({
   bottomNav
 }) => {
   return (
-    <div className="h-[100svh] bg-slate-100 flex flex-col overflow-hidden relative items-center pb-0">
+    <div className="min-h-[100dvh] h-full bg-slate-100 flex flex-col overflow-hidden relative items-center pb-0">
       {/* App Container: phone width on mobile, iPad width on desktop */}
       <div className="w-full max-w-full sm:max-w-[768px] h-full flex flex-col relative bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)] pb-0">
         <header className="shrink-0 bg-white pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-3 px-6 flex flex-col gap-2 border-b border-neutral-50">

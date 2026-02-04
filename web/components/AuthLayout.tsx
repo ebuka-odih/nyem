@@ -7,7 +7,7 @@ interface AuthLayoutProps {
 
 export const AuthLayout: React.FC<AuthLayoutProps> = ({ children }) => {
   return (
-    <div className="h-[100svh] bg-slate-100 flex flex-col overflow-hidden relative items-center pb-0">
+    <div className="min-h-[100dvh] h-full bg-slate-100 flex flex-col overflow-hidden relative items-center pb-0">
       {/* App Container: phone width on mobile, iPad width on desktop */}
       <div className="w-full max-w-full sm:max-w-[768px] h-full flex flex-col relative bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)] pb-0">
         <main className="flex-1 relative overflow-hidden flex flex-col">
