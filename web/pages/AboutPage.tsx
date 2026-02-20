@@ -80,7 +80,7 @@ export const AboutPage: React.FC = () => {
                                 <Info size={14} strokeWidth={3} /> Our Mission
                             </h3>
                             <p className="text-sm font-medium text-neutral-600 leading-relaxed md:text-base">
-                                Nyem is a dynamic hyper-local marketplace designed to empower individuals and small businesses within communities. We provide a seamless platform for buying, selling, hiring services, and swapping items—eliminating barriers to local commerce.
+                                Nyem is a dynamic hyper-local marketplace designed to empower individuals and small businesses within communities. We provide a seamless platform for buying, selling, and swapping items to remove friction from local commerce.
                             </p>
                         </motion.section>
 
@@ -135,7 +135,7 @@ export const AboutPage: React.FC = () => {
                                     Join the <br /> Ecosystem
                                 </h3>
                                 <p className="text-[10px] font-bold uppercase tracking-widest opacity-80 leading-relaxed mb-10 md:text-xs">
-                                    Whether you're a seller, a service provider, or looking for a great deal, Nyem is your home.
+                                    Whether you're buying or swapping, Nyem is your home for fast local discovery.
                                 </p>
                                 <button
                                     onClick={() => navigate('/discover')}

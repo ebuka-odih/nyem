@@ -1,31 +1,23 @@
 import React from 'react';
-import { Check, ChevronRight, Globe, Loader2 } from 'lucide-react';
+import { Check, ChevronRight, Loader2 } from 'lucide-react';
 import { Modal } from '../Modal';
 import { useCategories, Category } from '../../hooks/api/useCategories';
 import { getCategoryIcon } from '../../utils/categoryIcons';
+import { DISCOVER_TAB_CONFIG, DiscoverTab } from '../../constants/discoverTabs';
 
 interface FilterModalProps {
   isOpen: boolean;
   onClose: () => void;
   activeCategory: string;
   onCategorySelect: (category: string) => void;
-  activeTab: 'marketplace' | 'services' | 'barter';
+  activeTab: DiscoverTab;
 }
 
 /**
  * Maps activeTab to the parent category name used in the backend API
  */
-const getParentCategoryName = (tab: 'marketplace' | 'services' | 'barter'): string => {
-  switch (tab) {
-    case 'marketplace':
-      return 'Shop';
-    case 'services':
-      return 'Services';
-    case 'barter':
-      return 'Swap';
-    default:
-      return 'Shop';
-  }
+const getParentCategoryName = (tab: DiscoverTab): string => {
+  return DISCOVER_TAB_CONFIG[tab].parentCategory;
 };
 
 export const FilterModal: React.FC<FilterModalProps> = ({
@@ -116,5 +108,3 @@ export const FilterModal: React.FC<FilterModalProps> = ({
     </Modal>
   );
 };
-
-

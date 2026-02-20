@@ -27,13 +27,13 @@ export default function WelcomeScreen({ navigation }: Props) {
                     <Text style={styles.logoText}>N</Text>
                 </View>
                 <Text style={styles.appName}>Nyem</Text>
-                <Text style={styles.headlineTop}>Shop. Find Artisans. Swap Items.</Text>
+                <Text style={styles.headlineTop}>Shop. Barter. Trade.</Text>
             </View>
 
             <View style={styles.cardContainer}>
                 <View style={styles.taglineContainer}>
                     <Text style={styles.subtitle}>
-                        Discover items, artisans, and swap opportunities around you — all in one place.
+                        Discover local items to buy and swap through one simple flow.
                     </Text>
                 </View>
 
@@ -47,16 +47,9 @@ export default function WelcomeScreen({ navigation }: Props) {
 
                     <View style={styles.feature}>
                         <View style={styles.featureIcon}>
-                            <Text style={styles.featureEmoji}>💼</Text>
-                        </View>
-                        <Text style={styles.featureText}>Services: Book trusted artisans</Text>
-                    </View>
-
-                    <View style={styles.feature}>
-                        <View style={styles.featureIcon}>
                             <Text style={styles.featureEmoji}>🔁</Text>
                         </View>
-                        <Text style={styles.featureText}>Swap: Trade items effortlessly</Text>
+                        <Text style={styles.featureText}>Barter: Swap items effortlessly</Text>
                     </View>
                 </View>
 

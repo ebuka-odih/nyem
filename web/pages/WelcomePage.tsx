@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import {
   Zap,
   ShoppingBag,
-  Briefcase,
   RefreshCw,
   ArrowRight,
   UserPlus,
@@ -41,22 +40,15 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
   const navigate = useNavigate();
   const features = [
     {
-      title: 'Marketplace',
-      desc: 'Buy & sell from local sellers',
+      title: 'Shop',
+      desc: 'Buy and sell with people nearby',
       icon: ShoppingBag,
       color: 'bg-rose-50',
       iconColor: 'text-[#830e4c]'
     },
     {
-      title: 'Services',
-      desc: 'Hire skilled professionals nearby',
-      icon: Briefcase,
-      color: 'bg-[#830e4c1a]',
-      iconColor: 'text-[#830e4c]'
-    },
-    {
-      title: 'Swap',
-      desc: 'Trade items — no cash needed',
+      title: 'Barter',
+      desc: 'Swap items directly without cash',
       icon: RefreshCw,
       color: 'bg-[#830e4c1a]',
       iconColor: 'text-[#830e4c]'
@@ -80,11 +72,11 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({ onStart, onLogin, onRe
         </div>
 
         <h1 className="text-4xl font-black text-neutral-900 tracking-tighter uppercase italic leading-[0.85] mb-4">
-          Your Local <br /> Marketplace
+          Discover. <br /> Swipe. Trade.
         </h1>
 
         <p className="text-neutral-400 text-[10px] font-black uppercase tracking-[0.2em] max-w-[260px] leading-relaxed">
-          Connect with your community to buy, sell, trade, and hire — all in one app.
+          Buy and barter with your community through one simple loop.
         </p>
       </motion.div>
 

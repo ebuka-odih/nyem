@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { DiscoverHeader } from './DiscoverHeader';
+import { DiscoverTab } from '../constants/discoverTabs';
 
 interface DiscoverLayoutProps {
   children: React.ReactNode;
@@ -9,8 +10,8 @@ interface DiscoverLayoutProps {
     onLocation: () => void;
     onWishlist: () => void;
     activeCategory: string;
-    setActiveTab: (t: any) => void;
-    activeTab: string;
+    setActiveTab: (t: DiscoverTab) => void;
+    activeTab: DiscoverTab;
     wishlistCount: number;
   };
   bottomNav: React.ReactNode;

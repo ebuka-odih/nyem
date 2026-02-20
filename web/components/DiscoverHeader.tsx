@@ -1,27 +1,23 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { Filter, MapPin, Zap, ChevronDown } from 'lucide-react';
 import { PWAInstallBanner } from './PWAInstallBanner';
+import { DISCOVER_TAB_CONFIG, DISCOVER_TABS, DiscoverTab } from '../constants/discoverTabs';
 
 interface DiscoverHeaderProps {
   onFilter: () => void;
   onLocation: () => void;
   onWishlist: () => void;
   activeCategory: string;
-  setActiveTab: (t: any) => void;
-  activeTab: string;
+  setActiveTab: (t: DiscoverTab) => void;
+  activeTab: DiscoverTab;
   wishlistCount: number;
 }
 
 export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({
   onFilter, onLocation, onWishlist, activeCategory, setActiveTab, activeTab, wishlistCount
 }) => {
-  const navigate = useNavigate();
-
-  const handleTabChange = (tab: 'marketplace' | 'services' | 'barter') => {
-    const path = tab === 'marketplace' ? '/discover' : `/discover/${tab}`;
-    navigate(path);
+  const handleTabChange = (tab: DiscoverTab) => {
     setActiveTab(tab);
   };
 
@@ -44,13 +40,15 @@ export const DiscoverHeader: React.FC<DiscoverHeaderProps> = ({
 
           {/* Tab Pill - Enhanced visibility for mobile text */}
           <div className="flex-1 bg-neutral-100 p-2.5 rounded-2xl sm:rounded-[2rem] flex relative h-12 sm:h-16 min-w-0 mx-1">
-            {(['marketplace', 'services', 'barter'] as const).map((tab) => (
+            {DISCOVER_TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => handleTabChange(tab)}
                 className={`relative z-10 flex-1 flex items-center justify-center text-[10px] sm:text-[14px] font-black transition-all duration-300 uppercase px-2.5 sm:px-4 min-w-0 ${activeTab === tab ? 'text-[#830e4c]' : 'text-neutral-400'}`}
               >
-                <span className="whitespace-nowrap tracking-tighter sm:tracking-widest">{tab === 'marketplace' ? 'SHOP' : tab}</span>
+                <span className="whitespace-nowrap tracking-tighter sm:tracking-widest">
+                  {DISCOVER_TAB_CONFIG[tab].label}
+                </span>
                 {activeTab === tab && (
                   <motion.div
                     layoutId="activeTab"

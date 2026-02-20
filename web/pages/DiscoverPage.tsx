@@ -7,22 +7,20 @@ import { fetcher } from '../hooks/api/fetcher';
 import { SwipeCard } from '../components/SwipeCard';
 import { AdSwipeCard } from '../components/AdSwipeCard';
 import { WelcomeCard } from '../components/WelcomeCard';
-import { SwipeControls } from '../components/SwipeControls';
-import { ComingSoonState } from '../components/ComingSoonState';
 import { ProductDetailModal } from '../components/modals/ProductDetailModal';
 import { WishlistModal } from '../components/modals/WishlistModal';
 import { FilterModal } from '../components/modals/FilterModal';
 import { LocationModal } from '../components/modals/LocationModal';
-import { Modal } from '../components/Modal';
 import { useItems } from '../hooks/useItems';
 import { useWishlist } from '../hooks/useWishlist';
 import { createAdItem, sendNativeNotification, transformListingToProduct } from '../utils/productTransformers';
 import { getStoredToken } from '../utils/api';
 import { useCreateSwipe, useTrackView, useTrackShare } from '../hooks/api/useListings';
 import { ENDPOINTS } from '../constants/endpoints';
+import { DiscoverTab } from '../constants/discoverTabs';
 
 interface DiscoverPageProps {
-  activeTab: 'marketplace' | 'services' | 'barter';
+  activeTab: DiscoverTab;
   activeCategory: string;
   setActiveCategory: (category: string) => void;
   currentCity: string;
@@ -68,6 +66,7 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
   onItemsChange,
   onModalStateChange
 }) => {
+  const isShopTab = activeTab === 'marketplace';
   const {
     items,
     history,
@@ -209,19 +208,22 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
       return;
     }
 
+    const isBarterLike = activeTab === 'barter' && direction === 'right';
+    const swipeDirection = (direction === 'up' || isBarterLike) ? 'up' : 'right';
+
     // Send swipe to backend API
     if (direction === 'right' || direction === 'up') {
       try {
         await createSwipeMutation.mutateAsync({
           target_listing_id: swipedItem.id,
-          direction: direction === 'up' ? 'up' : 'right',
+          direction: swipeDirection,
         });
       } catch (err) {
         console.error('Failed to send swipe:', err);
       }
     }
 
-    if (direction === 'up') {
+    if (swipeDirection === 'up') {
       setLastSparkedItem(swipedItem);
       setShowSellerToast(true);
 
@@ -242,7 +244,7 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
     }
 
     finalizeSwipe();
-  }, [items, activeIndex, removeItem, fetchWishlist, onLogin, setTriggerDir]);
+  }, [items, activeIndex, removeItem, fetchWishlist, onLogin, setTriggerDir, activeTab]);
 
   // Handle triggerDir changes from parent
   // FIXED: Removed this useEffect because SwipeCard handles the animation and then calls onSwipe (which calls handleSwipe).
@@ -334,63 +336,63 @@ export const DiscoverPage: React.FC<DiscoverPageProps> = ({
 
       <div className="relative flex-1 w-full mt-1 mb-[2px]">
         <AnimatePresence mode="popLayout">
-          {activeTab === 'marketplace' ? (
-            loadingItems ? (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center px-8">
-                <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-6 border border-neutral-100 shadow-inner animate-pulse">
-                  <Compass size={32} className="text-[#830e4c]" />
-                </div>
-                <h3 className="text-xl font-black text-neutral-900 uppercase tracking-tighter">Loading drops...</h3>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-2">Discovering amazing items</p>
-              </motion.div>
-            ) : items.length > 0 ? (
-              items.slice(-4).map((product: Product, idx: number, arr: Product[]) => {
-                const activeVisibleIndex = arr.length - 1;
-                return product.isWelcome ? (
-                  <WelcomeCard
-                    key={product.id}
-                    index={activeVisibleIndex - idx}
-                    isTop={idx === activeVisibleIndex}
-                    onSwipe={handleSwipe}
-                    triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
-                  />
-                ) : product.isAd ? (
-                  <AdSwipeCard
-                    key={product.id}
-                    index={activeVisibleIndex - idx}
-                    isTop={idx === activeVisibleIndex}
-                    onSwipe={handleSwipe}
-                    onAction={onNavigateToUpload}
-                    triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
-                  />
-                ) : (
-                  <SwipeCard
-                    key={product.id}
-                    product={product}
-                    index={activeVisibleIndex - idx}
-                    isTop={idx === activeVisibleIndex}
-                    onSwipe={handleSwipe}
-                    triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
-                    onShowDetail={(p) => { setSelectedProduct(p); }}
-                  />
-                );
-              })
-            ) : (
-              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center px-8">
-                <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-6 border border-neutral-100 shadow-inner">
-                  <RotateCcw size={32} className="text-neutral-300" />
-                </div>
-                <h3 className="text-xl font-black text-neutral-900 uppercase tracking-tighter">End of the line</h3>
-                <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-2 mb-8">No more drops to show right now</p>
-                <button onClick={refreshDrops} className="px-10 py-5 bg-[#830e4c] hover:bg-[#830e4c]/90 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl active:scale-95 transition-all">
-                  Refresh Drops
-                </button>
-              </motion.div>
-            )
+          {loadingItems ? (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex flex-col items-center justify-center text-center px-8">
+              <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-6 border border-neutral-100 shadow-inner animate-pulse">
+                <Compass size={32} className="text-[#830e4c]" />
+              </div>
+              <h3 className="text-xl font-black text-neutral-900 uppercase tracking-tighter">
+                {isShopTab ? 'Loading shop drops...' : 'Loading barter offers...'}
+              </h3>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-2">
+                {isShopTab ? 'Discovering local deals' : 'Discovering nearby swaps'}
+              </p>
+            </motion.div>
+          ) : items.length > 0 ? (
+            items.slice(-4).map((product: Product, idx: number, arr: Product[]) => {
+              const activeVisibleIndex = arr.length - 1;
+              return product.isWelcome ? (
+                <WelcomeCard
+                  key={product.id}
+                  index={activeVisibleIndex - idx}
+                  isTop={idx === activeVisibleIndex}
+                  onSwipe={handleSwipe}
+                  triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
+                />
+              ) : product.isAd ? (
+                <AdSwipeCard
+                  key={product.id}
+                  index={activeVisibleIndex - idx}
+                  isTop={idx === activeVisibleIndex}
+                  onSwipe={handleSwipe}
+                  onAction={onNavigateToUpload}
+                  triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
+                />
+              ) : (
+                <SwipeCard
+                  key={product.id}
+                  product={product}
+                  index={activeVisibleIndex - idx}
+                  isTop={idx === activeVisibleIndex}
+                  onSwipe={handleSwipe}
+                  triggerDirection={idx === activeVisibleIndex ? triggerDir : null}
+                  onShowDetail={(p) => { setSelectedProduct(p); }}
+                />
+              );
+            })
           ) : (
-            <div className="h-full flex items-center justify-center px-2">
-              <ComingSoonState type={activeTab === 'services' ? 'services' : 'barter'} />
-            </div>
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="h-full flex flex-col items-center justify-center text-center px-8">
+              <div className="w-20 h-20 bg-neutral-50 rounded-full flex items-center justify-center mb-6 border border-neutral-100 shadow-inner">
+                <RotateCcw size={32} className="text-neutral-300" />
+              </div>
+              <h3 className="text-xl font-black text-neutral-900 uppercase tracking-tighter">End of the line</h3>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mt-2 mb-8">
+                {isShopTab ? 'No more shop drops right now' : 'No more barter offers right now'}
+              </p>
+              <button onClick={refreshDrops} className="px-10 py-5 bg-[#830e4c] hover:bg-[#830e4c]/90 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl active:scale-95 transition-all">
+                Refresh Feed
+              </button>
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

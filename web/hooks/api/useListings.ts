@@ -2,9 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetcher } from './fetcher';
 import { ENDPOINTS } from '../../constants/endpoints';
 import { transformListingToProduct } from '../../utils/productTransformers';
+import { DISCOVER_TAB_CONFIG, DiscoverTab } from '../../constants/discoverTabs';
 
 export const useListingsFeed = (filters: {
-  activeTab: string;
+  activeTab: DiscoverTab;
   activeCategory: string;
   currentCity: string;
 }) => {
@@ -14,7 +15,7 @@ export const useListingsFeed = (filters: {
     queryKey: ['listings', 'feed', filters],
     queryFn: () => {
       const params: string[] = [];
-      params.push('type=marketplace');
+      params.push(`type=${encodeURIComponent(DISCOVER_TAB_CONFIG[activeTab].feedType)}`);
 
       if (activeCategory !== "All") {
         params.push(`category=${encodeURIComponent(activeCategory)}`);
@@ -30,7 +31,6 @@ export const useListingsFeed = (filters: {
       const feedUrl = `${ENDPOINTS.items.feed}?${params.join('&')}`;
       return fetcher<any[]>(feedUrl);
     },
-    enabled: activeTab === 'marketplace',
     select: (data) => data.map(transformListingToProduct),
   });
 };
@@ -94,4 +94,3 @@ export const useTrackShare = () => {
       fetcher(ENDPOINTS.items.trackShare(id), { method: 'POST' }),
   });
 };
-

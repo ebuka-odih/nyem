@@ -56,7 +56,14 @@ export const ImageCropperModal: React.FC<ImageCropperModalProps> = ({
             className="fixed inset-0 z-[100] flex flex-col bg-black overflow-hidden"
         >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 bg-black/50 backdrop-blur-md z-10">
+            <div
+                className="flex items-center justify-between px-4 pb-4 bg-black/50 backdrop-blur-md z-10"
+                style={{
+                    paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
+                    paddingLeft: 'max(16px, env(safe-area-inset-left, 0px))',
+                    paddingRight: 'max(16px, env(safe-area-inset-right, 0px))',
+                }}
+            >
                 <button
                     onClick={onCancel}
                     className="p-2 text-white/70 hover:text-white transition-colors"

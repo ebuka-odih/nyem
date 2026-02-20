@@ -3,6 +3,7 @@ import { Product } from '../types';
 import { getStoredToken } from '../utils/api';
 import { transformListingToProduct, createAdItem, createWelcomeItem } from '../utils/productTransformers';
 import { useListingsFeed } from './api/useListings';
+import { DiscoverTab } from '../constants/discoverTabs';
 
 // Storage key generator based on filters
 const getStorageKey = (activeTab: string, activeCategory: string, currentCity: string) => {
@@ -22,7 +23,7 @@ interface PersistedState {
   };
 }
 
-export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activeCategory: string, currentCity: string) => {
+export const useItems = (activeTab: DiscoverTab, activeCategory: string, currentCity: string) => {
   // Try to restore from localStorage on initial mount
   const storageKey = getStorageKey(activeTab, activeCategory, currentCity);
   const restoredState = (() => {
@@ -181,4 +182,3 @@ export const useItems = (activeTab: 'marketplace' | 'services' | 'barter', activ
     removeItem
   };
 };
-

@@ -32,6 +32,12 @@ import { ServiceWorkerUpdate } from './components/ServiceWorkerUpdate';
 import { useCategories } from './hooks/api/useCategories';
 import { useWishlistQuery } from './hooks/api/useWishlist';
 import { useProfile } from './hooks/api/useProfile';
+import {
+  DISCOVER_TAB_CONFIG,
+  DiscoverTab,
+  isDiscoverTab,
+  toDiscoverTab
+} from './constants/discoverTabs';
 
 import { useAuth, AuthState } from './hooks/useAuth';
 
@@ -39,7 +45,7 @@ import { useAuth, AuthState } from './hooks/useAuth';
 const DiscoverRoute: React.FC = () => {
   const { tab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
-  const activeTab = (tab === 'services' || tab === 'barter' ? tab : 'marketplace') as 'marketplace' | 'services' | 'barter';
+  const activeTab = toDiscoverTab(tab);
 
   const [activeCategory, setActiveCategory] = useState("All");
   const [showFilterDialog, setShowFilterDialog] = useState(false);
@@ -117,9 +123,14 @@ const DiscoverRoute: React.FC = () => {
     }
   };
 
-  const setActiveTab = (tab: 'marketplace' | 'services' | 'barter') => {
-    const path = tab === 'marketplace' ? '/discover' : `/discover/${tab}`;
-    navigate(path);
+  useEffect(() => {
+    if (tab && !isDiscoverTab(tab)) {
+      navigate('/discover', { replace: true });
+    }
+  }, [tab, navigate]);
+
+  const setActiveTab = (tab: DiscoverTab) => {
+    navigate(DISCOVER_TAB_CONFIG[tab].route);
   };
 
   return (
@@ -146,7 +157,7 @@ const DiscoverRoute: React.FC = () => {
           wishlistCount: likedItems.length
         }}
         bottomNav={<BottomNav />}
-        floatingControls={activeTab === 'marketplace' && discoverItems.length > 0 && !hasOpenModal ? (
+        floatingControls={discoverItems.length > 0 && !hasOpenModal ? (
           <SwipeControls
             onUndo={() => discoverUndoLast?.()}
             onNope={() => setTriggerDir('left')}
