@@ -1,12 +1,18 @@
 # Nyem Platform
 
-Nyem is a multi-surface local commerce platform for:
+## What Nyem Marketplace Is
 
-- buying and selling (`marketplace`)
-- item-for-item exchanges (`barter/swap`)
-- finding and booking local service providers (`services`)
+Nyem Marketplace is a hyper-local commerce platform built for people and small businesses in the same community. It helps users buy, sell, and swap items quickly, while also giving them access to local service providers.
 
-The platform combines discovery feeds, swipe interactions, trade offers, matching, chat, escrow/payment support, and admin tooling.
+In simple terms, Nyem brings three activities into one product:
+
+- local shopping (`marketplace`)
+- direct item exchange (`barter/swap`)
+- local service discovery (`services`)
+
+The user experience is designed to be simple: discover listings, swipe to show interest, and continue into offers, matches, and chat when both sides are ready. Users can browse first and sign in when they want to take action.
+
+Nyem’s mission is to remove friction from local commerce by making neighborhood trading and service discovery faster, more transparent, and easier to trust.
 
 ## What This Repository Contains
 
@@ -76,7 +82,7 @@ nyem/
 ├── web/       # Main React web client
 ├── app/       # Expo React Native mobile app
 ├── web2/      # Older/alternate web client
-└── *.md       # Project and feature documentation notes
+└── docs/      # Project and feature documentation notes
 ```
 
 ## Local Development Setup
